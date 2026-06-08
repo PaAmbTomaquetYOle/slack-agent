@@ -1,0 +1,25 @@
+{
+  "name": "slack-agent",
+  "version": "0.1.0",
+  "description": "Slack agent for hackathon challenge",
+  "keywords": [
+    "slack",
+    "agent",
+    "hackathon"
+  ],
+  "homepage": "https://github.com/PaAmbTomaquetYOle/slack-agent#readme",
+  "bugs": {
+    "url": "https://github.com/PaAmbTomaquetYOle/slack-agent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PaAmbTomaquetYOle/slack-agent.git"
+  },
+  "license": "MIT",
+  "author": "Oriol Orbea",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
