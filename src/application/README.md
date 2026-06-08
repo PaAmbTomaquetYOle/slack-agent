@@ -6,8 +6,7 @@ This directory acts as the orchestrator of the application. It contains the **Us
 - **Depends only on Domain:** This layer can import from `domain/`, but it **must never** import from `infrastructure/`.
 - **Framework-agnostic:** Like the Domain, keep this layer free from Slack-specific logic or database implementations.
 
-## What belongs here?
-- **Use Cases / Services:** Classes or functions that orchestrate a specific business feature (e.g., `CreateIncidentUseCase`, `RegisterUserUseCase`). They fetch data, call domain logic, and save results.
-- **Ports (Interfaces):**
-  - *Inbound Ports:* Interfaces defining how external controllers can interact with our use cases.
-  - *Outbound Ports:* Interfaces defining what our use cases need from the outside world (e.g., `IncidentRepository` or `MessageSenderPort`).
+## Subdirectories
+
+- **[ports/](./ports/README.md)**: Defines boundary interfaces (both inbound/driving and outbound/driven) that isolate our core logic from the outside world.
+- **[services/](./services/README.md)**: Implements application use cases and orchestrates the flow of data using domain entities and ports.
