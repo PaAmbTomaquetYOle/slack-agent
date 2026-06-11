@@ -5,7 +5,7 @@ This directory contains the implementations of the application's use cases. Thes
 ## Characteristics
 
 - **Orchestration:** They do not contain the core business rules themselves (which belong to the Domain layer). Instead, they fetch domain entities, trigger domain logic, and persist or communicate the results.
-- **Dependency Inversion:** They interact with external resources (like databases or third-party APIs) strictly through **Outbound Ports** (interfaces).
+- **Dependency Inversion:** They interact with external resources (like databases or third-party APIs) strictly through **Outbound Ports** (interfaces), and they should implement the corresponding contracts defined in `src/application/serviceInterfaces`.
 - **Transaction Boundaries:** Often, an application service defines a single transactional or operational unit of work.
 
 ## Lifecycle and Dependency Injection
