@@ -1,0 +1,99 @@
+# BrainTrust — architecture diagram (D2)
+# Render: d2 architecture.d2 architecture.svg   (see README for PNG)
+
+direction: right
+
+classes: {
+  p1: { style: { stroke: "#2563eb"; font-color: "#1e3a8a"; bold: true; stroke-width: 2 } }
+  p2: { style: { stroke: "#16a34a"; font-color: "#14532d"; bold: true; stroke-width: 2 } }
+  p3: { style: { stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true; stroke-width: 2 } }
+}
+
+slack: Slack Workspace {
+  icon: https://api.iconify.design/logos/slack-icon.svg
+  style.fill: "#fffbeb"
+  style.stroke: "#d97706"
+  u1: Departing volunteer
+  u2: Newcomer · asks in channel
+  u3: Team · crisis / lookup
+}
+
+agent: slack-agent — TypeScript · Slack Bolt {
+  icon: https://api.iconify.design/logos/typescript-icon.svg
+  style.fill: "#eff6ff"
+  style.stroke: "#2563eb"
+  ctrl: Controllers · Bolt events/commands
+  appl: Application · use cases / ports
+  dom: Domain · entities / rules
+  ctrl -> appl -> dom
+}
+
+mcp: MCP Server — Python · MCP SDK {
+  icon: https://api.iconify.design/logos/python.svg
+  style.fill: "#f5f3ff"
+  style.stroke: "#7c3aed"
+  tools: Tools · fetch open tasks / search
+}
+
+be: Backend — Python · FastAPI {
+  icon: https://api.iconify.design/logos/fastapi.svg
+  style.fill: "#f0fdf4"
+  style.stroke: "#16a34a"
+  api: REST API
+  sdoss: Service · Handover Dossier
+  ssop: Service · SOPs
+  sgraph: Service · Knowledge Graph
+  api -> sdoss
+  api -> ssop
+  api -> sgraph
+}
+
+data: Persistence {
+  style.fill: "#f8fafc"
+  pg: Postgres · Dossiers / SOPs {
+    icon: https://api.iconify.design/logos/postgresql.svg
+    shape: cylinder
+  }
+  neo: Neo4j · Knowledge Graph {
+    icon: https://api.iconify.design/logos/neo4j.svg
+    shape: cylinder
+  }
+}
+
+ext: External APIs {
+  style.fill: "#fdf4ff"
+  jira: Jira { icon: https://api.iconify.design/logos/jira.svg }
+  trello: Trello { icon: https://api.iconify.design/logos/trello.svg }
+  slackai: Slack AI · summary/dossier { icon: https://api.iconify.design/logos/slack-icon.svg }
+  rts: Real-Time Search API
+}
+
+# ---------- Phase 1 · Smart Offboarding (MVP) ----------
+slack.u1 -> agent.ctrl: "① announces departure" { class: p1 }
+agent -> mcp: "① pull tasks" { class: p1 }
+mcp.tools -> ext.jira: "①" { class: p1 }
+mcp.tools -> ext.trello: "①" { class: p1 }
+agent -> slack.u1: "① guided interview" { class: p1 }
+agent -> ext.slackai: "① summarize interview" { class: p1 }
+agent -> be.api: "① save dossier" { class: p1 }
+be.sdoss -> data.pg: "①" { class: p1 }
+
+# ---------- Phase 2 · Dynamic SOPs ----------
+slack.u2 -> agent.ctrl: "② question / veteran answer" { class: p2 }
+agent -> be.api: "② save as SOP?" { class: p2 }
+be.ssop -> ext.rts: "② link similar" { class: p2 }
+be.ssop -> data.pg: "②" { class: p2 }
+
+# ---------- Phase 3 · Knowledge Graph ----------
+slack.u3 -> agent.ctrl: "③ who is the expert?" { class: p3 }
+agent -> be.api: "③ query experts" { class: p3 }
+be.sgraph -> data.neo: "③ map relationships" { class: p3 }
+
+# ---------- Legend ----------
+legend: Project phases {
+  near: top-left
+  style.fill: "#ffffff"
+  l1: ① Phase 1 · Smart Offboarding (MVP) { class: p1 }
+  l2: ② Phase 2 · Dynamic SOPs { class: p2 }
+  l3: ③ Phase 3 · Knowledge Graph { class: p3 }
+}
