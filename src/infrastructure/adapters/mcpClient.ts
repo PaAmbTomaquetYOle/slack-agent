@@ -2,7 +2,15 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { IMcpClient } from '../../application/ports';
 import { SETTINGS } from '../settings';
-import { McpTool, McpToolResult } from '../../domain';
+import type {
+  McpTool,
+  McpToolResult,
+  McpPrompt,
+  McpPromptResult,
+  McpResource,
+  McpResourceContent,
+  McpResourceTemplate,
+} from '../../domain';
 
 export class McpClient implements IMcpClient {
   readonly #url: URL;
@@ -66,6 +74,77 @@ export class McpClient implements IMcpClient {
       content: result.content as McpToolResult['content'],
       ...(result.isError !== undefined ? { isError: result.isError as boolean } : {}),
     };
+  }
+
+  async listPrompts(): Promise<McpPrompt[]> {
+    if (this.#client === null || !this.#connected) {
+      throw new Error('MCP client is not connected. Call connect() first.');
+    }
+    const { prompts } = await this.#client.listPrompts();
+    return prompts.map((p): McpPrompt => ({
+      name: p.name,
+      ...(p.description !== undefined ? { description: p.description } : {}),
+      ...(p.arguments !== undefined
+        ? {
+            arguments: p.arguments.map((a) => ({
+              name: a.name,
+              ...(a.description !== undefined ? { description: a.description } : {}),
+              ...(a.required !== undefined ? { required: a.required } : {}),
+            })),
+          }
+        : {}),
+    }));
+  }
+
+  async getPrompt(name: string, args?: Record<string, string>): Promise<McpPromptResult> {
+    if (this.#client === null || !this.#connected) {
+      throw new Error('MCP client is not connected. Call connect() first.');
+    }
+    const result = await this.#client.getPrompt({
+      name,
+      ...(args !== undefined ? { arguments: args } : {}),
+    });
+    return {
+      messages: result.messages.map((m) => ({
+        role: m.role,
+        content: m.content as McpPromptResult['messages'][number]['content'],
+      })),
+      ...(result.description !== undefined ? { description: result.description } : {}),
+    };
+  }
+
+  async listResources(): Promise<McpResource[]> {
+    if (this.#client === null || !this.#connected) {
+      throw new Error('MCP client is not connected. Call connect() first.');
+    }
+    const { resources } = await this.#client.listResources();
+    return resources.map((r): McpResource => ({
+      uri: r.uri,
+      name: r.name,
+      ...(r.description !== undefined ? { description: r.description } : {}),
+      ...(r.mimeType !== undefined ? { mimeType: r.mimeType } : {}),
+    }));
+  }
+
+  async listResourceTemplates(): Promise<McpResourceTemplate[]> {
+    if (this.#client === null || !this.#connected) {
+      throw new Error('MCP client is not connected. Call connect() first.');
+    }
+    const { resourceTemplates } = await this.#client.listResourceTemplates();
+    return resourceTemplates.map((t): McpResourceTemplate => ({
+      uriTemplate: t.uriTemplate,
+      name: t.name,
+      ...(t.description !== undefined ? { description: t.description } : {}),
+      ...(t.mimeType !== undefined ? { mimeType: t.mimeType } : {}),
+    }));
+  }
+
+  async readResource(uri: string): Promise<McpResourceContent[]> {
+    if (this.#client === null || !this.#connected) {
+      throw new Error('MCP client is not connected. Call connect() first.');
+    }
+    const { contents } = await this.#client.readResource({ uri });
+    return contents as McpResourceContent[];
   }
 
   async close(): Promise<void> {
