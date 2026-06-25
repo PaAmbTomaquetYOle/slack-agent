@@ -1,3 +1,5 @@
-export interface IMcpService {
+import { McpTool } from "../../domain";
 
+export interface IMcpService {
+    discoverTools(): Promise<McpTool[]>;
 }
