@@ -1,7 +1,6 @@
-import { App } from '@slack/bolt';
-import { APP_OPTIONS, SETTINGS } from './infrastructure';
+import { AppFactory, SETTINGS } from './infrastructure';
 
-const app = new App(APP_OPTIONS);
+const app = new AppFactory().createApp();
 
 (async () => {
   await app.start(SETTINGS.PORT);
