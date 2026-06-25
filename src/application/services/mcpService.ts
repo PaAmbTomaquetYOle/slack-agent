@@ -1,4 +1,4 @@
-import { McpTool } from "../../domain";
+import { McpTool, McpToolResult } from "../../domain";
 import { IMcpClient } from "../ports";
 import { IMcpService } from "../serviceInterfaces";
 
@@ -9,8 +9,17 @@ export class McpService implements IMcpService {
         this.#mcpClient = mcpClient;
     }
 
-    discoverTools(): Promise<McpTool[]> {
-        this.#mcpClient.connect();
+    async discoverTools(): Promise<McpTool[]> {
+        if (!this.#mcpClient.isConnected()) {
+            await this.#mcpClient.connect();
+        }
         return this.#mcpClient.listTools();
+    }
+
+    async callTool(name: string, args?: Record<string, unknown>): Promise<McpToolResult> {
+        if (!this.#mcpClient.isConnected()) {
+            await this.#mcpClient.connect();
+        }
+        return this.#mcpClient.callTool(name, args);
     }
 }
