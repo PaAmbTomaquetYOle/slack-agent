@@ -18,4 +18,7 @@ export interface IMcpService {
   listResources(): Promise<McpResource[]>;
   listResourceTemplates(): Promise<McpResourceTemplate[]>;
   readResource(uri: string): Promise<McpResourceContent[]>;
+
+  jiraLoginPrompt(): Promise<McpPromptResult>;
+  trelloLoginPrompt(): Promise<McpPromptResult>;
 }

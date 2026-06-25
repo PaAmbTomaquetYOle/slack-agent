@@ -17,6 +17,14 @@ export class McpService implements IMcpService {
     this.#mcpClient = mcpClient;
   }
 
+  jiraLoginPrompt(): Promise<McpPromptResult> {
+    return this.getPrompt("jira_login");
+  }
+
+    trelloLoginPrompt(): Promise<McpPromptResult> {
+      return this.getPrompt("trello_login");
+    }
+
   private async ensureConnected(): Promise<void> {
     if (!this.#mcpClient.isConnected()) {
       await this.#mcpClient.connect();
