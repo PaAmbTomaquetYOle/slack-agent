@@ -17,19 +17,19 @@ export class McpService implements IMcpService {
     this.#mcpClient = mcpClient;
   }
 
-  extractPendingJiraTasksPrompt(assigneeName: string): Promise<McpPromptResult> {
+  async extractPendingJiraTasksPrompt(assigneeName: string): Promise<McpPromptResult> {
     return this.getPrompt("extract_pending_jira_tasks", {assignee: assigneeName});
   }
 
-  extractPendingTrelloTasksPrompt(assigneeName: string): Promise<McpPromptResult> {
+  async extractPendingTrelloTasksPrompt(assigneeName: string): Promise<McpPromptResult> {
     return this.getPrompt("extract_pending_trello_tasks", {assignee: assigneeName});
   }
 
-  jiraLoginPrompt(): Promise<McpPromptResult> {
+  async jiraLoginPrompt(): Promise<McpPromptResult> {
     return this.getPrompt("jira_login");
   }
 
-  trelloLoginPrompt(): Promise<McpPromptResult> {
+  async trelloLoginPrompt(): Promise<McpPromptResult> {
     return this.getPrompt("trello_login");
   }
 
