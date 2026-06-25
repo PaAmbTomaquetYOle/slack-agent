@@ -21,4 +21,7 @@ export interface IMcpService {
 
   jiraLoginPrompt(): Promise<McpPromptResult>;
   trelloLoginPrompt(): Promise<McpPromptResult>;
+
+  extractPendingJiraTasksPrompt(assigneeName: string): Promise<McpPromptResult>;
+  extractPendingTrelloTasksPrompt(assigneeName: string): Promise<McpPromptResult>;
 }
