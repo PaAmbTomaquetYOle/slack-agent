@@ -1,10 +1,10 @@
-import { DomainError } from '../exceptions/index';
+import { InvalidValueObjectError } from '../exceptions';
 
 export class ProcessId {
   readonly #value: string;
 
   constructor(value: string) {
-    if (!value.trim()) throw new DomainError('ProcessId cannot be empty');
+    if (!value.trim()) throw new InvalidValueObjectError('ProcessId', 'cannot be empty');
     this.#value = value;
   }
 

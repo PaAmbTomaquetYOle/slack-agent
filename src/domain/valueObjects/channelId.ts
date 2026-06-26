@@ -1,10 +1,10 @@
-import { DomainError } from '../exceptions/index';
+import { InvalidValueObjectError } from '../exceptions';
 
 export class ChannelId {
   readonly #value: string;
 
   constructor(value: string) {
-    if (!value.trim()) throw new DomainError('ChannelId cannot be empty');
+    if (!value.trim()) throw new InvalidValueObjectError('ChannelId', 'cannot be empty');
     this.#value = value;
   }
 
