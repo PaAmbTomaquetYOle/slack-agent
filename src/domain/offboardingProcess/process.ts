@@ -10,12 +10,13 @@ export class OffboardingProcess {
   readonly #initiatorId: UserId;
   readonly #createdAt: Date;
   #state: OffboardingProcessState;
-  #channelId: ChannelId | null;
-  #handoverDossier: string | null;
-  #assignedReviewer: UserId | null;
+  #channelId: ChannelId | null; // populated by later state transitions (SA-3)
+  #handoverDossier: string | null; // populated when dossier is generated (SA-4)
+  #assignedReviewer: UserId | null; // assigned during review phase (SA-3)
   readonly #tasks: unknown[];
   readonly #domainEvents: DomainEvent[];
 
+  // TypeScript `private` intentional: JS does not support `#` on constructors
   private constructor(
     id: ProcessId,
     departingUserId: UserId,
@@ -50,7 +51,7 @@ export class OffboardingProcess {
   get id(): ProcessId { return this.#id; }
   get departingUserId(): UserId { return this.#departingUserId; }
   get initiatorId(): UserId { return this.#initiatorId; }
-  get createdAt(): Date { return this.#createdAt; }
+  get createdAt(): Date { return new Date(this.#createdAt); }
   get stateName(): string { return this.#state.stateName; }
 
   pullDomainEvents(): DomainEvent[] {
