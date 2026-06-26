@@ -41,7 +41,7 @@ export class OffboardingController extends BaseController {
       });
     });
 
-    app.view(MODAL_CALLBACK_ID, async ({ ack, view, body }) => {
+    app.view(MODAL_CALLBACK_ID, async ({ ack, view, body, client }) => {
       await ack();
       const departingUserId =
         view.state.values[USER_PICKER_BLOCK_ID]?.[USER_PICKER_ACTION_ID]?.selected_user;
@@ -51,6 +51,11 @@ export class OffboardingController extends BaseController {
         await this.#offboardingService.startOffboarding(departingUserId, initiatorId);
       } catch (error) {
         console.error('Failed to start offboarding:', error);
+        await client.chat.postEphemeral({
+          channel: body.user.id,
+          user: body.user.id,
+          text: 'Failed to start the offboarding process. Please try again or contact an admin.',
+        });
       }
     });
   }

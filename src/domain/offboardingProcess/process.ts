@@ -13,7 +13,7 @@ export class OffboardingProcess {
   #channelId: ChannelId | null; // populated by later state transitions (SA-3)
   #handoverDossier: string | null; // populated when dossier is generated (SA-4)
   #assignedReviewer: UserId | null; // assigned during review phase (SA-3)
-  readonly #tasks: unknown[];
+  readonly #tasks: never[]; // placeholder — replace with Task value object in SA-3
   readonly #domainEvents: DomainEvent[];
 
   // TypeScript `private` intentional: JS does not support `#` on constructors
