@@ -10,7 +10,7 @@ A Slack agent that fights knowledge loss caused by high volunteer turnover in NG
 2. **Phase 2 (Dynamic SOPs):** The agent monitors channels where newcomers ask questions. When a veteran gives a detailed answer about a procedure, the agent offers to save it as a Standard Operating Procedure (SOP), using the Real-Time Search API to link it to similar past questions.
 3. **Phase 3 (Knowledge Graph backend):** A graph database (e.g. Neo4j) maps who interacts with whom, which documents are shared, and which topics each person dominates. On a crisis the agent recommends experts ("based on 2 years of history, Laura and Carlos are the experts on this — contact them") rather than only searching documents.
 
-The codebase is currently an early scaffold: the hexagonal skeleton and Slack bootstrap exist, but business logic is not yet implemented.
+The codebase is currently an early scaffold: the hexagonal skeleton, Slack bootstrap, MCP client integration, and offboarding domain state machine exist, but business logic is not yet implemented.
 
 ## Commands
 
@@ -22,7 +22,7 @@ npm start        # node dist/index.js (run build first)
 
 There is **no test runner yet** — `npm test` is a placeholder that exits 1. There is no linter configured.
 
-The bot runs in **Slack Socket Mode** (`socketMode: true` in `appOptions.ts`), so local dev needs no public URL/tunnel. Requires a `.env` (see `.env.example`) with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN`, and optional `PORT` (default 3000).
+The bot runs in **Slack Socket Mode** (`socketMode: true` in `appOptions.ts`), so local dev needs no public URL/tunnel. Requires a `.env` (see `.env.example`) with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN`, and optionally `PORT` (default 3000), `MCP_SERVER_URL` (default `http://localhost:8000/mcp`), `CLIENT_NAME`, `CLIENT_VERSION`.
 
 ## Architecture
 
@@ -41,9 +41,25 @@ The bot runs in **Slack Socket Mode** (`socketMode: true` in `appOptions.ts`), s
 
 Dependency direction: `infrastructure` → `application` → `domain`. Outer layers depend on inner; inner layers never know about outer.
 
+### Wiring: AppFactory
+
+`infrastructure/appFactory.ts` is the composition root. It instantiates adapters, injects them into services, injects services into controllers, and registers controllers against the Bolt `App`. `src/index.ts` only calls `new AppFactory().createApp()` and starts it. Add new controllers/services here, not in `index.ts`.
+
+### MCP Integration
+
+`McpClient` (`infrastructure/adapters/mcpClient.ts`) connects via `StreamableHTTPClientTransport` to an external MCP server (Jira/Trello proxy). It is lazy-connected: `McpService` calls `ensureConnected()` before every operation. The port contract is `IMcpClient` (`application/ports/mcpClient.ts`). Slack commands (`/jira-login`, `/trello-login`, `/extract-jira-tasks`, `/extract-trello-tasks`) are registered in `McpPromptController`.
+
+### Offboarding Domain State Machine
+
+`domain/offboardingProcess/` models the lifecycle of an offboarding as a State pattern:
+
+- `OffboardingProcess` holds a `state: OffboardingProcessState`.
+- Concrete states: `NotStartedState`, `InProgressState`, `PendingRevisionState`, `FinishedState` — each returns its `OffboardingStateEnum` value.
+- State transitions are not yet wired to application services; this is the next Phase 1 implementation area.
+
 ### Conventions
 
 - **ESM + barrel files.** `"type": "module"` and every directory exposes a barrel `index.ts` that re-exports its contents (e.g. `infrastructure/index.ts` → `settings`, `settings/index.ts` → `constants` + `appOptions`). Import from the directory, not the deep file.
-- **Entry point** (`src/index.ts`) only wires `APP_OPTIONS` + `SETTINGS` into a Bolt `App` and starts it. Keep wiring here thin; put logic in the layers.
 - **Config flows through `settings/`.** `constants.ts` reads `process.env` (loads dotenv) into `SETTINGS`; `appOptions.ts` builds the Bolt `AppOptions`. Add new env vars here, not by reading `process.env` elsewhere.
 - **Strict TypeScript.** `strict`, plus `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Optional Slack tokens are spread conditionally (`...(x ? { token: x } : {})`) to satisfy `exactOptionalPropertyTypes` — follow that pattern rather than assigning `undefined`.
+- **Private class fields** use `#` syntax (not `private` keyword) — see `McpService`, `McpClient`, `McpPromptController` for the pattern.
