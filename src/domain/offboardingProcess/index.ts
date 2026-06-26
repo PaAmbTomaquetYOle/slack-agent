@@ -1,2 +1,2 @@
-export { OffboardingProcessState, NotStartedState, InProgressState, PendingRevisionState, FinishedState } from './state';
-export { OffboardingProcess } from './process';
+export { OffboardingProcessState, NotStartedState, InProgressState, PendingRevisionState, FinishedState } from './state/index.js';
+export { OffboardingProcess } from './process.js';

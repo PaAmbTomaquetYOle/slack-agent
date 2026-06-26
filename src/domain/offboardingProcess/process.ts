@@ -1,4 +1,4 @@
-import {OffboardingProcessState} from "./state";
+import { OffboardingProcessState } from './state/index.js';
 
 export class OffboardingProcess {
     private state: OffboardingProcessState;
