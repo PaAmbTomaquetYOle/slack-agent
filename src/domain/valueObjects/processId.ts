@@ -1,14 +1,18 @@
+import { DomainError } from '../exceptions/index.js';
+
 export class ProcessId {
   readonly #value: string;
 
   constructor(value: string) {
-    if (!value.trim()) throw new Error('ProcessId cannot be empty');
+    if (!value.trim()) throw new DomainError('ProcessId cannot be empty');
     this.#value = value;
   }
 
   get value(): string { return this.#value; }
 
   equals(other: ProcessId): boolean { return this.#value === other.#value; }
+
+  toString(): string { return this.#value; }
 
   static generate(): ProcessId { return new ProcessId(crypto.randomUUID()); }
 }

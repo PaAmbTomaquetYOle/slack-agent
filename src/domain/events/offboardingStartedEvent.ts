@@ -1,6 +1,5 @@
 import type { DomainEvent } from './domainEvent.js';
-import type { ProcessId } from '../valueObjects/index.js';
-import type { UserId } from '../valueObjects/index.js';
+import type { ProcessId, UserId } from '../valueObjects/index.js';
 
 export class OffboardingStartedEvent implements DomainEvent {
   readonly eventName = 'offboarding.started';
@@ -9,8 +8,8 @@ export class OffboardingStartedEvent implements DomainEvent {
   readonly departingUserId: UserId;
   readonly initiatorId: UserId;
 
-  constructor(processId: ProcessId, departingUserId: UserId, initiatorId: UserId) {
-    this.occurredOn = new Date();
+  constructor(processId: ProcessId, departingUserId: UserId, initiatorId: UserId, occurredOn: Date = new Date()) {
+    this.occurredOn = occurredOn;
     this.processId = processId;
     this.departingUserId = departingUserId;
     this.initiatorId = initiatorId;
