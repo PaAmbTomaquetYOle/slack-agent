@@ -1,12 +1,14 @@
-import type { DomainEvent } from '../../domain/index';
-import type { IMessagingPort } from '../ports/index';
-import type { OffboardingStartedEvent } from '../../domain/index';
+import type { DomainEvent } from '../../domain';
+import type { IMessagingPort } from '../ports';
+import { OffboardingStartedEvent } from '../../domain';
 
 export function createOffboardingStartedHandler(messagingPort: IMessagingPort) {
   return async (event: DomainEvent): Promise<void> => {
-    const e = event as OffboardingStartedEvent;
+    if (!(event instanceof OffboardingStartedEvent)) {
+      throw new Error(`Unexpected event type: ${event.eventName}`);
+    }
     await messagingPort.sendDirectMessage(
-      e.departingUserId.value,
+      event.departingUserId.value,
       `Hi! An offboarding process has been started for you. We'll guide you through the knowledge handover. :wave:`,
     );
   };

@@ -1,5 +1,4 @@
-import type { OffboardingProcess } from '../../domain';
-import type { ProcessId } from '../../domain';
+import type { OffboardingProcess, ProcessId } from '../../domain';
 
 export interface IOffboardingRepository {
   save(process: OffboardingProcess): Promise<void>;

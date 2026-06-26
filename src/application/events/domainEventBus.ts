@@ -1,8 +1,9 @@
-import type { DomainEvent } from '../../domain/index';
+import type { DomainEvent } from '../../domain';
+import type { IDomainEventBus } from './domainEventBusInterface';
 
 type DomainEventHandler = (event: DomainEvent) => Promise<void>;
 
-export class DomainEventBus {
+export class DomainEventBus implements IDomainEventBus {
   readonly #handlers: Map<string, DomainEventHandler[]> = new Map();
 
   subscribe(eventName: string, handler: DomainEventHandler): void {

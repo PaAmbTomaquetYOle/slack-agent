@@ -1,13 +1,13 @@
-import type { IOffboardingRepository } from '../ports/index';
-import type { IOffboardingService } from '../serviceInterfaces/index';
-import { DomainEventBus } from '../events/index';
-import { OffboardingProcess, ProcessId, UserId } from '../../domain/index';
+import type { IOffboardingRepository } from '../ports';
+import type { IOffboardingService } from '../serviceInterfaces';
+import type { IDomainEventBus } from '../events';
+import { OffboardingProcess, ProcessId, UserId } from '../../domain';
 
 export class OffboardingService implements IOffboardingService {
   readonly #repository: IOffboardingRepository;
-  readonly #eventBus: DomainEventBus;
+  readonly #eventBus: IDomainEventBus;
 
-  constructor(repository: IOffboardingRepository, eventBus: DomainEventBus) {
+  constructor(repository: IOffboardingRepository, eventBus: IDomainEventBus) {
     this.#repository = repository;
     this.#eventBus = eventBus;
   }
@@ -20,9 +20,7 @@ export class OffboardingService implements IOffboardingService {
     );
     await this.#repository.save(process);
     const events = process.pullDomainEvents();
-    for (const event of events) {
-      await this.#eventBus.publish(event);
-    }
+    await Promise.all(events.map(e => this.#eventBus.publish(e)));
     return process;
   }
 }
