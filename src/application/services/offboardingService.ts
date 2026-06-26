@@ -1,7 +1,7 @@
-import type { IOffboardingRepository } from '../ports/index.js';
-import type { IOffboardingService } from '../serviceInterfaces/index.js';
-import { DomainEventBus } from '../events/index.js';
-import { OffboardingProcess, ProcessId, UserId } from '../../domain/index.js';
+import type { IOffboardingRepository } from '../ports/index';
+import type { IOffboardingService } from '../serviceInterfaces/index';
+import { DomainEventBus } from '../events/index';
+import { OffboardingProcess, ProcessId, UserId } from '../../domain/index';
 
 export class OffboardingService implements IOffboardingService {
   readonly #repository: IOffboardingRepository;

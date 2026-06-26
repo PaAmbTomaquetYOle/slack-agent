@@ -1,6 +1,6 @@
-import type { DomainEvent } from '../../domain/index.js';
-import type { IMessagingPort } from '../ports/index.js';
-import type { OffboardingStartedEvent } from '../../domain/index.js';
+import type { DomainEvent } from '../../domain/index';
+import type { IMessagingPort } from '../ports/index';
+import type { OffboardingStartedEvent } from '../../domain/index';
 
 export function createOffboardingStartedHandler(messagingPort: IMessagingPort) {
   return async (event: DomainEvent): Promise<void> => {

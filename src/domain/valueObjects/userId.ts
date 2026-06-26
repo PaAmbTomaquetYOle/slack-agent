@@ -1,4 +1,4 @@
-import { DomainError } from '../exceptions/index.js';
+import { DomainError } from '../exceptions/index';
 
 export class UserId {
   readonly #value: string;

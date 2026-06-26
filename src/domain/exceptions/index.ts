@@ -1,2 +1,2 @@
-export { DomainError } from './domainError.js';
-export { InvalidStateTransitionError } from './invalidStateTransitionError.js';
+export { DomainError } from './domainError';
+export { InvalidStateTransitionError } from './invalidStateTransitionError';

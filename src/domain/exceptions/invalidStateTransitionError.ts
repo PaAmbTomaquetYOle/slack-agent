@@ -1,4 +1,4 @@
-import { DomainError } from './domainError.js';
+import { DomainError } from './domainError';
 
 export class InvalidStateTransitionError extends DomainError {
   constructor(fromState: string, action: string) {

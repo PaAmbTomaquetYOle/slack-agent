@@ -1,2 +1,2 @@
-export type { IMcpService } from './mcpService.js';
-export type { IOffboardingService } from './offboardingService.js';
+export type { IMcpService } from './mcpService';
+export type { IOffboardingService } from './offboardingService';

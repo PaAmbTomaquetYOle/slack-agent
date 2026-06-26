@@ -1,3 +1,3 @@
-export { UserId } from './userId.js';
-export { ProcessId } from './processId.js';
-export { ChannelId } from './channelId.js';
+export { UserId } from './userId';
+export { ProcessId } from './processId';
+export { ChannelId } from './channelId';

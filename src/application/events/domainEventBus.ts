@@ -1,4 +1,4 @@
-import type { DomainEvent } from '../../domain/index.js';
+import type { DomainEvent } from '../../domain/index';
 
 type DomainEventHandler = (event: DomainEvent) => Promise<void>;
 

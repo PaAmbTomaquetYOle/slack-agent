@@ -1,8 +1,8 @@
-import type { DomainEvent } from '../events/index.js';
-import { OffboardingStartedEvent } from '../events/index.js';
-import { NotStartedState } from './state/index.js';
-import type { OffboardingProcessState } from './state/index.js';
-import type { ProcessId, UserId, ChannelId } from '../valueObjects/index.js';
+import type { DomainEvent } from '../events/index';
+import { OffboardingStartedEvent } from '../events/index';
+import { NotStartedState } from './state/index';
+import type { OffboardingProcessState } from './state/index';
+import type { ProcessId, UserId, ChannelId } from '../valueObjects/index';
 
 export class OffboardingProcess {
   readonly #id: ProcessId;

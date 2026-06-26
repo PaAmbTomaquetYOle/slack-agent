@@ -1,5 +1,5 @@
-import type { DomainEvent } from './domainEvent.js';
-import type { ProcessId, UserId } from '../valueObjects/index.js';
+import type { DomainEvent } from './domainEvent';
+import type { ProcessId, UserId } from '../valueObjects/index';
 
 export class OffboardingStartedEvent implements DomainEvent {
   readonly eventName = 'offboarding.started';

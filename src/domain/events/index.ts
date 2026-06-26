@@ -1,2 +1,2 @@
-export type { DomainEvent } from './domainEvent.js';
-export { OffboardingStartedEvent } from './offboardingStartedEvent.js';
+export type { DomainEvent } from './domainEvent';
+export { OffboardingStartedEvent } from './offboardingStartedEvent';

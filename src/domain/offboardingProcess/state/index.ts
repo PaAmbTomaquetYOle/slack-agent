@@ -1,5 +1,5 @@
-export { OffboardingProcessState } from './state.js';
-export { NotStartedState } from './notStarted.js';
-export { InProgressState } from './inProgress.js';
-export { PendingRevisionState } from './pendingRevision.js';
-export { FinishedState } from './finished.js';
+export { OffboardingProcessState } from './state';
+export { NotStartedState } from './notStarted';
+export { InProgressState } from './inProgress';
+export { PendingRevisionState } from './pendingRevision';
+export { FinishedState } from './finished';
