@@ -2,7 +2,8 @@ import type { DomainEvent } from './domainEvent';
 import type { ProcessId, UserId } from '../valueObjects/index';
 
 export class OffboardingStartedEvent implements DomainEvent {
-  readonly eventName = 'offboarding.started';
+  static readonly EVENT_NAME = 'offboarding.started' as const;
+  readonly eventName = OffboardingStartedEvent.EVENT_NAME;
   readonly occurredOn: Date;
   readonly processId: ProcessId;
   readonly departingUserId: UserId;

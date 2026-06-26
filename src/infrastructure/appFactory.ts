@@ -7,6 +7,7 @@ import { InMemoryOffboardingRepository } from './repositories';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import { McpService, OffboardingService } from '../application/services';
 import { DomainEventBus, createOffboardingStartedHandler } from '../application/events';
+import { OffboardingStartedEvent } from '../domain';
 
 export class AppFactory {
   private createMcpClient(): IMcpClient {
@@ -28,7 +29,7 @@ export class AppFactory {
     const repository: IOffboardingRepository = new InMemoryOffboardingRepository();
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const eventBus = new DomainEventBus();
-    eventBus.subscribe('offboarding.started', createOffboardingStartedHandler(messagingPort));
+    eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus);
     new OffboardingController(offboardingService).register(app);
 
