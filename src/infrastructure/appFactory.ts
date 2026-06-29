@@ -2,7 +2,7 @@ import { App } from '@slack/bolt';
 import type { IMcpClient, IOffboardingRepository, IMessagingPort } from '../application/ports';
 import type { IMcpService, IOffboardingService } from '../application/serviceInterfaces';
 import { McpClient, SlackMessagingAdapter } from './adapters';
-import { McpPromptController, OffboardingController } from './controllers';
+import { McpPromptController, OffboardingController, AppMentionController } from './controllers';
 import { InMemoryOffboardingRepository } from './repositories';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import { McpService, OffboardingService } from '../application/services';
@@ -32,6 +32,7 @@ export class AppFactory {
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus);
     new OffboardingController(offboardingService).register(app);
+    new AppMentionController().register(app);
 
     return app;
   }
