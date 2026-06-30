@@ -1,4 +1,4 @@
-import { InvalidStateTransitionError } from '../../exceptions/index';
+import { InvalidStateTransitionError } from '../../exceptions';
 
 export abstract class OffboardingProcessState {
   abstract get stateName(): string;
@@ -13,5 +13,9 @@ export abstract class OffboardingProcessState {
 
   complete(): OffboardingProcessState {
     throw new InvalidStateTransitionError(this.stateName, 'complete');
+  }
+
+  cancel(): OffboardingProcessState {
+    throw new InvalidStateTransitionError(this.stateName, 'cancel');
   }
 }
