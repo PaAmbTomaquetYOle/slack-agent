@@ -1,16 +1,16 @@
 import { App } from '@slack/bolt';
-import type { IMcpClient, IOffboardingRepository, IMessagingPort } from '../application/ports';
+import type { IOffboardingProcessRepository, IInterviewRepository, IDossierRepository, IMessagingPort } from '../application/ports';
 import type { IMcpService, IOffboardingService } from '../application/serviceInterfaces';
-import { McpClient, SlackMessagingAdapter } from './adapters';
+import { McpClient, SlackMessagingAdapter, HttpOffboardingProcessRepository, HttpInterviewRepository, HttpDossierRepository } from './adapters';
 import { McpPromptController, OffboardingController, AppMentionController } from './controllers';
-import { InMemoryOffboardingRepository } from './repositories';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import { McpService, OffboardingService } from '../application/services';
 import { DomainEventBus, createOffboardingStartedHandler } from '../application/events';
 import { OffboardingStartedEvent } from '../domain';
+import { createBackendHttpClient } from './http';
 
 export class AppFactory {
-  private createMcpClient(): IMcpClient {
+  private createMcpClient() {
     return new McpClient(SETTINGS.MCP_SERVER_URL);
   }
 
@@ -25,8 +25,13 @@ export class AppFactory {
     const mcpService = this.createMcpService();
     new McpPromptController(mcpService).register(app);
 
+    // HTTP client (shared)
+    const httpClient = createBackendHttpClient();
+
     // Offboarding wiring
-    const repository: IOffboardingRepository = new InMemoryOffboardingRepository();
+    const repository: IOffboardingProcessRepository = new HttpOffboardingProcessRepository(httpClient);
+    const interviewRepository: IInterviewRepository = new HttpInterviewRepository(httpClient);
+    const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const eventBus = new DomainEventBus();
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));

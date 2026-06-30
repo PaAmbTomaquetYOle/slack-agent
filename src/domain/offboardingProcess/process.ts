@@ -1,8 +1,8 @@
-import type { DomainEvent } from '../events/index';
-import { OffboardingStartedEvent } from '../events/index';
-import { NotStartedState } from './state/index';
-import type { OffboardingProcessState } from './state/index';
-import type { ProcessId, UserId, ChannelId } from '../valueObjects/index';
+import type { DomainEvent } from '../events';
+import { OffboardingStartedEvent } from '../events';
+import { NotStartedState, InProgressState, PendingRevisionState, FinishedState, CancelledState } from './state';
+import type { OffboardingProcessState } from './state';
+import type { ProcessId, UserId, ChannelId, InterviewId, DossierId } from '../valueObjects';
 
 export class OffboardingProcess {
   readonly #id: ProcessId;
@@ -15,6 +15,8 @@ export class OffboardingProcess {
   #assignedReviewer: UserId | null; // assigned during review phase (SA-3)
   readonly #tasks: never[]; // placeholder — replace with Task value object in SA-3
   readonly #domainEvents: DomainEvent[];
+  #interviewId: InterviewId | null;
+  #dossierId: DossierId | null;
 
   // TypeScript `private` intentional: JS does not support `#` on constructors
   private constructor(
@@ -33,6 +35,8 @@ export class OffboardingProcess {
     this.#assignedReviewer = null;
     this.#tasks = [];
     this.#domainEvents = [];
+    this.#interviewId = null;
+    this.#dossierId = null;
   }
 
   static create(
@@ -48,11 +52,45 @@ export class OffboardingProcess {
     return process;
   }
 
+  static fromBackend(params: {
+    id: ProcessId;
+    departingUserId: UserId;
+    initiatorId: UserId;
+    createdAt: Date;
+    state: string;
+    interviewId: InterviewId | null;
+    dossierId: DossierId | null;
+  }): OffboardingProcess {
+    const process = new OffboardingProcess(
+      params.id,
+      params.departingUserId,
+      params.initiatorId,
+      params.createdAt,
+    );
+    process.#state = OffboardingProcess.#stateFromName(params.state);
+    process.#interviewId = params.interviewId;
+    process.#dossierId = params.dossierId;
+    return process;
+  }
+
+  static #stateFromName(name: string): OffboardingProcessState {
+    switch (name) {
+      case 'not_started': return new NotStartedState();
+      case 'in_progress': return new InProgressState();
+      case 'pending_revision': return new PendingRevisionState();
+      case 'finished': return new FinishedState();
+      case 'cancelled': return new CancelledState();
+      default: throw new Error(`Unknown offboarding process state: ${name}`);
+    }
+  }
+
   get id(): ProcessId { return this.#id; }
   get departingUserId(): UserId { return this.#departingUserId; }
   get initiatorId(): UserId { return this.#initiatorId; }
   get createdAt(): Date { return new Date(this.#createdAt); }
   get stateName(): string { return this.#state.stateName; }
+  get interviewId(): InterviewId | null { return this.#interviewId; }
+  get dossierId(): DossierId | null { return this.#dossierId; }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this.#domainEvents];

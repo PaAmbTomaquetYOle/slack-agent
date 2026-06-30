@@ -1,26 +1,29 @@
-import type { IOffboardingRepository } from '../ports';
+import type { IOffboardingProcessRepository } from '../ports';
 import type { IOffboardingService } from '../serviceInterfaces';
 import type { IDomainEventBus } from '../events';
-import { OffboardingProcess, ProcessId, UserId } from '../../domain';
+import type { OffboardingProcess } from '../../domain';
+import { UserId, OffboardingStartedEvent } from '../../domain';
 
 export class OffboardingService implements IOffboardingService {
-  readonly #repository: IOffboardingRepository;
+  readonly #repository: IOffboardingProcessRepository;
   readonly #eventBus: IDomainEventBus;
 
-  constructor(repository: IOffboardingRepository, eventBus: IDomainEventBus) {
+  constructor(repository: IOffboardingProcessRepository, eventBus: IDomainEventBus) {
     this.#repository = repository;
     this.#eventBus = eventBus;
   }
 
   async startOffboarding(departingUserId: string, initiatorId: string): Promise<OffboardingProcess> {
-    const process = OffboardingProcess.create(
-      ProcessId.generate(),
+    const process = await this.#repository.create(
       new UserId(departingUserId),
       new UserId(initiatorId),
     );
-    await this.#repository.save(process);
-    const events = process.pullDomainEvents();
-    await Promise.all(events.map(e => this.#eventBus.publish(e)));
+    const event = new OffboardingStartedEvent(
+      process.id,
+      process.departingUserId,
+      process.initiatorId,
+    );
+    await this.#eventBus.publish(event);
     return process;
   }
 }
