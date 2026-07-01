@@ -21,11 +21,18 @@ export class HttpOffboardingProcessRepository implements IOffboardingProcessRepo
     this.#http = http;
   }
 
-  async create(departingUserId: UserId, initiatorId: UserId): Promise<OffboardingProcess> {
+  async create(
+    departingUserId: UserId,
+    initiatorId: UserId,
+    employeeName?: string,
+    managerName?: string,
+  ): Promise<OffboardingProcess> {
     try {
       const response = await this.#http.post<BackendOffboardingResponse>('/offboarding', {
         employee_id: departingUserId.value,
         manager_id: initiatorId.value,
+        ...(employeeName ? { employee_name: employeeName } : {}),
+        ...(managerName ? { manager_name: managerName } : {}),
       });
       return mapOffboardingResponse(response.data);
     } catch (error) {
