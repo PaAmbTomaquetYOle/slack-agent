@@ -1,7 +1,7 @@
 import { App } from '@slack/bolt';
-import type { IOffboardingProcessRepository, IInterviewRepository, IDossierRepository, IMessagingPort } from '../application/ports';
+import type { IOffboardingProcessRepository, IInterviewRepository, IDossierRepository, IMessagingPort, IUserInfoProvider } from '../application/ports';
 import type { IMcpService, IOffboardingService } from '../application/serviceInterfaces';
-import { McpClient, SlackMessagingAdapter, HttpOffboardingProcessRepository, HttpInterviewRepository, HttpDossierRepository } from './adapters';
+import { McpClient, SlackMessagingAdapter, SlackUserInfoProvider, HttpOffboardingProcessRepository, HttpInterviewRepository, HttpDossierRepository } from './adapters';
 import { McpPromptController, OffboardingController, AppMentionController } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import { McpService, OffboardingService } from '../application/services';
@@ -33,9 +33,10 @@ export class AppFactory {
     const interviewRepository: IInterviewRepository = new HttpInterviewRepository(httpClient);
     const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
+    const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
     const eventBus = new DomainEventBus();
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
-    const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus);
+    const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
 
