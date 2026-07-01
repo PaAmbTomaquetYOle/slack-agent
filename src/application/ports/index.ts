@@ -4,3 +4,4 @@ export type { IOffboardingProcessRepository } from './offboardingRepository';
 export type { IInterviewRepository } from './interviewRepository';
 export type { IDossierRepository } from './dossierRepository';
 export type { IMessagingPort } from './messagingPort';
+export type { IUserInfoProvider } from './userInfoProvider';

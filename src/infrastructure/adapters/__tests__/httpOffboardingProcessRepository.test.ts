@@ -47,6 +47,17 @@ describe('HttpOffboardingProcessRepository', () => {
       expect(result.id.value).toBe('proc-1');
       expect(result.departingUserId.value).toBe('emp-1');
     });
+
+    it('includes employee_name and manager_name when provided', async () => {
+      vi.mocked(http.post).mockResolvedValue(axiosResponse(sampleResponse, 201));
+      await repo.create(new UserId('emp-1'), new UserId('mgr-1'), 'Juan Perez', 'Ana Gomez');
+      expect(http.post).toHaveBeenCalledWith('/offboarding', {
+        employee_id: 'emp-1',
+        manager_id: 'mgr-1',
+        employee_name: 'Juan Perez',
+        manager_name: 'Ana Gomez',
+      });
+    });
   });
 
   describe('findById()', () => {

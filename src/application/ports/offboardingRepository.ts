@@ -6,7 +6,12 @@ export interface IOffboardingRepository {
 }
 
 export interface IOffboardingProcessRepository {
-  create(departingUserId: UserId, initiatorId: UserId): Promise<OffboardingProcess>;
+  create(
+    departingUserId: UserId,
+    initiatorId: UserId,
+    employeeName?: string,
+    managerName?: string,
+  ): Promise<OffboardingProcess>;
   findById(id: ProcessId): Promise<OffboardingProcess | null>;
   findAll(filters?: { employeeId?: string; managerId?: string; state?: string }): Promise<{ items: OffboardingProcess[]; count: number }>;
   delete(id: ProcessId): Promise<void>;
