@@ -1,16 +1,18 @@
 import { App } from '@slack/bolt';
 import { Kafka } from 'kafkajs';
 import type { Producer } from 'kafkajs';
+import { GoogleGenAI } from '@google/genai';
 import type {
   IOffboardingProcessRepository,
   IInterviewRepository,
+  IInterviewAgent,
   IDossierRepository,
   IMessagingPort,
   IUserInfoProvider,
   IEventPublisher,
   IEventConsumer,
 } from '../application/ports';
-import type { IMcpService, IOffboardingService } from '../application/serviceInterfaces';
+import type { IMcpService, IOffboardingService, IInterviewService } from '../application/serviceInterfaces';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -18,25 +20,27 @@ import {
   HttpOffboardingProcessRepository,
   HttpInterviewRepository,
   HttpDossierRepository,
+  GeminiInterviewAgent,
   NoOpEventPublisher,
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
   KafkaEventConsumer,
 } from './adapters';
-import { McpPromptController, OffboardingController, AppMentionController } from './controllers';
+import { McpPromptController, OffboardingController, AppMentionController, InterviewController } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
-import { McpService, OffboardingService } from '../application/services';
+import { McpService, OffboardingService, InterviewService } from '../application/services';
 import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
+  createKafkaInterviewCompletedForwarder,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
   OffboardingCompletedHandler,
   InterviewCompletedHandler,
   DossierGeneratedHandler,
 } from '../application/events';
-import { OffboardingStartedEvent, INBOUND_EVENT_TYPES } from '../domain';
+import { OffboardingStartedEvent, InterviewCompletedEvent, INBOUND_EVENT_TYPES } from '../domain';
 import { createBackendHttpClient } from './http';
 
 interface EventInfrastructure {
@@ -51,6 +55,11 @@ export class AppFactory {
 
   private createMcpService(): IMcpService {
     return new McpService(this.createMcpClient());
+  }
+
+  private createInterviewAgent(): IInterviewAgent {
+    const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
+    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
   }
 
   private async createEventInfrastructure(
@@ -124,9 +133,22 @@ export class AppFactory {
     const eventBus = new DomainEventBus();
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
+    eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
+
+    // Guided interview wiring
+    const interviewAgent = this.createInterviewAgent();
+    const interviewService: IInterviewService = new InterviewService(
+      repository,
+      interviewRepository,
+      interviewAgent,
+      userInfoProvider,
+      messagingPort,
+      eventBus,
+    );
+    new InterviewController(interviewService).register(app);
 
     return { app, eventConsumer };
   }

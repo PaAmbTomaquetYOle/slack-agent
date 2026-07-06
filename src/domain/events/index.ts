@@ -1,5 +1,6 @@
 export type { DomainEvent } from './domainEvent';
 export { OffboardingStartedEvent } from './offboardingStartedEvent';
+export { InterviewCompletedEvent } from './interviewCompletedEvent';
 export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
 export type {
   OffboardingTriggeredPayload,

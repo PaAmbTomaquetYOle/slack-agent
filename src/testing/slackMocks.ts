@@ -41,9 +41,18 @@ export function makeAppMock() {
     command: vi.fn(record('command')),
     view: vi.fn(record('view')),
     action: vi.fn(record('action')),
+    // app.message() takes an optional pattern before the handler; we only use
+    // the no-pattern form, so the last argument is always the handler.
+    message: vi.fn((...args: unknown[]) => {
+      handlers.set('message:*', args[args.length - 1] as Handler);
+    }),
   } as unknown as App;
 
-  const trigger = async (kind: 'event' | 'command' | 'view' | 'action', key: string, args: unknown): Promise<void> => {
+  const trigger = async (
+    kind: 'event' | 'command' | 'view' | 'action' | 'message',
+    key: string,
+    args: unknown,
+  ): Promise<void> => {
     const handler = handlers.get(`${kind}:${key}`);
     if (!handler) throw new Error(`No handler registered for ${kind}:${key}`);
     await handler(args);
