@@ -5,3 +5,6 @@ export type { IInterviewRepository } from './interviewRepository';
 export type { IDossierRepository } from './dossierRepository';
 export type { IMessagingPort } from './messagingPort';
 export type { IUserInfoProvider } from './userInfoProvider';
+export type { IEventPublisher } from './eventPublisher';
+export type { IEventConsumer } from './eventConsumer';
+export type { IDeadLetterQueue } from './deadLetterQueue';
