@@ -12,6 +12,14 @@ const CLIENT_VERSION = process.env.CLIENT_VERSION ?? '0.1.0';
 const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8001/api/v1';
 const BACKEND_JWT_SECRET = process.env.BACKEND_JWT_SECRET ?? '';
 const BACKEND_JWT_ISSUER = process.env.BACKEND_JWT_ISSUER ?? 'slack-agent';
+// Empty KAFKA_BROKERS disables Kafka entirely: publisher falls back to a
+// no-op and no consumer is started, so the Slack bot works without it.
+const KAFKA_BROKERS = process.env.KAFKA_BROKERS ?? '';
+const KAFKA_CLIENT_ID = process.env.KAFKA_CLIENT_ID ?? 'slack-agent';
+const KAFKA_OUTBOUND_TOPIC_PREFIX = process.env.KAFKA_OUTBOUND_TOPIC_PREFIX ?? 'slack-agent';
+const KAFKA_INBOUND_TOPIC_PREFIX = process.env.KAFKA_INBOUND_TOPIC_PREFIX ?? 'offboarding';
+const KAFKA_CONSUMER_GROUP_ID = process.env.KAFKA_CONSUMER_GROUP_ID ?? 'slack-agent-consumer';
+const KAFKA_DLQ_TOPIC = process.env.KAFKA_DLQ_TOPIC ?? 'slack-agent.dlq';
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -23,5 +31,11 @@ export const SETTINGS = {
   CLIENT_VERSION,
   BACKEND_API_URL,
   BACKEND_JWT_SECRET,
-  BACKEND_JWT_ISSUER
+  BACKEND_JWT_ISSUER,
+  KAFKA_BROKERS,
+  KAFKA_CLIENT_ID,
+  KAFKA_OUTBOUND_TOPIC_PREFIX,
+  KAFKA_INBOUND_TOPIC_PREFIX,
+  KAFKA_CONSUMER_GROUP_ID,
+  KAFKA_DLQ_TOPIC
 };

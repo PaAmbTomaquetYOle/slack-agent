@@ -1,13 +1,48 @@
 import { App } from '@slack/bolt';
-import type { IOffboardingProcessRepository, IInterviewRepository, IDossierRepository, IMessagingPort, IUserInfoProvider } from '../application/ports';
+import { Kafka } from 'kafkajs';
+import type { Producer } from 'kafkajs';
+import type {
+  IOffboardingProcessRepository,
+  IInterviewRepository,
+  IDossierRepository,
+  IMessagingPort,
+  IUserInfoProvider,
+  IEventPublisher,
+  IEventConsumer,
+} from '../application/ports';
 import type { IMcpService, IOffboardingService } from '../application/serviceInterfaces';
-import { McpClient, SlackMessagingAdapter, SlackUserInfoProvider, HttpOffboardingProcessRepository, HttpInterviewRepository, HttpDossierRepository } from './adapters';
+import {
+  McpClient,
+  SlackMessagingAdapter,
+  SlackUserInfoProvider,
+  HttpOffboardingProcessRepository,
+  HttpInterviewRepository,
+  HttpDossierRepository,
+  NoOpEventPublisher,
+  KafkaEventPublisher,
+  KafkaDeadLetterQueue,
+  KafkaEventConsumer,
+} from './adapters';
 import { McpPromptController, OffboardingController, AppMentionController } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import { McpService, OffboardingService } from '../application/services';
-import { DomainEventBus, createOffboardingStartedHandler } from '../application/events';
-import { OffboardingStartedEvent } from '../domain';
+import {
+  DomainEventBus,
+  createOffboardingStartedHandler,
+  createKafkaOffboardingStartedForwarder,
+  InboundEventDispatcher,
+  OffboardingStateChangedHandler,
+  OffboardingCompletedHandler,
+  InterviewCompletedHandler,
+  DossierGeneratedHandler,
+} from '../application/events';
+import { OffboardingStartedEvent, INBOUND_EVENT_TYPES } from '../domain';
 import { createBackendHttpClient } from './http';
+
+interface EventInfrastructure {
+  publisher: IEventPublisher;
+  consumer: IEventConsumer | null;
+}
 
 export class AppFactory {
   private createMcpClient() {
@@ -18,7 +53,56 @@ export class AppFactory {
     return new McpService(this.createMcpClient());
   }
 
-  createApp(): App {
+  private async createEventInfrastructure(
+    repository: IOffboardingProcessRepository,
+    messagingPort: IMessagingPort,
+  ): Promise<EventInfrastructure> {
+    if (!SETTINGS.KAFKA_BROKERS) {
+      console.warn('KAFKA_BROKERS not set; Kafka is disabled, events will not be published or consumed.');
+      return { publisher: new NoOpEventPublisher(), consumer: null };
+    }
+
+    const kafka = new Kafka({
+      clientId: SETTINGS.KAFKA_CLIENT_ID,
+      brokers: SETTINGS.KAFKA_BROKERS.split(','),
+    });
+
+    let producer: Producer;
+    try {
+      producer = kafka.producer();
+      await producer.connect();
+    } catch (error) {
+      console.warn('Failed to connect Kafka producer; falling back to no-op publisher.', error);
+      return { publisher: new NoOpEventPublisher(), consumer: null };
+    }
+    const publisher: IEventPublisher = new KafkaEventPublisher(producer, SETTINGS.KAFKA_OUTBOUND_TOPIC_PREFIX);
+
+    let consumer: IEventConsumer | null = null;
+    try {
+      const dlq = new KafkaDeadLetterQueue(producer, SETTINGS.KAFKA_DLQ_TOPIC);
+      const dispatcher = new InboundEventDispatcher([
+        new OffboardingStateChangedHandler(messagingPort),
+        new InterviewCompletedHandler(messagingPort, repository),
+        new DossierGeneratedHandler(messagingPort, repository),
+        new OffboardingCompletedHandler(messagingPort),
+      ]);
+      const topics = INBOUND_EVENT_TYPES.map((eventType) => `${SETTINGS.KAFKA_INBOUND_TOPIC_PREFIX}.${eventType}`);
+      const kafkaConsumer = new KafkaEventConsumer(
+        kafka.consumer({ groupId: SETTINGS.KAFKA_CONSUMER_GROUP_ID }),
+        dispatcher,
+        dlq,
+        topics,
+      );
+      await kafkaConsumer.start();
+      consumer = kafkaConsumer;
+    } catch (error) {
+      console.warn('Failed to start Kafka consumer; inbound events will not be processed.', error);
+    }
+
+    return { publisher, consumer };
+  }
+
+  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null }> {
     const app = new App(APP_OPTIONS);
 
     // MCP wiring (existing)
@@ -34,12 +118,16 @@ export class AppFactory {
     const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
+
+    const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(repository, messagingPort);
+
     const eventBus = new DomainEventBus();
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
+    eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
 
-    return app;
+    return { app, eventConsumer };
   }
 }

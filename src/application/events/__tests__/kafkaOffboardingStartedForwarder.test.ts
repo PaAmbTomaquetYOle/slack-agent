@@ -1,0 +1,28 @@
+import { describe, it, expect, vi } from 'vitest';
+import { createKafkaOffboardingStartedForwarder } from '../kafkaOffboardingStartedForwarder';
+import type { IEventPublisher } from '../../ports';
+import { OffboardingStartedEvent, ProcessId, UserId, OFFBOARDING_TRIGGERED } from '../../../domain';
+
+function makePublisherMock(): IEventPublisher {
+  return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };
+}
+
+describe('createKafkaOffboardingStartedForwarder', () => {
+  it('forwards OffboardingStartedEvent as an offboarding.triggered Kafka event', async () => {
+    const publisher = makePublisherMock();
+    const forward = createKafkaOffboardingStartedForwarder(publisher);
+    const event = new OffboardingStartedEvent(new ProcessId('proc-1'), new UserId('emp-1'), new UserId('mgr-1'));
+
+    await forward(event);
+
+    expect(publisher.publish).toHaveBeenCalledWith({
+      eventType: OFFBOARDING_TRIGGERED,
+      payload: { process_id: 'proc-1', employee_id: 'emp-1', manager_id: 'mgr-1' },
+    });
+  });
+
+  it('throws on an unexpected event type', async () => {
+    const forward = createKafkaOffboardingStartedForwarder(makePublisherMock());
+    await expect(forward({ eventName: 'other.event', occurredOn: new Date() })).rejects.toThrow();
+  });
+});
