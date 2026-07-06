@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Vision: BrainTrust
+## Project Vision: OffboardMe
 
-A Slack agent that fights knowledge loss caused by high volunteer turnover in NGOs. When a key volunteer leaves, operational knowledge (how to run the food bank, who to contact at city hall) walks out the door. The agent captures and retrieves it. Planned in three phases:
+A Slack agent that fights knowledge loss caused by high employee turnover. When a key person leaves, operational knowledge walks out the door. The agent captures and retrieves it. Planned in three phases:
 
 1. **Phase 1 (MVP — Smart Offboarding):** When a volunteer announces departure, an MCP server pulls their open tasks from Jira/Trello. The agent runs a guided interview over Slack to document the state of each item, then Slack AI summarizes it into a "Handover Dossier."
 2. **Phase 2 (Dynamic SOPs):** The agent monitors channels where newcomers ask questions. When a veteran gives a detailed answer about a procedure, the agent offers to save it as a Standard Operating Procedure (SOP), using the Real-Time Search API to link it to similar past questions.
