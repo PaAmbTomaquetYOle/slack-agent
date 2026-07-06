@@ -202,10 +202,18 @@ describe('InterviewService', () => {
     });
   });
 
-  it('completes the interview and publishes InterviewCompletedEvent when the agent reports all topics covered', async () => {
+  it('completes the interview and publishes InterviewCompletedEvent when all 5 topics end up covered', async () => {
     const process = OffboardingProcess.create(ProcessId.generate(), new UserId('U-DEPARTING'), new UserId('U-INITIATOR'));
+    const priorTurns = [
+      makeTurn({ order: 0, topic: 'current_projects' }),
+      makeTurn({ order: 1, topic: 'key_contacts' }),
+      makeTurn({ order: 2, topic: 'undocumented_processes' }),
+      makeTurn({ order: 3, topic: 'access_credentials' }),
+    ];
     vi.mocked(offboardingProcessRepository.findAll).mockResolvedValue({ items: [process], count: 1 });
-    vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(makeInterview({ processId: process.id, turns: [] }));
+    vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(
+      makeInterview({ processId: process.id, turns: priorTurns }),
+    );
     vi.mocked(interviewAgent.nextTurn).mockResolvedValue({
       replyText: 'Thanks, that covers everything!',
       topic: 'successor_recommendations',
@@ -216,10 +224,7 @@ describe('InterviewService', () => {
     const completedInterview = makeInterview({
       processId: process.id,
       id: new InterviewId('int-1'),
-      turns: [
-        makeTurn({ order: 0, topic: 'successor_recommendations' }),
-        makeTurn({ order: 1, speakerRole: 'interviewer', turnType: 'question', content: 'Thanks, that covers everything!' }),
-      ],
+      turns: [...priorTurns, makeTurn({ order: 4, topic: 'successor_recommendations' })],
     });
     vi.mocked(interviewRepository.addTurns).mockResolvedValue(completedInterview);
 
@@ -231,6 +236,48 @@ describe('InterviewService', () => {
     expect(publishedEvent.processId).toBe(process.id);
     expect(publishedEvent.interviewId).toBe(completedInterview.id);
     expect(publishedEvent.turns).toBe(completedInterview.turns);
+  });
+
+  it('does not complete the interview when the agent claims completion but topics remain uncovered', async () => {
+    const process = OffboardingProcess.create(ProcessId.generate(), new UserId('U-DEPARTING'), new UserId('U-INITIATOR'));
+    vi.mocked(offboardingProcessRepository.findAll).mockResolvedValue({ items: [process], count: 1 });
+    vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(makeInterview({ processId: process.id, turns: [] }));
+    vi.mocked(interviewAgent.nextTurn).mockResolvedValue({
+      replyText: 'Great, all done!',
+      topic: 'current_projects',
+      sentiment: 'positive',
+      answerText: 'Talked about current projects',
+      isComplete: true, // hallucinated: 4 other topics were never covered
+    });
+    vi.mocked(interviewRepository.addTurns).mockResolvedValue(
+      makeInterview({ processId: process.id, turns: [makeTurn({ order: 0, topic: 'current_projects' })] }),
+    );
+
+    await service.handleIncomingDirectMessage('U-DEPARTING', 'We migrated the CRM.');
+
+    expect(interviewRepository.complete).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'Great, all done!');
+  });
+
+  it('propagates errors that happen after a successful agent call instead of duplicating the interviewee turn', async () => {
+    const process = OffboardingProcess.create(ProcessId.generate(), new UserId('U-DEPARTING'), new UserId('U-INITIATOR'));
+    vi.mocked(offboardingProcessRepository.findAll).mockResolvedValue({ items: [process], count: 1 });
+    vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(makeInterview({ processId: process.id, turns: [] }));
+    vi.mocked(interviewAgent.nextTurn).mockResolvedValue({
+      replyText: 'What projects are you working on?',
+      topic: 'current_projects',
+      sentiment: 'neutral',
+      answerText: 'Greeted the bot',
+      isComplete: false,
+    });
+    vi.mocked(interviewRepository.addTurns).mockRejectedValue(new Error('backend unavailable'));
+
+    await expect(service.handleIncomingDirectMessage('U-DEPARTING', 'Hi there')).rejects.toThrow('backend unavailable');
+
+    expect(interviewRepository.addTurns).toHaveBeenCalledTimes(1);
+    expect(messagingPort.sendDirectMessage).not.toHaveBeenCalled();
+    expect(interviewRepository.complete).not.toHaveBeenCalled();
   });
 
   it('persists the interviewee turn but sends a fallback reply when the agent call fails', async () => {

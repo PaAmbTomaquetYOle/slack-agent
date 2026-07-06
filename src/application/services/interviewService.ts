@@ -2,6 +2,7 @@ import type {
   IOffboardingProcessRepository,
   IInterviewRepository,
   IInterviewAgent,
+  InterviewAgentTurnResult,
   IUserInfoProvider,
   IMessagingPort,
 } from '../ports';
@@ -59,47 +60,54 @@ export class InterviewService implements IInterviewService {
       answerText: null,
     };
 
+    let result: InterviewAgentTurnResult;
     try {
-      const result = await this.#interviewAgent.nextTurn({
+      result = await this.#interviewAgent.nextTurn({
         employeeName,
         pendingTopics,
         turns: interview.turns,
         incomingMessage: text,
       });
-
-      const classifiedIntervieweeTurn: InterviewTurn = {
-        ...intervieweeTurn,
-        topic: result.topic,
-        sentiment: result.sentiment,
-        answerText: result.answerText,
-      };
-      const interviewerTurn: InterviewTurn = {
-        turnType: 'question',
-        speakerRole: 'interviewer',
-        timestamp: new Date(),
-        content: result.replyText,
-        order: intervieweeTurn.order + 1,
-        topic: null,
-        sentiment: null,
-        answerText: null,
-      };
-
-      const updatedInterview = await this.#interviewRepository.addTurns(process.id, [
-        classifiedIntervieweeTurn,
-        interviewerTurn,
-      ]);
-      await this.#messagingPort.sendDirectMessage(userId, result.replyText);
-
-      if (result.isComplete) {
-        await this.#interviewRepository.complete(process.id);
-        await this.#eventBus.publish(
-          new InterviewCompletedEvent(process.id, updatedInterview.id, updatedInterview.turns),
-        );
-      }
     } catch (error) {
       console.error('Interview agent failed to produce the next turn:', error);
       await this.#interviewRepository.addTurns(process.id, [intervieweeTurn]);
       await this.#messagingPort.sendDirectMessage(userId, FALLBACK_REPLY);
+      return;
+    }
+
+    const classifiedIntervieweeTurn: InterviewTurn = {
+      ...intervieweeTurn,
+      topic: result.topic,
+      sentiment: result.sentiment,
+      answerText: result.answerText,
+    };
+    const interviewerTurn: InterviewTurn = {
+      turnType: 'question',
+      speakerRole: 'interviewer',
+      timestamp: new Date(),
+      content: result.replyText,
+      order: intervieweeTurn.order + 1,
+      topic: null,
+      sentiment: null,
+      answerText: null,
+    };
+
+    // Cross-check the agent's isComplete claim against topics we can independently
+    // verify are covered — an LLM hallucinating completion must not end the interview.
+    const stillPending = this.#pendingTopics([...interview.turns, classifiedIntervieweeTurn]);
+    const isComplete = result.isComplete && stillPending.length === 0;
+
+    const updatedInterview = await this.#interviewRepository.addTurns(process.id, [
+      classifiedIntervieweeTurn,
+      interviewerTurn,
+    ]);
+    await this.#messagingPort.sendDirectMessage(userId, result.replyText);
+
+    if (isComplete) {
+      await this.#interviewRepository.complete(process.id);
+      await this.#eventBus.publish(
+        new InterviewCompletedEvent(process.id, updatedInterview.id, updatedInterview.turns),
+      );
     }
   }
 

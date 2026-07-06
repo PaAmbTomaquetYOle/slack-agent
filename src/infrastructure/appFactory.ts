@@ -58,6 +58,9 @@ export class AppFactory {
   }
 
   private createInterviewAgent(): IInterviewAgent {
+    if (!SETTINGS.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is required to run the guided offboarding interview.');
+    }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
     return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
   }
