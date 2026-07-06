@@ -4,3 +4,8 @@ export { SlackUserInfoProvider } from './slackUserInfoProvider';
 export { HttpOffboardingProcessRepository } from './httpOffboardingProcessRepository';
 export { HttpInterviewRepository } from './httpInterviewRepository';
 export { HttpDossierRepository } from './httpDossierRepository';
+export { NoOpEventPublisher } from './noopEventPublisher';
+export { KafkaEventPublisher } from './kafkaEventPublisher';
+export { KafkaDeadLetterQueue } from './kafkaDeadLetterQueue';
+export { KafkaEventConsumer } from './kafkaEventConsumer';
+export { deserializeEnvelope, EventDeserializationError } from './eventDeserializer';

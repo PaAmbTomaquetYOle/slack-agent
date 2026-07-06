@@ -1,0 +1,40 @@
+import type { Producer } from 'kafkajs';
+import type { IEventPublisher } from '../../application/ports';
+import type { KafkaEventEnvelope, OutboundEvent } from '../../domain';
+
+export class KafkaEventPublisher implements IEventPublisher {
+  readonly #producer: Producer;
+  readonly #topicPrefix: string;
+
+  constructor(producer: Producer, topicPrefix: string) {
+    this.#producer = producer;
+    this.#topicPrefix = topicPrefix;
+  }
+
+  async publish(event: OutboundEvent): Promise<void> {
+    const envelope: KafkaEventEnvelope = {
+      event_id: crypto.randomUUID(),
+      event_type: event.eventType,
+      occurred_at: new Date().toISOString(),
+      payload: event.payload as unknown as Record<string, unknown>,
+    };
+    const topic = `${this.#topicPrefix}.${event.eventType}`;
+    const processId = envelope.payload['process_id'];
+    const key = typeof processId === 'string' && processId ? processId : envelope.event_id;
+    try {
+      await this.#producer.send({
+        topic,
+        messages: [{ key, value: JSON.stringify(envelope) }],
+      });
+    } catch (error) {
+      // Publishing must never block the Slack conversational flow.
+      console.warn(`Failed to publish event '${event.eventType}' to Kafka:`, error);
+    }
+  }
+
+  async publishMany(events: OutboundEvent[]): Promise<void> {
+    for (const event of events) {
+      await this.publish(event);
+    }
+  }
+}
