@@ -1,6 +1,10 @@
 /**
  * Events slack-agent publishes to Kafka for the backend to consume.
  * Topics are named `slack-agent.{event_type}` (see infrastructure settings).
+ *
+ * Payload shapes are converged with the AsyncAPI contract vendored at
+ * `docs/asyncapi/asyncapi.yml` (canonical source: `backend/docs/asyncapi/asyncapi.yml`,
+ * BE-9/BE-11). See README.md "Kafka event contract" for the sync policy.
  */
 
 export const OFFBOARDING_TRIGGERED = 'offboarding.triggered' as const;
@@ -19,7 +23,6 @@ export interface OffboardingTriggeredPayload {
 
 export interface InterviewStartedPayload {
   process_id: string;
-  employee_id: string;
 }
 
 export interface OutboundInterviewTurnPayload {
@@ -38,22 +41,15 @@ export interface InterviewCompletedOutboundPayload {
   turns?: OutboundInterviewTurnPayload[];
 }
 
-export interface OutboundDossierSectionPayload {
-  title: string;
-  content: string;
-}
-
 export interface DossierGenerationRequestedPayload {
   process_id: string;
-  summary: string;
-  sections: OutboundDossierSectionPayload[];
 }
 
 export interface SopCreationRequestedPayload {
-  channel_id: string;
-  author_id: string;
-  message_text: string;
-  message_ts: string;
+  content: string;
+  author: string;
+  origin_channel: string;
+  tags?: string[];
 }
 
 export type OutboundEvent =

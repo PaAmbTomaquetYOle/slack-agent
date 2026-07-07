@@ -160,11 +160,11 @@ describe('DossierGeneratedHandler', () => {
 });
 
 describe('SopCreatedHandler', () => {
-  it('DMs the author from payload.author_id', async () => {
+  it('DMs the author from payload.author', async () => {
     const messaging = makeMessagingMock();
     const handler = new SopCreatedHandler(messaging);
     await handler.handle(envelope('sop.created', {
-      sop_id: 'sop-1', channel_id: 'C123', author_id: 'U456',
+      sop_id: 'sop-1', author: 'U456', origin_channel: 'C123', tags: [], version: 1, created_at: '2024-01-01T00:00:00.000Z',
     }));
     expect(messaging.sendDirectMessage).toHaveBeenCalledWith('U456', expect.stringContaining('sop-1'));
   });

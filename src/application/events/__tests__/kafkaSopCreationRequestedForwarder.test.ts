@@ -23,10 +23,9 @@ describe('createKafkaSopCreationRequestedForwarder', () => {
     expect(publisher.publish).toHaveBeenCalledWith({
       eventType: SOP_CREATION_REQUESTED,
       payload: {
-        channel_id: 'C123',
-        author_id: 'U456',
-        message_text: 'Run the deploy pipeline twice in staging before prod.',
-        message_ts: '1234.5678',
+        content: 'Run the deploy pipeline twice in staging before prod.',
+        author: 'U456',
+        origin_channel: 'C123',
       },
     });
   });

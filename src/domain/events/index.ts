@@ -10,7 +10,6 @@ export type {
   InterviewStartedPayload,
   OutboundInterviewTurnPayload,
   InterviewCompletedOutboundPayload,
-  OutboundDossierSectionPayload,
   DossierGenerationRequestedPayload,
   SopCreationRequestedPayload,
   OutboundEvent,

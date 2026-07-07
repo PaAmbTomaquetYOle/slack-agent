@@ -17,7 +17,7 @@ describe('createKafkaInterviewStartedForwarder', () => {
 
     expect(publisher.publish).toHaveBeenCalledWith({
       eventType: INTERVIEW_STARTED,
-      payload: { process_id: 'proc-1', employee_id: 'emp-1' },
+      payload: { process_id: 'proc-1' },
     });
   });
 

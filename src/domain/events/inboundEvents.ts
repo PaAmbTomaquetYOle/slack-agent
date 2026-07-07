@@ -38,8 +38,11 @@ export interface OffboardingCompletedPayload {
 
 export interface SopCreatedPayload {
   sop_id: string;
-  channel_id: string;
-  author_id: string;
+  author: string;
+  origin_channel: string;
+  tags: string[];
+  version: number;
+  created_at: string;
 }
 
 export const INBOUND_EVENT_TYPES = [

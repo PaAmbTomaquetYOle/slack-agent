@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DossierService } from '../dossierService';
-import type { IOffboardingProcessRepository, IUserInfoProvider, IMessagingPort, IDossierGenerationAgent } from '../../ports';
+import type { IOffboardingProcessRepository, IDossierRepository, IUserInfoProvider, IMessagingPort } from '../../ports';
 import type { IDomainEventBus } from '../../events';
-import { OffboardingProcess, ProcessId, UserId, DossierGenerationRequestedEvent } from '../../../domain';
-import type { InterviewTurn, DossierDraft } from '../../../domain';
+import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, DossierGenerationRequestedEvent } from '../../../domain';
+import type { Dossier } from '../../../domain';
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
   return {
@@ -18,6 +18,10 @@ function makeRepositoryMock(): IOffboardingProcessRepository {
   };
 }
 
+function makeDossierRepositoryMock(): IDossierRepository {
+  return { create: vi.fn(), findByProcessId: vi.fn() };
+}
+
 function makeUserInfoProviderMock(): IUserInfoProvider {
   return { getDisplayName: vi.fn().mockResolvedValue('Alice') };
 }
@@ -29,10 +33,6 @@ function makeMessagingMock(): IMessagingPort {
     sendChannelMessage: vi.fn().mockResolvedValue(undefined),
     createChannelCanvas: vi.fn().mockResolvedValue(undefined),
   };
-}
-
-function makeDossierAgentMock(): IDossierGenerationAgent {
-  return { generate: vi.fn() };
 }
 
 function makeEventBusMock(): IDomainEventBus {
@@ -51,99 +51,52 @@ function makeProcess(): OffboardingProcess {
   });
 }
 
-const TURNS: InterviewTurn[] = [
-  {
-    turnType: 'note', speakerRole: 'interviewee', timestamp: new Date('2026-07-06T09:00:00.000Z'),
-    content: 'We migrated the CRM last month.', order: 0,
-    topic: 'current_projects', sentiment: 'neutral', answerText: 'Migrated the CRM',
-  },
-];
-
-const DRAFT: DossierDraft = {
+const DOSSIER: Dossier = {
+  id: new DossierId('dos-1'),
+  processId: new ProcessId('proc-1'),
+  interviewId: new InterviewId('int-1'),
+  state: 'draft',
+  createdAt: new Date(),
   summary: 'Alice led the CRM migration.',
-  sections: [{ title: 'Ongoing Projects', content: 'CRM migration, completed.' }],
+  sections: [
+    { title: 'Ongoing Projects', sectionType: 'responsibilities', responsibilities: ['CRM migration, completed.'], contacts: null, tasks: null, areas: null },
+  ],
 };
 
 describe('DossierService', () => {
   let repository: IOffboardingProcessRepository;
+  let dossierRepository: IDossierRepository;
   let userInfoProvider: IUserInfoProvider;
   let messaging: IMessagingPort;
-  let dossierAgent: IDossierGenerationAgent;
   let eventBus: IDomainEventBus;
   let service: DossierService;
 
   beforeEach(() => {
     repository = makeRepositoryMock();
+    dossierRepository = makeDossierRepositoryMock();
     userInfoProvider = makeUserInfoProviderMock();
     messaging = makeMessagingMock();
-    dossierAgent = makeDossierAgentMock();
     eventBus = makeEventBusMock();
     vi.mocked(repository.findById).mockResolvedValue(makeProcess());
-    vi.mocked(dossierAgent.generate).mockResolvedValue(DRAFT);
-    service = new DossierService(dossierAgent, repository, userInfoProvider, messaging, eventBus, 'C-managers');
+    vi.mocked(dossierRepository.findByProcessId).mockResolvedValue(DOSSIER);
+    service = new DossierService(repository, dossierRepository, userInfoProvider, messaging, eventBus, 'C-managers');
   });
 
   describe('handleInterviewCompleted', () => {
-    it('generates a draft and publishes DossierGenerationRequestedEvent', async () => {
-      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
+    it('publishes DossierGenerationRequestedEvent for the backend to generate the dossier', async () => {
+      await service.handleInterviewCompleted('proc-1');
 
-      expect(dossierAgent.generate).toHaveBeenCalledWith({ employeeName: 'Alice', turns: TURNS });
       expect(eventBus.publish).toHaveBeenCalledWith(
         expect.objectContaining({
           eventName: DossierGenerationRequestedEvent.EVENT_NAME,
           processId: expect.objectContaining({ value: 'proc-1' }),
-          interviewId: expect.objectContaining({ value: 'int-1' }),
-          draft: DRAFT,
         }),
       );
-    });
-
-    it('does nothing when the offboarding process cannot be found', async () => {
-      vi.mocked(repository.findById).mockResolvedValue(null);
-
-      await service.handleInterviewCompleted('proc-missing', 'int-1', TURNS);
-
-      expect(dossierAgent.generate).not.toHaveBeenCalled();
-      expect(eventBus.publish).not.toHaveBeenCalled();
-    });
-
-    it('does not throw and does not publish when the agent fails', async () => {
-      vi.mocked(dossierAgent.generate).mockRejectedValue(new Error('gemini down'));
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(service.handleInterviewCompleted('proc-1', 'int-1', TURNS)).resolves.not.toThrow();
-
-      expect(eventBus.publish).not.toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('does not throw when resolving the offboarding process fails', async () => {
-      vi.mocked(repository.findById).mockRejectedValue(new Error('backend down'));
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(service.handleInterviewCompleted('proc-1', 'int-1', TURNS)).resolves.not.toThrow();
-
-      expect(dossierAgent.generate).not.toHaveBeenCalled();
-      expect(eventBus.publish).not.toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
-    });
-
-    it('does not throw when resolving the employee display name fails', async () => {
-      vi.mocked(userInfoProvider.getDisplayName).mockRejectedValue(new Error('slack api down'));
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-      await expect(service.handleInterviewCompleted('proc-1', 'int-1', TURNS)).resolves.not.toThrow();
-
-      expect(dossierAgent.generate).not.toHaveBeenCalled();
-      expect(eventBus.publish).not.toHaveBeenCalled();
-      consoleErrorSpy.mockRestore();
     });
   });
 
   describe('publishDossier', () => {
-    it('posts a channel message and creates a Canvas for a generated draft', async () => {
-      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
-
+    it('posts a channel message and creates a Canvas from the fetched dossier', async () => {
       await service.publishDossier('proc-1');
 
       expect(messaging.sendChannelMessage).toHaveBeenCalledWith('C-managers', expect.stringContaining('Alice'));
@@ -154,26 +107,27 @@ describe('DossierService', () => {
       );
     });
 
-    it('does nothing for an unknown processId', async () => {
+    it('does nothing when the offboarding process cannot be found', async () => {
+      vi.mocked(repository.findById).mockResolvedValue(null);
+
       await service.publishDossier('proc-unknown');
 
       expect(messaging.sendChannelMessage).not.toHaveBeenCalled();
       expect(messaging.createChannelCanvas).not.toHaveBeenCalled();
     });
 
-    it('does not publish twice for the same process', async () => {
-      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
+    it('does nothing when the dossier cannot be found', async () => {
+      vi.mocked(dossierRepository.findByProcessId).mockResolvedValue(null);
 
       await service.publishDossier('proc-1');
-      await service.publishDossier('proc-1');
 
-      expect(messaging.sendChannelMessage).toHaveBeenCalledTimes(1);
+      expect(messaging.sendChannelMessage).not.toHaveBeenCalled();
+      expect(messaging.createChannelCanvas).not.toHaveBeenCalled();
     });
 
     it('skips publishing when no managers channel is configured', async () => {
-      service = new DossierService(dossierAgent, repository, userInfoProvider, messaging, eventBus, '');
+      service = new DossierService(repository, dossierRepository, userInfoProvider, messaging, eventBus, '');
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
 
       await service.publishDossier('proc-1');
 
@@ -182,18 +136,12 @@ describe('DossierService', () => {
       consoleWarnSpy.mockRestore();
     });
 
-    it('keeps the draft cached for a retry when the Slack channel post fails', async () => {
+    it('does not throw when the Slack channel post fails', async () => {
       vi.mocked(messaging.sendChannelMessage).mockRejectedValueOnce(new Error('slack rate limited'));
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
 
       await expect(service.publishDossier('proc-1')).resolves.not.toThrow();
       expect(messaging.createChannelCanvas).not.toHaveBeenCalled();
-
-      await service.publishDossier('proc-1');
-
-      expect(messaging.sendChannelMessage).toHaveBeenCalledTimes(2);
-      expect(messaging.createChannelCanvas).toHaveBeenCalledTimes(1);
       consoleErrorSpy.mockRestore();
     });
   });
