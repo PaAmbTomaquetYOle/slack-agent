@@ -5,6 +5,7 @@ export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStarte
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
 export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder';
+export { createDossierGenerationTriggerHandler } from './dossierGenerationTriggerHandler';
 export type { IInboundEventHandler } from './inboundEventHandler';
 export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher';
 export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler';
