@@ -5,6 +5,7 @@ import { InterviewCompletedHandler } from '../handlers/interviewCompletedHandler
 import { DossierGeneratedHandler } from '../handlers/dossierGeneratedHandler';
 import { SopCreatedHandler } from '../handlers/sopCreatedHandler';
 import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
+import type { IDossierService } from '../../serviceInterfaces';
 import { OffboardingProcess, ProcessId, UserId } from '../../../domain';
 import type { KafkaEventEnvelope } from '../../../domain';
 
@@ -106,12 +107,14 @@ describe('InterviewCompletedHandler', () => {
 describe('DossierGeneratedHandler', () => {
   let messaging: IMessagingPort;
   let repository: IOffboardingProcessRepository;
+  let dossierService: IDossierService;
   let handler: DossierGeneratedHandler;
 
   beforeEach(() => {
     messaging = makeMessagingMock();
     repository = makeRepositoryMock();
-    handler = new DossierGeneratedHandler(messaging, repository);
+    dossierService = { handleInterviewCompleted: vi.fn().mockResolvedValue(undefined), publishDossier: vi.fn().mockResolvedValue(undefined) };
+    handler = new DossierGeneratedHandler(messaging, repository, dossierService);
   });
 
   it('resolves the manager via the repository and sends a DM', async () => {
@@ -129,6 +132,23 @@ describe('DossierGeneratedHandler', () => {
       dossier_id: 'dos-1', process_id: 'proc-1', interview_id: 'int-1',
     }));
     expect(messaging.sendDirectMessage).toHaveBeenCalledWith('mgr-1', expect.stringContaining('proc-1'));
+  });
+
+  it('publishes the dossier to Slack (managers channel / Canvas) via DossierService', async () => {
+    const process = OffboardingProcess.fromBackend({
+      id: new ProcessId('proc-1'),
+      departingUserId: new UserId('emp-1'),
+      initiatorId: new UserId('mgr-1'),
+      createdAt: new Date(),
+      state: 'pending_revision',
+      interviewId: null,
+      dossierId: null,
+    });
+    vi.mocked(repository.findById).mockResolvedValue(process);
+    await handler.handle(envelope('dossier.generated', {
+      dossier_id: 'dos-1', process_id: 'proc-1', interview_id: 'int-1',
+    }));
+    expect(dossierService.publishDossier).toHaveBeenCalledWith('proc-1');
   });
 
   it('throws when the process cannot be found', async () => {
