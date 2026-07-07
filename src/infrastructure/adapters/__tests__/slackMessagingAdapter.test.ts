@@ -51,4 +51,23 @@ describe('SlackMessagingAdapter', () => {
       ],
     });
   });
+
+  it('sendChannelMessage() posts a plain message to the given channel', async () => {
+    await adapter.sendChannelMessage('C-managers', 'The handover dossier is ready.');
+
+    expect(client.chat.postMessage).toHaveBeenCalledWith({
+      channel: 'C-managers',
+      text: 'The handover dossier is ready.',
+    });
+  });
+
+  it('createChannelCanvas() creates a Canvas tied to the channel with markdown content', async () => {
+    await adapter.createChannelCanvas('C-managers', 'Handover Dossier — Alice', '# Summary\n\nAlice led the migration.');
+
+    expect(client.conversations.canvases.create).toHaveBeenCalledWith({
+      channel_id: 'C-managers',
+      title: 'Handover Dossier — Alice',
+      document_content: { type: 'markdown', markdown: '# Summary\n\nAlice led the migration.' },
+    });
+  });
 });

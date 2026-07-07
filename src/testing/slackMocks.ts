@@ -13,7 +13,7 @@ import type { App } from '@slack/bolt';
 /** Minimal WebClient mock covering the methods adapters call. */
 export function makeWebClientMock() {
   return {
-    conversations: { open: vi.fn() },
+    conversations: { open: vi.fn(), canvases: { create: vi.fn() } },
     chat: { postMessage: vi.fn(), postEphemeral: vi.fn() },
     users: { info: vi.fn() },
     views: { open: vi.fn() },
