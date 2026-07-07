@@ -3,6 +3,7 @@ export { DomainEventBus } from './domainEventBus';
 export { createOffboardingStartedHandler } from './offboardingStartedHandler';
 export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
+export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
 export type { IInboundEventHandler } from './inboundEventHandler';
 export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher';
 export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler';
