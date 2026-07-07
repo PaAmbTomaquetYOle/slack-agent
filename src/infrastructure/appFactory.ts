@@ -7,6 +7,7 @@ import type {
   IInterviewRepository,
   IInterviewAgent,
   IDossierRepository,
+  IDossierGenerationAgent,
   IMessagingPort,
   IUserInfoProvider,
   IEventPublisher,
@@ -17,6 +18,7 @@ import type {
   IOffboardingService,
   IInterviewService,
   ISopService,
+  IDossierService,
 } from '../application/serviceInterfaces';
 import {
   McpClient,
@@ -26,6 +28,7 @@ import {
   HttpInterviewRepository,
   HttpDossierRepository,
   GeminiInterviewAgent,
+  GeminiDossierAgent,
   NoOpEventPublisher,
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
@@ -39,13 +42,15 @@ import {
   SopController,
 } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
-import { McpService, OffboardingService, InterviewService, SopService } from '../application/services';
+import { McpService, OffboardingService, InterviewService, SopService, DossierService } from '../application/services';
 import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaSopCreationRequestedForwarder,
+  createKafkaDossierGenerationRequestedForwarder,
+  createDossierGenerationTriggerHandler,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
   OffboardingCompletedHandler,
@@ -57,6 +62,7 @@ import {
   OffboardingStartedEvent,
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
+  DossierGenerationRequestedEvent,
   INBOUND_EVENT_TYPES,
   ExpertResponseDetector,
 } from '../domain';
@@ -84,6 +90,14 @@ export class AppFactory {
     return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
   }
 
+  private createDossierGenerationAgent(): IDossierGenerationAgent {
+    if (!SETTINGS.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is required to generate the handover dossier.');
+    }
+    const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
+    return new GeminiDossierAgent(client, SETTINGS.GEMINI_MODEL);
+  }
+
   private createExpertResponseDetector(): ExpertResponseDetector {
     const keywords = SETTINGS.SOP_KEYWORDS.split(',').map((keyword) => keyword.trim()).filter(Boolean);
     return new ExpertResponseDetector({
@@ -96,6 +110,7 @@ export class AppFactory {
   private async createEventInfrastructure(
     repository: IOffboardingProcessRepository,
     messagingPort: IMessagingPort,
+    dossierService: IDossierService,
   ): Promise<EventInfrastructure> {
     if (!SETTINGS.KAFKA_BROKERS) {
       console.warn('KAFKA_BROKERS not set; Kafka is disabled, events will not be published or consumed.');
@@ -123,7 +138,7 @@ export class AppFactory {
       const dispatcher = new InboundEventDispatcher([
         new OffboardingStateChangedHandler(messagingPort),
         new InterviewCompletedHandler(messagingPort, repository),
-        new DossierGeneratedHandler(messagingPort, repository),
+        new DossierGeneratedHandler(messagingPort, repository, dossierService),
         new OffboardingCompletedHandler(messagingPort),
         new SopCreatedHandler(messagingPort),
       ]);
@@ -160,12 +175,30 @@ export class AppFactory {
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
 
-    const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(repository, messagingPort);
-
     const eventBus = new DomainEventBus();
+    const dossierService: IDossierService = new DossierService(
+      this.createDossierGenerationAgent(),
+      repository,
+      userInfoProvider,
+      messagingPort,
+      eventBus,
+      SETTINGS.DOSSIER_MANAGERS_CHANNEL_ID,
+    );
+
+    const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(
+      repository,
+      messagingPort,
+      dossierService,
+    );
+
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
+    eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
+    eventBus.subscribe(
+      DossierGenerationRequestedEvent.EVENT_NAME,
+      createKafkaDossierGenerationRequestedForwarder(publisher),
+    );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);

@@ -41,4 +41,16 @@ export class SlackMessagingAdapter implements IMessagingPort {
       ],
     });
   }
+
+  async sendChannelMessage(channelId: string, text: string): Promise<void> {
+    await this.#client.chat.postMessage({ channel: channelId, text });
+  }
+
+  async createChannelCanvas(channelId: string, title: string, markdown: string): Promise<void> {
+    await this.#client.conversations.canvases.create({
+      channel_id: channelId,
+      title,
+      document_content: { type: 'markdown', markdown },
+    });
+  }
 }

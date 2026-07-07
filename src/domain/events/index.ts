@@ -2,11 +2,13 @@ export type { DomainEvent } from './domainEvent';
 export { OffboardingStartedEvent } from './offboardingStartedEvent';
 export { InterviewCompletedEvent } from './interviewCompletedEvent';
 export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
+export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEvent';
 export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
 export type {
   OffboardingTriggeredPayload,
   OutboundInterviewTurnPayload,
   InterviewCompletedOutboundPayload,
+  OutboundDossierSectionPayload,
   DossierGenerationRequestedPayload,
   SopCreationRequestedPayload,
   OutboundEvent,

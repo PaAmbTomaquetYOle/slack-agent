@@ -28,6 +28,9 @@ const SOP_MIN_MESSAGE_LENGTH = Number(process.env.SOP_MIN_MESSAGE_LENGTH ?? '200
 const SOP_KEYWORDS = process.env.SOP_KEYWORDS
   ?? 'deploy,pipeline,credentials,migration,workaround,config,rollback,incident';
 const SOP_MIN_REACTIONS = Number(process.env.SOP_MIN_REACTIONS ?? '3');
+// Empty channel id disables Slack publication of the handover dossier (SA-4);
+// generation and the Kafka round-trip still happen either way.
+const DOSSIER_MANAGERS_CHANNEL_ID = process.env.DOSSIER_MANAGERS_CHANNEL_ID ?? '';
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -52,4 +55,5 @@ export const SETTINGS = {
   SOP_MIN_MESSAGE_LENGTH,
   SOP_KEYWORDS,
   SOP_MIN_REACTIONS,
+  DOSSIER_MANAGERS_CHANNEL_ID,
 };

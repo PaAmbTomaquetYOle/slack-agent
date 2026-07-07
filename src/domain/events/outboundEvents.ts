@@ -32,8 +32,15 @@ export interface InterviewCompletedOutboundPayload {
   turns?: OutboundInterviewTurnPayload[];
 }
 
+export interface OutboundDossierSectionPayload {
+  title: string;
+  content: string;
+}
+
 export interface DossierGenerationRequestedPayload {
   process_id: string;
+  summary: string;
+  sections: OutboundDossierSectionPayload[];
 }
 
 export interface SopCreationRequestedPayload {
