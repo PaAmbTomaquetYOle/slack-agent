@@ -67,6 +67,33 @@ describe('SopService', () => {
 
       expect(messaging.sendEphemeralActionPrompt).toHaveBeenCalledTimes(1);
     });
+
+    it('does not confuse candidates from different channels that share the same message ts', async () => {
+      service = new SopService(
+        new ExpertResponseDetector(DETECTOR_CONFIG),
+        messaging,
+        eventBus,
+        ['C-monitored', 'C-other-monitored'],
+      );
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, 'shared-ts');
+      await service.handleChannelMessage('C-other-monitored', 'U2', HIGH_VALUE_TEXT, 'shared-ts');
+
+      await service.handleSopDecision('C-monitored', 'shared-ts', true);
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U1' }) }),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U2' }) }),
+      );
+
+      vi.mocked(eventBus.publish).mockClear();
+      await service.handleSopDecision('C-other-monitored', 'shared-ts', true);
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U2' }) }),
+      );
+    });
   });
 
   describe('handleReactionAdded', () => {
@@ -95,6 +122,19 @@ describe('SopService', () => {
       await service.handleReactionAdded('C-monitored', '222.2', 5);
 
       expect(messaging.sendEphemeralActionPrompt).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries offering after a failed send instead of stranding the candidate', async () => {
+      vi.mocked(messaging.sendEphemeralActionPrompt).mockRejectedValueOnce(new Error('slack unavailable'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '222.3');
+      expect(messaging.sendEphemeralActionPrompt).toHaveBeenCalledTimes(1);
+
+      await service.handleReactionAdded('C-monitored', '222.3', 3);
+      expect(messaging.sendEphemeralActionPrompt).toHaveBeenCalledTimes(2);
+
+      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -126,6 +166,35 @@ describe('SopService', () => {
     it('does nothing for an unknown candidate', async () => {
       await expect(service.handleSopDecision('C-monitored', 'unknown-ts', true)).resolves.not.toThrow();
       expect(eventBus.publish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('candidate cache eviction', () => {
+    it('does not evict a candidate awaiting a decision even when the cache is at capacity', async () => {
+      service = new SopService(
+        new ExpertResponseDetector(DETECTOR_CONFIG),
+        messaging,
+        eventBus,
+        ['C-monitored'],
+        1,
+      );
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, 'keep');
+      await service.handleChannelMessage('C-monitored', 'U2', LOW_VALUE_TEXT, 'other');
+
+      await service.handleSopDecision('C-monitored', 'keep', true);
+
+      expect(eventBus.publish).toHaveBeenCalledWith(expect.objectContaining({ messageTs: 'keep' }));
+
+      consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('isMonitoredChannel', () => {
+    it('returns true only for configured channels', () => {
+      expect(service.isMonitoredChannel('C-monitored')).toBe(true);
+      expect(service.isMonitoredChannel('C-other')).toBe(false);
     });
   });
 });

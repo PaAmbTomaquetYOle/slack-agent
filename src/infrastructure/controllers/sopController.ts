@@ -29,6 +29,7 @@ export class SopController extends BaseController {
 
     app.event('reaction_added', async ({ event, client }) => {
       if (event.item.type !== 'message') return;
+      if (!this.#sopService.isMonitoredChannel(event.item.channel)) return;
       const result = await client.reactions.get({ channel: event.item.channel, timestamp: event.item.ts });
       const reactionCount = (result.message?.reactions ?? []).reduce(
         (sum, reaction) => sum + (reaction.count ?? 0),

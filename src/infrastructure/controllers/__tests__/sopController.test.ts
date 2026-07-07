@@ -6,6 +6,7 @@ import { makeAppMock, makeWebClientMock, makeAckFn } from '../../../testing/slac
 
 function makeSopServiceMock(): ISopService {
   return {
+    isMonitoredChannel: vi.fn().mockReturnValue(true),
     handleChannelMessage: vi.fn().mockResolvedValue(undefined),
     handleReactionAdded: vi.fn().mockResolvedValue(undefined),
     handleSopDecision: vi.fn().mockResolvedValue(undefined),
@@ -87,6 +88,19 @@ describe('SopController', () => {
 
     expect(sopService.handleReactionAdded).not.toHaveBeenCalled();
     expect(client.reactions.get).not.toHaveBeenCalled();
+  });
+
+  it('does not call the Slack API for reactions in unmonitored channels', async () => {
+    vi.mocked(sopService.isMonitoredChannel).mockReturnValue(false);
+    const client = makeWebClientMock();
+
+    await trigger('event', 'reaction_added', {
+      event: { type: 'reaction_added', user: 'U2', reaction: '+1', item: { type: 'message', channel: 'C-other', ts: '111.1' }, item_user: 'U1', event_ts: '999' },
+      client,
+    });
+
+    expect(client.reactions.get).not.toHaveBeenCalled();
+    expect(sopService.handleReactionAdded).not.toHaveBeenCalled();
   });
 
   it('acks and forwards an accepted SOP decision', async () => {
