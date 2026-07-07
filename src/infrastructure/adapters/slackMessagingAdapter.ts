@@ -1,5 +1,5 @@
 import type { WebClient } from '@slack/web-api';
-import type { IMessagingPort } from '../../application/ports';
+import type { EphemeralAction, IMessagingPort } from '../../application/ports';
 
 export class SlackMessagingAdapter implements IMessagingPort {
   readonly #client: WebClient;
@@ -15,5 +15,30 @@ export class SlackMessagingAdapter implements IMessagingPort {
       throw new Error(`Could not open DM channel with user ${userId}`);
     }
     await this.#client.chat.postMessage({ channel: channelId, text });
+  }
+
+  async sendEphemeralActionPrompt(
+    channelId: string,
+    userId: string,
+    text: string,
+    actions: EphemeralAction[],
+  ): Promise<void> {
+    await this.#client.chat.postEphemeral({
+      channel: channelId,
+      user: userId,
+      text,
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn', text } },
+        {
+          type: 'actions',
+          elements: actions.map((action) => ({
+            type: 'button',
+            action_id: action.actionId,
+            text: { type: 'plain_text', text: action.text },
+            value: action.value,
+          })),
+        },
+      ],
+    });
   }
 }

@@ -28,4 +28,27 @@ describe('SlackMessagingAdapter', () => {
     );
     expect(client.chat.postMessage).not.toHaveBeenCalled();
   });
+
+  it('sendEphemeralActionPrompt() posts an ephemeral message with action buttons', async () => {
+    await adapter.sendEphemeralActionPrompt('C123', 'U1', 'Save this as an SOP?', [
+      { actionId: 'sop_accept', text: 'Yes, save it', value: '1234.5678' },
+      { actionId: 'sop_decline', text: 'No thanks', value: '1234.5678' },
+    ]);
+
+    expect(client.chat.postEphemeral).toHaveBeenCalledWith({
+      channel: 'C123',
+      user: 'U1',
+      text: 'Save this as an SOP?',
+      blocks: [
+        { type: 'section', text: { type: 'mrkdwn', text: 'Save this as an SOP?' } },
+        {
+          type: 'actions',
+          elements: [
+            { type: 'button', action_id: 'sop_accept', text: { type: 'plain_text', text: 'Yes, save it' }, value: '1234.5678' },
+            { type: 'button', action_id: 'sop_decline', text: { type: 'plain_text', text: 'No thanks' }, value: '1234.5678' },
+          ],
+        },
+      ],
+    });
+  });
 });
