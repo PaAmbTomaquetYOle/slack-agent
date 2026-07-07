@@ -1,0 +1,650 @@
+asyncapi: 3.0.0
+info:
+  title: OffboardMe — Kafka Event Contract
+  version: 1.0.0
+  description: >
+    Machine-readable contract for the Kafka events exchanged between the
+    `backend` (OffboardMe FastAPI service) and `slack-agent`. This is the
+    single source of truth for the event contract defined in BE-9 (#16) and
+    formalized in BE-11 (#18) — it supersedes the prose table that used to
+    live only in `README.md`.
+
+
+    ## Envelope
+
+    Every message (both directions) uses the same JSON envelope, produced by
+    `DomainEvent.to_dict()` in `src/app/domain/events/base.py`:
+
+    ```json
+    { "event_id": "<uuid>", "event_type": "<string>", "occurred_at": "<ISO-8601 UTC>", "payload": { ... } }
+    ```
+
+
+    ## Kafka message key
+
+    The Kafka record key is `payload.process_id` when present, otherwise it
+    falls back to `event_id` (see `kafka_event_publisher.py`). This partitions
+    delivery by offboarding process.
+
+
+    ## Delivery semantics
+
+    Consumption is at-least-once: offsets are committed manually only after a
+    message is either dispatched successfully or routed to the dead-letter
+    queue — a malformed message or handler failure never blocks the consumer.
+
+
+    ## Topic namespacing
+
+    Topics are namespaced by direction so the backend never re-consumes what
+    it just produced:
+    - `slack-agent.*` — inbound, published by slack-agent, consumed by backend.
+    - `offboarding.*` — outbound, published by backend, consumed by slack-agent.
+
+    Note: slack-agent does not yet produce the inbound events — it currently
+    talks to the backend over REST. This contract defines the target shape so
+    both sides can converge on it.
+  license:
+    name: UNLICENSED
+
+servers:
+  kafka:
+    host: '{KAFKA_BOOTSTRAP_SERVERS}'
+    protocol: kafka
+    description: Shared Kafka cluster used by backend and slack-agent.
+    variables:
+      KAFKA_BOOTSTRAP_SERVERS:
+        default: localhost:9092
+        description: Value of the `KAFKA_BOOTSTRAP_SERVERS` env var.
+
+defaultContentType: application/json
+
+channels:
+  # ---------------------------------------------------------------------
+  # Inbound — published by slack-agent, consumed by backend.
+  # Prefix `slack-agent` (KAFKA_INBOUND_TOPIC_PREFIX).
+  # Consumer group `offboardme-backend-consumer` (KAFKA_CONSUMER_GROUP_ID).
+  # ---------------------------------------------------------------------
+  slackAgentOffboardingTriggered:
+    address: slack-agent.offboarding.triggered
+    description: Creates the offboarding process and starts it.
+    messages:
+      offboardingTriggered:
+        $ref: '#/components/messages/OffboardingTriggered'
+
+  slackAgentInterviewStarted:
+    address: slack-agent.interview.started
+    description: >
+      Records that the interview for an offboarding process has begun.
+      Idempotent: if the interview is already past SCHEDULED (redelivery, or
+      `interview.completed` already handled it), the start transition is
+      skipped instead of raising.
+    messages:
+      interviewStartedInbound:
+        $ref: '#/components/messages/InterviewStartedInbound'
+
+  slackAgentInterviewCompleted:
+    address: slack-agent.interview.completed
+    description: >
+      Saves the collected interview answers, completes the interview, and
+      submits the offboarding process for review.
+    messages:
+      interviewCompletedInbound:
+        $ref: '#/components/messages/InterviewCompletedInbound'
+
+  slackAgentDossierGenerationRequested:
+    address: slack-agent.dossier.generation_requested
+    description: >
+      Generates and persists the dossier (interview content is read from the
+      database, not carried in the payload), then completes the offboarding
+      process.
+    messages:
+      dossierGenerationRequested:
+        $ref: '#/components/messages/DossierGenerationRequested'
+
+  slackAgentSopCreationRequested:
+    address: slack-agent.sop.creation_requested
+    description: Creates a SOP from a Slack-originated request.
+    messages:
+      sopCreationRequested:
+        $ref: '#/components/messages/SopCreationRequested'
+
+  # ---------------------------------------------------------------------
+  # Outbound — published by backend, consumed by slack-agent.
+  # Prefix `offboarding` (KAFKA_TOPIC_PREFIX).
+  # ---------------------------------------------------------------------
+  offboardingOffboardingStateChanged:
+    address: offboarding.offboarding.state_changed
+    description: The offboarding process transitioned to a new state.
+    messages:
+      offboardingStateChanged:
+        $ref: '#/components/messages/OffboardingStateChanged'
+
+  offboardingInterviewCompleted:
+    address: offboarding.interview.completed
+    description: The backend finished persisting a completed interview.
+    messages:
+      interviewCompletedOutbound:
+        $ref: '#/components/messages/InterviewCompletedOutbound'
+
+  offboardingDossierGenerated:
+    address: offboarding.dossier.generated
+    description: A dossier was generated and persisted for a process.
+    messages:
+      dossierGenerated:
+        $ref: '#/components/messages/DossierGenerated'
+
+  offboardingOffboardingCompleted:
+    address: offboarding.offboarding.completed
+    description: The offboarding process finished end-to-end.
+    messages:
+      offboardingCompleted:
+        $ref: '#/components/messages/OffboardingCompleted'
+
+  offboardingSopCreated:
+    address: offboarding.sop.created
+    description: A SOP (Standard Operating Procedure) document was created.
+    messages:
+      sopCreated:
+        $ref: '#/components/messages/SopCreated'
+
+  # ---------------------------------------------------------------------
+  # Dead-letter queue — single fixed topic for both directions.
+  # ---------------------------------------------------------------------
+  offboardingDlq:
+    address: offboarding.dlq
+    description: >
+      Malformed envelopes or handler failures are republished here verbatim
+      (original bytes, not re-encoded) with headers `source_topic` (the topic
+      the failing message came from) and `error` (the failure reason). The
+      offset of the original message is committed regardless, so a bad
+      message never blocks or crashes the consumer.
+    messages:
+      deadLetter:
+        $ref: '#/components/messages/DeadLetter'
+
+operations:
+  onOffboardingTriggered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentOffboardingTriggered'
+    messages:
+      - $ref: '#/channels/slackAgentOffboardingTriggered/messages/offboardingTriggered'
+
+  onInterviewStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentInterviewStarted'
+    messages:
+      - $ref: '#/channels/slackAgentInterviewStarted/messages/interviewStartedInbound'
+
+  onInterviewCompletedInbound:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentInterviewCompleted'
+    messages:
+      - $ref: '#/channels/slackAgentInterviewCompleted/messages/interviewCompletedInbound'
+
+  onDossierGenerationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentDossierGenerationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentDossierGenerationRequested/messages/dossierGenerationRequested'
+
+  onSopCreationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentSopCreationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentSopCreationRequested/messages/sopCreationRequested'
+
+  sendOffboardingStateChanged:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingOffboardingStateChanged'
+    messages:
+      - $ref: '#/channels/offboardingOffboardingStateChanged/messages/offboardingStateChanged'
+
+  sendInterviewCompletedOutbound:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingInterviewCompleted'
+    messages:
+      - $ref: '#/channels/offboardingInterviewCompleted/messages/interviewCompletedOutbound'
+
+  sendDossierGenerated:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingDossierGenerated'
+    messages:
+      - $ref: '#/channels/offboardingDossierGenerated/messages/dossierGenerated'
+
+  sendOffboardingCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingOffboardingCompleted'
+    messages:
+      - $ref: '#/channels/offboardingOffboardingCompleted/messages/offboardingCompleted'
+
+  sendSopCreated:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingSopCreated'
+    messages:
+      - $ref: '#/channels/offboardingSopCreated/messages/sopCreated'
+
+  sendDeadLetter:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingDlq'
+    messages:
+      - $ref: '#/channels/offboardingDlq/messages/deadLetter'
+
+components:
+  messages:
+    OffboardingTriggered:
+      name: offboarding.triggered
+      title: Offboarding triggered
+      summary: Requests creation of a new offboarding process.
+      payload:
+        $ref: '#/components/schemas/OffboardingTriggeredEnvelope'
+
+    InterviewStartedInbound:
+      name: interview.started
+      title: Interview started (inbound)
+      summary: Signals that an offboarding interview has begun.
+      payload:
+        $ref: '#/components/schemas/InterviewStartedInboundEnvelope'
+
+    InterviewCompletedInbound:
+      name: interview.completed
+      title: Interview completed (inbound)
+      summary: Delivers the collected interview turns for a process.
+      payload:
+        $ref: '#/components/schemas/InterviewCompletedInboundEnvelope'
+
+    DossierGenerationRequested:
+      name: dossier.generation_requested
+      title: Dossier generation requested
+      summary: Requests dossier generation for a process.
+      payload:
+        $ref: '#/components/schemas/DossierGenerationRequestedEnvelope'
+
+    SopCreationRequested:
+      name: sop.creation_requested
+      title: SOP creation requested
+      summary: Requests creation of a SOP from a Slack-originated request.
+      payload:
+        $ref: '#/components/schemas/SopCreationRequestedEnvelope'
+
+    OffboardingStateChanged:
+      name: offboarding.state_changed
+      title: Offboarding state changed
+      summary: The offboarding process transitioned to a new state.
+      payload:
+        $ref: '#/components/schemas/OffboardingStateChangedEnvelope'
+
+    InterviewCompletedOutbound:
+      name: interview.completed
+      title: Interview completed (outbound)
+      summary: Notifies that the backend finished persisting a completed interview.
+      payload:
+        $ref: '#/components/schemas/InterviewCompletedOutboundEnvelope'
+
+    DossierGenerated:
+      name: dossier.generated
+      title: Dossier generated
+      summary: A dossier was generated and persisted for a process.
+      payload:
+        $ref: '#/components/schemas/DossierGeneratedEnvelope'
+
+    OffboardingCompleted:
+      name: offboarding.completed
+      title: Offboarding completed
+      summary: The offboarding process finished end-to-end.
+      payload:
+        $ref: '#/components/schemas/OffboardingCompletedEnvelope'
+
+    SopCreated:
+      name: sop.created
+      title: SOP created
+      summary: A SOP document was created.
+      payload:
+        $ref: '#/components/schemas/SopCreatedEnvelope'
+
+    DeadLetter:
+      name: dead_letter
+      title: Dead letter
+      summary: >
+        A message that failed deserialization or handling, republished
+        verbatim with failure metadata in headers.
+      headers:
+        type: object
+        properties:
+          source_topic:
+            type: string
+            description: The original topic the failing message was consumed from.
+          error:
+            type: string
+            description: String representation of the exception that caused the failure.
+        required: [source_topic, error]
+      payload:
+        description: >
+          The original, unmodified message bytes. May or may not be a valid
+          DomainEvent envelope — that is exactly what failed.
+        type: object
+
+  schemas:
+    DomainEventEnvelopeBase:
+      type: object
+      description: Shared envelope fields, common to every event in both directions.
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique identifier of this event instance.
+        event_type:
+          type: string
+          description: Discriminator matching one of the `event_type` values in this contract.
+        occurred_at:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of when the event occurred.
+      required: [event_id, event_type, occurred_at]
+
+    InterviewTurn:
+      type: object
+      description: >
+        One turn of an interview transcript. `answer_text` only applies when
+        `turn_type` is `question`.
+      properties:
+        turn_type:
+          type: string
+          enum: [question, note]
+        speaker_role:
+          type: string
+          enum: [interviewer, interviewee]
+        timestamp:
+          type: string
+          format: date-time
+        content:
+          type: string
+        order:
+          type: integer
+        topic:
+          type: string
+          nullable: true
+        sentiment:
+          type: string
+          nullable: true
+        answer_text:
+          type: string
+          nullable: true
+          description: Only present/meaningful when `turn_type` is `question`.
+      required: [turn_type, speaker_role, timestamp, content, order]
+
+    # --- Inbound payloads --------------------------------------------
+
+    OffboardingTriggeredPayload:
+      type: object
+      properties:
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        employee_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required: [employee_id, manager_id]
+
+    OffboardingTriggeredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: offboarding.triggered
+            payload:
+              $ref: '#/components/schemas/OffboardingTriggeredPayload'
+          required: [payload]
+
+    InterviewStartedInboundPayload:
+      type: object
+      description: >
+        `process_id` is the offboarding process this interview belongs to.
+        The handler docstring also mentions `employee_id`, but it is not
+        actually read (the process already knows its employee).
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    InterviewStartedInboundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: interview.started
+            payload:
+              $ref: '#/components/schemas/InterviewStartedInboundPayload'
+          required: [payload]
+
+    InterviewCompletedInboundPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    InterviewCompletedInboundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: interview.completed
+            payload:
+              $ref: '#/components/schemas/InterviewCompletedInboundPayload'
+          required: [payload]
+
+    DossierGenerationRequestedPayload:
+      type: object
+      description: >
+        Only `process_id` is carried — the interview content is read from
+        the database (source of truth), not from the event payload.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    DossierGenerationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: dossier.generation_requested
+            payload:
+              $ref: '#/components/schemas/DossierGenerationRequestedPayload'
+          required: [payload]
+
+    SopCreationRequestedPayload:
+      type: object
+      properties:
+        content:
+          type: string
+        author:
+          type: string
+        origin_channel:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+          nullable: true
+      required: [content, author, origin_channel]
+
+    SopCreationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.creation_requested
+            payload:
+              $ref: '#/components/schemas/SopCreationRequestedPayload'
+          required: [payload]
+
+    # --- Outbound payloads --------------------------------------------
+
+    OffboardingStateChangedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        previous_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        new_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+      required: [process_id, previous_state, new_state, employee_id, manager_id]
+
+    OffboardingStateChangedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: offboarding.state_changed
+            payload:
+              $ref: '#/components/schemas/OffboardingStateChangedPayload'
+          required: [payload]
+
+    InterviewCompletedOutboundPayload:
+      type: object
+      properties:
+        interview_id:
+          type: string
+          format: uuid
+        process_id:
+          type: string
+          format: uuid
+        completed_at:
+          type: string
+          format: date-time
+      required: [interview_id, process_id, completed_at]
+
+    InterviewCompletedOutboundEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: interview.completed
+            payload:
+              $ref: '#/components/schemas/InterviewCompletedOutboundPayload'
+          required: [payload]
+
+    DossierGeneratedPayload:
+      type: object
+      properties:
+        dossier_id:
+          type: string
+          format: uuid
+        process_id:
+          type: string
+          format: uuid
+        interview_id:
+          type: string
+          format: uuid
+      required: [dossier_id, process_id, interview_id]
+
+    DossierGeneratedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: dossier.generated
+            payload:
+              $ref: '#/components/schemas/DossierGeneratedPayload'
+          required: [payload]
+
+    OffboardingCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        dossier_id:
+          type: string
+          format: uuid
+      required: [process_id, employee_id, manager_id, dossier_id]
+
+    OffboardingCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: offboarding.completed
+            payload:
+              $ref: '#/components/schemas/OffboardingCompletedPayload'
+          required: [payload]
+
+    SopCreatedPayload:
+      type: object
+      description: >
+        Unlike every other outbound payload, `tags` and `version` are not
+        stringified — they are emitted as a genuine JSON array and integer.
+      properties:
+        sop_id:
+          type: string
+          format: uuid
+        author:
+          type: string
+        origin_channel:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+      required: [sop_id, author, origin_channel, tags, version, created_at]
+
+    SopCreatedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.created
+            payload:
+              $ref: '#/components/schemas/SopCreatedPayload'
+          required: [payload]
