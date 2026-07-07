@@ -2,6 +2,7 @@ export type { IDomainEventBus } from './domainEventBusInterface';
 export { DomainEventBus } from './domainEventBus';
 export { createOffboardingStartedHandler } from './offboardingStartedHandler';
 export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStartedForwarder';
+export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
 export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder';

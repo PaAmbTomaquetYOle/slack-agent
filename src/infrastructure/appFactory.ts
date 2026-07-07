@@ -47,6 +47,7 @@ import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
+  createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaSopCreationRequestedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
@@ -60,6 +61,7 @@ import {
 } from '../application/events';
 import {
   OffboardingStartedEvent,
+  InterviewStartedEvent,
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
   DossierGenerationRequestedEvent,
@@ -193,6 +195,7 @@ export class AppFactory {
 
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
+    eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
     eventBus.subscribe(

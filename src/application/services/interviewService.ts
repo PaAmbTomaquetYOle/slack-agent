@@ -9,7 +9,7 @@ import type {
 import type { IDomainEventBus } from '../events';
 import type { IInterviewService } from '../serviceInterfaces';
 import type { InterviewTopic, InterviewTurn, OffboardingProcess } from '../../domain';
-import { INTERVIEW_TOPICS, InterviewCompletedEvent } from '../../domain';
+import { INTERVIEW_TOPICS, InterviewCompletedEvent, InterviewStartedEvent } from '../../domain';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 
@@ -44,6 +44,7 @@ export class InterviewService implements IInterviewService {
     let interview = await this.#interviewRepository.findByProcessId(process.id);
     if (!interview) {
       interview = await this.#interviewRepository.start(process.id);
+      await this.#eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
     }
 
     const pendingTopics = this.#pendingTopics(interview.turns);

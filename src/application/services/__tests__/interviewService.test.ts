@@ -13,6 +13,7 @@ import {
   ProcessId,
   UserId,
   InterviewId,
+  InterviewStartedEvent,
   InterviewCompletedEvent,
   INTERVIEW_TOPICS,
 } from '../../../domain';
@@ -170,7 +171,10 @@ describe('InterviewService', () => {
     ]);
     expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'What projects are you working on?');
     expect(interviewRepository.complete).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewStartedEvent));
+    const publishedEvent = vi.mocked(eventBus.publish).mock.calls[0]?.[0] as InterviewStartedEvent;
+    expect(publishedEvent.processId).toBe(process.id);
+    expect(publishedEvent.employeeId).toBe(process.departingUserId);
   });
 
   it('continues an existing interview, excluding already-covered topics from pendingTopics', async () => {
@@ -200,6 +204,7 @@ describe('InterviewService', () => {
       turns: [existingTurn],
       incomingMessage: 'We migrated the CRM last month.',
     });
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   it('completes the interview and publishes InterviewCompletedEvent when all 5 topics end up covered', async () => {
