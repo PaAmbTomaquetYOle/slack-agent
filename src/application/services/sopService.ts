@@ -1,11 +1,10 @@
 import type { IMessagingPort } from '../ports';
 import type { IDomainEventBus } from '../events';
 import type { ISopService } from '../serviceInterfaces';
+import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../serviceInterfaces';
 import type { ExpertResponseDetector } from '../../domain';
 import { ChannelId, UserId, SopCreationRequestedEvent } from '../../domain';
 
-export const SOP_ACCEPT_ACTION_ID = 'sop_accept';
-export const SOP_DECLINE_ACTION_ID = 'sop_decline';
 const OFFER_TEXT = 'That looked like a valuable answer! Want to save it as an SOP so it is not lost?';
 const MAX_TRACKED_CANDIDATES = 500;
 
