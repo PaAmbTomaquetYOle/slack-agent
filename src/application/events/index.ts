@@ -10,3 +10,4 @@ export { OffboardingStateChangedHandler } from './handlers/offboardingStateChang
 export { OffboardingCompletedHandler } from './handlers/offboardingCompletedHandler';
 export { InterviewCompletedHandler } from './handlers/interviewCompletedHandler';
 export { DossierGeneratedHandler } from './handlers/dossierGeneratedHandler';
+export { SopCreatedHandler } from './handlers/sopCreatedHandler';

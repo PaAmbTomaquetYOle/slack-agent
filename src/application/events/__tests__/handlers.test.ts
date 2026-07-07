@@ -3,6 +3,7 @@ import { OffboardingStateChangedHandler } from '../handlers/offboardingStateChan
 import { OffboardingCompletedHandler } from '../handlers/offboardingCompletedHandler';
 import { InterviewCompletedHandler } from '../handlers/interviewCompletedHandler';
 import { DossierGeneratedHandler } from '../handlers/dossierGeneratedHandler';
+import { SopCreatedHandler } from '../handlers/sopCreatedHandler';
 import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
 import { OffboardingProcess, ProcessId, UserId } from '../../../domain';
 import type { KafkaEventEnvelope } from '../../../domain';
@@ -135,5 +136,21 @@ describe('DossierGeneratedHandler', () => {
     await expect(handler.handle(envelope('dossier.generated', {
       dossier_id: 'dos-1', process_id: 'missing', interview_id: 'int-1',
     }))).rejects.toThrow();
+  });
+});
+
+describe('SopCreatedHandler', () => {
+  it('DMs the author from payload.author_id', async () => {
+    const messaging = makeMessagingMock();
+    const handler = new SopCreatedHandler(messaging);
+    await handler.handle(envelope('sop.created', {
+      sop_id: 'sop-1', channel_id: 'C123', author_id: 'U456',
+    }));
+    expect(messaging.sendDirectMessage).toHaveBeenCalledWith('U456', expect.stringContaining('sop-1'));
+  });
+
+  it('throws when the payload is missing required fields', async () => {
+    const handler = new SopCreatedHandler(makeMessagingMock());
+    await expect(handler.handle(envelope('sop.created', { sop_id: 'sop-1' }))).rejects.toThrow();
   });
 });
