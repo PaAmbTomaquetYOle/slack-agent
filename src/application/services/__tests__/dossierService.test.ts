@@ -116,6 +116,28 @@ describe('DossierService', () => {
       expect(eventBus.publish).not.toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
+
+    it('does not throw when resolving the offboarding process fails', async () => {
+      vi.mocked(repository.findById).mockRejectedValue(new Error('backend down'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(service.handleInterviewCompleted('proc-1', 'int-1', TURNS)).resolves.not.toThrow();
+
+      expect(dossierAgent.generate).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
+
+    it('does not throw when resolving the employee display name fails', async () => {
+      vi.mocked(userInfoProvider.getDisplayName).mockRejectedValue(new Error('slack api down'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(service.handleInterviewCompleted('proc-1', 'int-1', TURNS)).resolves.not.toThrow();
+
+      expect(dossierAgent.generate).not.toHaveBeenCalled();
+      expect(eventBus.publish).not.toHaveBeenCalled();
+      consoleErrorSpy.mockRestore();
+    });
   });
 
   describe('publishDossier', () => {
@@ -158,6 +180,21 @@ describe('DossierService', () => {
       expect(messaging.sendChannelMessage).not.toHaveBeenCalled();
       expect(messaging.createChannelCanvas).not.toHaveBeenCalled();
       consoleWarnSpy.mockRestore();
+    });
+
+    it('keeps the draft cached for a retry when the Slack channel post fails', async () => {
+      vi.mocked(messaging.sendChannelMessage).mockRejectedValueOnce(new Error('slack rate limited'));
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      await service.handleInterviewCompleted('proc-1', 'int-1', TURNS);
+
+      await expect(service.publishDossier('proc-1')).resolves.not.toThrow();
+      expect(messaging.createChannelCanvas).not.toHaveBeenCalled();
+
+      await service.publishDossier('proc-1');
+
+      expect(messaging.sendChannelMessage).toHaveBeenCalledTimes(2);
+      expect(messaging.createChannelCanvas).toHaveBeenCalledTimes(1);
+      consoleErrorSpy.mockRestore();
     });
   });
 });

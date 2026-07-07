@@ -40,16 +40,16 @@ export class DossierService implements IDossierService {
   }
 
   async handleInterviewCompleted(processId: string, interviewId: string, turns: readonly InterviewTurn[]): Promise<void> {
-    const process = await this.#offboardingProcessRepository.findById(new ProcessId(processId));
-    if (!process) return;
-
-    const employeeName = (await this.#userInfoProvider.getDisplayName(process.departingUserId.value)) ?? process.departingUserId.value;
-
+    let employeeName: string;
     let draft: DossierDraft;
     try {
+      const process = await this.#offboardingProcessRepository.findById(new ProcessId(processId));
+      if (!process) return;
+
+      employeeName = (await this.#userInfoProvider.getDisplayName(process.departingUserId.value)) ?? process.departingUserId.value;
       draft = await this.#dossierGenerationAgent.generate({ employeeName, turns });
     } catch (error) {
-      console.error('Dossier generation agent failed:', error);
+      console.error('Dossier generation failed:', error);
       return;
     }
 
@@ -61,23 +61,28 @@ export class DossierService implements IDossierService {
     const cached = this.#drafts.get(processId);
     if (!cached) return;
 
-    this.#drafts.delete(processId);
-
     if (!this.#managersChannelId) {
       console.warn('DOSSIER_MANAGERS_CHANNEL_ID not set; skipping Slack publication of the handover dossier.');
+      this.#drafts.delete(processId);
       return;
     }
 
     const { employeeName, draft } = cached;
-    await this.#messagingPort.sendChannelMessage(
-      this.#managersChannelId,
-      `:memo: Handover dossier ready for *${employeeName}*.\n\n${draft.summary}`,
-    );
-    await this.#messagingPort.createChannelCanvas(
-      this.#managersChannelId,
-      `Handover Dossier — ${employeeName}`,
-      this.#toMarkdown(draft),
-    );
+    try {
+      await this.#messagingPort.sendChannelMessage(
+        this.#managersChannelId,
+        `:memo: Handover dossier ready for *${employeeName}*.\n\n${draft.summary}`,
+      );
+      await this.#messagingPort.createChannelCanvas(
+        this.#managersChannelId,
+        `Handover Dossier — ${employeeName}`,
+        this.#toMarkdown(draft),
+      );
+    } catch (error) {
+      console.error('Failed to publish the handover dossier to Slack; will retry if the confirmation is redelivered:', error);
+      return;
+    }
+    this.#drafts.delete(processId);
   }
 
   #toMarkdown(draft: DossierDraft): string {
