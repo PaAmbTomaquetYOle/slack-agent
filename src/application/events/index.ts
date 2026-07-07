@@ -2,6 +2,7 @@ export type { IDomainEventBus } from './domainEventBusInterface';
 export { DomainEventBus } from './domainEventBus';
 export { createOffboardingStartedHandler } from './offboardingStartedHandler';
 export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStartedForwarder';
+export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export type { IInboundEventHandler } from './inboundEventHandler';
 export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher';
 export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler';

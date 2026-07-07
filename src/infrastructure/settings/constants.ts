@@ -20,6 +20,8 @@ const KAFKA_OUTBOUND_TOPIC_PREFIX = process.env.KAFKA_OUTBOUND_TOPIC_PREFIX ?? '
 const KAFKA_INBOUND_TOPIC_PREFIX = process.env.KAFKA_INBOUND_TOPIC_PREFIX ?? 'offboarding';
 const KAFKA_CONSUMER_GROUP_ID = process.env.KAFKA_CONSUMER_GROUP_ID ?? 'slack-agent-consumer';
 const KAFKA_DLQ_TOPIC = process.env.KAFKA_DLQ_TOPIC ?? 'slack-agent.dlq';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? '';
+const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -37,5 +39,7 @@ export const SETTINGS = {
   KAFKA_OUTBOUND_TOPIC_PREFIX,
   KAFKA_INBOUND_TOPIC_PREFIX,
   KAFKA_CONSUMER_GROUP_ID,
-  KAFKA_DLQ_TOPIC
+  KAFKA_DLQ_TOPIC,
+  GEMINI_API_KEY,
+  GEMINI_MODEL,
 };
