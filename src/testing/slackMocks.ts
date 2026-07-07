@@ -17,6 +17,7 @@ export function makeWebClientMock() {
     chat: { postMessage: vi.fn(), postEphemeral: vi.fn() },
     users: { info: vi.fn() },
     views: { open: vi.fn() },
+    reactions: { get: vi.fn() },
   } as unknown as WebClient;
 }
 
