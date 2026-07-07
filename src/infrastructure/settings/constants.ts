@@ -22,6 +22,12 @@ const KAFKA_CONSUMER_GROUP_ID = process.env.KAFKA_CONSUMER_GROUP_ID ?? 'slack-ag
 const KAFKA_DLQ_TOPIC = process.env.KAFKA_DLQ_TOPIC ?? 'slack-agent.dlq';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY ?? '';
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
+// Comma-separated channel IDs to monitor for high-value expert answers (SA-7).
+const SOP_MONITORED_CHANNELS = process.env.SOP_MONITORED_CHANNELS ?? '';
+const SOP_MIN_MESSAGE_LENGTH = Number(process.env.SOP_MIN_MESSAGE_LENGTH ?? '200');
+const SOP_KEYWORDS = process.env.SOP_KEYWORDS
+  ?? 'deploy,pipeline,credentials,migration,workaround,config,rollback,incident';
+const SOP_MIN_REACTIONS = Number(process.env.SOP_MIN_REACTIONS ?? '3');
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -42,4 +48,8 @@ export const SETTINGS = {
   KAFKA_DLQ_TOPIC,
   GEMINI_API_KEY,
   GEMINI_MODEL,
+  SOP_MONITORED_CHANNELS,
+  SOP_MIN_MESSAGE_LENGTH,
+  SOP_KEYWORDS,
+  SOP_MIN_REACTIONS,
 };
