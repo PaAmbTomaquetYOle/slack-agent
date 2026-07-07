@@ -193,7 +193,7 @@ export class AppFactory {
       createKafkaDossierGenerationRequestedForwarder(publisher),
     );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
-    const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
+    const offboardingService: IOffboardingService = new OffboardingService(eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
 

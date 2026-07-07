@@ -14,7 +14,6 @@ export const DOSSIER_GENERATION_REQUESTED = 'dossier.generation_requested' as co
 export const SOP_CREATION_REQUESTED = 'sop.creation_requested' as const;
 
 export interface OffboardingTriggeredPayload {
-  process_id?: string;
   employee_id: string;
   manager_id: string;
   employee_name?: string;

@@ -1,5 +1,3 @@
-import type { OffboardingProcess } from '../../domain';
-
 export interface IOffboardingService {
-  startOffboarding(departingUserId: string, initiatorId: string): Promise<OffboardingProcess>;
+  startOffboarding(departingUserId: string, initiatorId: string): Promise<void>;
 }
