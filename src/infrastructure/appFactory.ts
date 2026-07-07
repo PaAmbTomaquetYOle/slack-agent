@@ -44,6 +44,7 @@ import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
+  createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaSopCreationRequestedForwarder,
   InboundEventDispatcher,
@@ -55,6 +56,7 @@ import {
 } from '../application/events';
 import {
   OffboardingStartedEvent,
+  InterviewStartedEvent,
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
   INBOUND_EVENT_TYPES,
@@ -165,6 +167,7 @@ export class AppFactory {
     const eventBus = new DomainEventBus();
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
+    eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
