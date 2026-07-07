@@ -24,7 +24,7 @@ describe('createDossierGenerationTriggerHandler', () => {
 
     await handle(event);
 
-    expect(dossierService.handleInterviewCompleted).toHaveBeenCalledWith('proc-1', 'int-1', TURNS);
+    expect(dossierService.handleInterviewCompleted).toHaveBeenCalledWith('proc-1');
   });
 
   it('throws on an unexpected event type', async () => {

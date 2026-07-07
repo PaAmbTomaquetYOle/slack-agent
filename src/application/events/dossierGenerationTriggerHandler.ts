@@ -15,6 +15,6 @@ export function createDossierGenerationTriggerHandler(dossierService: IDossierSe
     if (!isInterviewCompletedEvent(event)) {
       throw new Error(`Unexpected event type: ${event.eventName}`);
     }
-    await dossierService.handleInterviewCompleted(event.processId.value, event.interviewId.value, event.turns);
+    await dossierService.handleInterviewCompleted(event.processId.value);
   };
 }

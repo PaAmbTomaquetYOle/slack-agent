@@ -19,10 +19,9 @@ export function createKafkaSopCreationRequestedForwarder(publisher: IEventPublis
     await publisher.publish({
       eventType: SOP_CREATION_REQUESTED,
       payload: {
-        channel_id: event.channelId.value,
-        author_id: event.authorId.value,
-        message_text: event.messageText,
-        message_ts: event.messageTs,
+        content: event.messageText,
+        author: event.authorId.value,
+        origin_channel: event.channelId.value,
       },
     });
   };

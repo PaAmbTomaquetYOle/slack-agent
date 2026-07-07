@@ -20,7 +20,6 @@ export function createKafkaInterviewStartedForwarder(publisher: IEventPublisher)
       eventType: INTERVIEW_STARTED,
       payload: {
         process_id: event.processId.value,
-        employee_id: event.employeeId.value,
       },
     });
   };

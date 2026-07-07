@@ -19,9 +19,10 @@ export function createKafkaOffboardingStartedForwarder(publisher: IEventPublishe
     await publisher.publish({
       eventType: OFFBOARDING_TRIGGERED,
       payload: {
-        process_id: event.processId.value,
         employee_id: event.departingUserId.value,
         manager_id: event.initiatorId.value,
+        ...(event.employeeName !== undefined ? { employee_name: event.employeeName } : {}),
+        ...(event.managerName !== undefined ? { manager_name: event.managerName } : {}),
       },
     });
   };

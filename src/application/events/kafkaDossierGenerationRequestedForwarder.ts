@@ -20,8 +20,6 @@ export function createKafkaDossierGenerationRequestedForwarder(publisher: IEvent
       eventType: DOSSIER_GENERATION_REQUESTED,
       payload: {
         process_id: event.processId.value,
-        summary: event.draft.summary,
-        sections: event.draft.sections.map((section) => ({ title: section.title, content: section.content })),
       },
     });
   };

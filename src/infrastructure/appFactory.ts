@@ -7,7 +7,6 @@ import type {
   IInterviewRepository,
   IInterviewAgent,
   IDossierRepository,
-  IDossierGenerationAgent,
   IMessagingPort,
   IUserInfoProvider,
   IEventPublisher,
@@ -28,7 +27,6 @@ import {
   HttpInterviewRepository,
   HttpDossierRepository,
   GeminiInterviewAgent,
-  GeminiDossierAgent,
   NoOpEventPublisher,
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
@@ -90,14 +88,6 @@ export class AppFactory {
     }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
     return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
-  }
-
-  private createDossierGenerationAgent(): IDossierGenerationAgent {
-    if (!SETTINGS.GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY is required to generate the handover dossier.');
-    }
-    const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
-    return new GeminiDossierAgent(client, SETTINGS.GEMINI_MODEL);
   }
 
   private createExpertResponseDetector(): ExpertResponseDetector {
@@ -179,8 +169,8 @@ export class AppFactory {
 
     const eventBus = new DomainEventBus();
     const dossierService: IDossierService = new DossierService(
-      this.createDossierGenerationAgent(),
       repository,
+      dossierRepository,
       userInfoProvider,
       messagingPort,
       eventBus,
@@ -203,7 +193,7 @@ export class AppFactory {
       createKafkaDossierGenerationRequestedForwarder(publisher),
     );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
-    const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
+    const offboardingService: IOffboardingService = new OffboardingService(eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
 

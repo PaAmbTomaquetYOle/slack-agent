@@ -5,8 +5,8 @@ import { SOP_CREATED } from '../../../domain';
 
 function isSopCreatedPayload(payload: unknown): payload is SopCreatedPayload {
   const p = payload as Partial<SopCreatedPayload> | null;
-  return !!p && typeof p.sop_id === 'string' && typeof p.channel_id === 'string'
-    && typeof p.author_id === 'string';
+  return !!p && typeof p.sop_id === 'string' && typeof p.author === 'string'
+    && typeof p.origin_channel === 'string';
 }
 
 export class SopCreatedHandler implements IInboundEventHandler {
@@ -23,7 +23,7 @@ export class SopCreatedHandler implements IInboundEventHandler {
       throw new Error(`Invalid payload for event '${this.eventType}'`);
     }
     await this.#messaging.sendDirectMessage(
-      payload.author_id,
+      payload.author,
       `Thanks! Your answer has been saved as SOP (${payload.sop_id}). :white_check_mark:`,
     );
   }

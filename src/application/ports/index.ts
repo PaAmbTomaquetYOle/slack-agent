@@ -4,7 +4,6 @@ export type { IOffboardingProcessRepository } from './offboardingRepository';
 export type { IInterviewRepository } from './interviewRepository';
 export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from './interviewAgent';
 export type { IDossierRepository } from './dossierRepository';
-export type { IDossierGenerationAgent, DossierGenerationContext } from './dossierGenerationAgent';
 export type { IMessagingPort, EphemeralAction } from './messagingPort';
 export type { IUserInfoProvider } from './userInfoProvider';
 export type { IEventPublisher } from './eventPublisher';

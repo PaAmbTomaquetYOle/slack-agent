@@ -47,7 +47,7 @@ export class OffboardingProcess {
     const process = new OffboardingProcess(id, departingUserId, initiatorId, new Date());
     process.#state = process.#state.start();
     process.#domainEvents.push(
-      new OffboardingStartedEvent(id, departingUserId, initiatorId),
+      new OffboardingStartedEvent(departingUserId, initiatorId),
     );
     return process;
   }
