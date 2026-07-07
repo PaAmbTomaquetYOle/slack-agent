@@ -4,6 +4,7 @@ export { SlackUserInfoProvider } from './slackUserInfoProvider';
 export { HttpOffboardingProcessRepository } from './httpOffboardingProcessRepository';
 export { HttpInterviewRepository } from './httpInterviewRepository';
 export { GeminiInterviewAgent } from './geminiInterviewAgent';
+export { GeminiDossierAgent } from './geminiDossierAgent';
 export { HttpDossierRepository } from './httpDossierRepository';
 export { NoOpEventPublisher } from './noopEventPublisher';
 export { KafkaEventPublisher } from './kafkaEventPublisher';
