@@ -7,6 +7,7 @@ export const OFFBOARDING_STATE_CHANGED = 'offboarding.state_changed' as const;
 export const INBOUND_INTERVIEW_COMPLETED = 'interview.completed' as const;
 export const DOSSIER_GENERATED = 'dossier.generated' as const;
 export const OFFBOARDING_COMPLETED = 'offboarding.completed' as const;
+export const SOP_CREATED = 'sop.created' as const;
 
 export interface OffboardingStateChangedPayload {
   process_id: string;
@@ -35,9 +36,16 @@ export interface OffboardingCompletedPayload {
   dossier_id: string;
 }
 
+export interface SopCreatedPayload {
+  sop_id: string;
+  channel_id: string;
+  author_id: string;
+}
+
 export const INBOUND_EVENT_TYPES = [
   OFFBOARDING_STATE_CHANGED,
   INBOUND_INTERVIEW_COMPLETED,
   DOSSIER_GENERATED,
   OFFBOARDING_COMPLETED,
+  SOP_CREATED,
 ] as const;

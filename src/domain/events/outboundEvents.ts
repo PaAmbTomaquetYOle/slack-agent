@@ -6,6 +6,7 @@
 export const OFFBOARDING_TRIGGERED = 'offboarding.triggered' as const;
 export const OUTBOUND_INTERVIEW_COMPLETED = 'interview.completed' as const;
 export const DOSSIER_GENERATION_REQUESTED = 'dossier.generation_requested' as const;
+export const SOP_CREATION_REQUESTED = 'sop.creation_requested' as const;
 
 export interface OffboardingTriggeredPayload {
   process_id?: string;
@@ -35,7 +36,15 @@ export interface DossierGenerationRequestedPayload {
   process_id: string;
 }
 
+export interface SopCreationRequestedPayload {
+  channel_id: string;
+  author_id: string;
+  message_text: string;
+  message_ts: string;
+}
+
 export type OutboundEvent =
   | { eventType: typeof OFFBOARDING_TRIGGERED; payload: OffboardingTriggeredPayload }
   | { eventType: typeof OUTBOUND_INTERVIEW_COMPLETED; payload: InterviewCompletedOutboundPayload }
-  | { eventType: typeof DOSSIER_GENERATION_REQUESTED; payload: DossierGenerationRequestedPayload };
+  | { eventType: typeof DOSSIER_GENERATION_REQUESTED; payload: DossierGenerationRequestedPayload }
+  | { eventType: typeof SOP_CREATION_REQUESTED; payload: SopCreationRequestedPayload };

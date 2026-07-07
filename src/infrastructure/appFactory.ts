@@ -12,7 +12,12 @@ import type {
   IEventPublisher,
   IEventConsumer,
 } from '../application/ports';
-import type { IMcpService, IOffboardingService, IInterviewService } from '../application/serviceInterfaces';
+import type {
+  IMcpService,
+  IOffboardingService,
+  IInterviewService,
+  ISopService,
+} from '../application/serviceInterfaces';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -26,21 +31,35 @@ import {
   KafkaDeadLetterQueue,
   KafkaEventConsumer,
 } from './adapters';
-import { McpPromptController, OffboardingController, AppMentionController, InterviewController } from './controllers';
+import {
+  McpPromptController,
+  OffboardingController,
+  AppMentionController,
+  InterviewController,
+  SopController,
+} from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
-import { McpService, OffboardingService, InterviewService } from '../application/services';
+import { McpService, OffboardingService, InterviewService, SopService } from '../application/services';
 import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
   createKafkaInterviewCompletedForwarder,
+  createKafkaSopCreationRequestedForwarder,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
   OffboardingCompletedHandler,
   InterviewCompletedHandler,
   DossierGeneratedHandler,
+  SopCreatedHandler,
 } from '../application/events';
-import { OffboardingStartedEvent, InterviewCompletedEvent, INBOUND_EVENT_TYPES } from '../domain';
+import {
+  OffboardingStartedEvent,
+  InterviewCompletedEvent,
+  SopCreationRequestedEvent,
+  INBOUND_EVENT_TYPES,
+  ExpertResponseDetector,
+} from '../domain';
 import { createBackendHttpClient } from './http';
 
 interface EventInfrastructure {
@@ -63,6 +82,15 @@ export class AppFactory {
     }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
     return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
+  }
+
+  private createExpertResponseDetector(): ExpertResponseDetector {
+    const keywords = SETTINGS.SOP_KEYWORDS.split(',').map((keyword) => keyword.trim()).filter(Boolean);
+    return new ExpertResponseDetector({
+      minLength: SETTINGS.SOP_MIN_MESSAGE_LENGTH,
+      keywords,
+      minReactions: SETTINGS.SOP_MIN_REACTIONS,
+    });
   }
 
   private async createEventInfrastructure(
@@ -97,6 +125,7 @@ export class AppFactory {
         new InterviewCompletedHandler(messagingPort, repository),
         new DossierGeneratedHandler(messagingPort, repository),
         new OffboardingCompletedHandler(messagingPort),
+        new SopCreatedHandler(messagingPort),
       ]);
       const topics = INBOUND_EVENT_TYPES.map((eventType) => `${SETTINGS.KAFKA_INBOUND_TOPIC_PREFIX}.${eventType}`);
       const kafkaConsumer = new KafkaEventConsumer(
@@ -137,6 +166,7 @@ export class AppFactory {
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
+    eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
     const offboardingService: IOffboardingService = new OffboardingService(repository, eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
@@ -152,6 +182,16 @@ export class AppFactory {
       eventBus,
     );
     new InterviewController(interviewService).register(app);
+
+    // SOP detection wiring
+    const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);
+    const sopService: ISopService = new SopService(
+      this.createExpertResponseDetector(),
+      messagingPort,
+      eventBus,
+      monitoredChannelIds,
+    );
+    new SopController(sopService).register(app);
 
     return { app, eventConsumer };
   }

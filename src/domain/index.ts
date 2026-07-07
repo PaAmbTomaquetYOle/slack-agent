@@ -5,3 +5,4 @@ export * from './events';
 export * from './offboardingProcess';
 export * from './interview';
 export * from './dossier';
+export * from './sop';
