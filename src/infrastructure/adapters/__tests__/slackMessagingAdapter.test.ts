@@ -52,6 +52,16 @@ describe('SlackMessagingAdapter', () => {
     });
   });
 
+  it('sendEphemeralMessage() posts a plain ephemeral message with no action buttons', async () => {
+    await adapter.sendEphemeralMessage('C123', 'U1', 'Found some related content that might help:');
+
+    expect(client.chat.postEphemeral).toHaveBeenCalledWith({
+      channel: 'C123',
+      user: 'U1',
+      text: 'Found some related content that might help:',
+    });
+  });
+
   it('sendChannelMessage() posts a plain message to the given channel', async () => {
     await adapter.sendChannelMessage('C-managers', 'The handover dossier is ready.');
 

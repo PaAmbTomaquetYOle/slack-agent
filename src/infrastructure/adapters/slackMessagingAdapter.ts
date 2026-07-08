@@ -42,6 +42,10 @@ export class SlackMessagingAdapter implements IMessagingPort {
     });
   }
 
+  async sendEphemeralMessage(channelId: string, userId: string, text: string): Promise<void> {
+    await this.#client.chat.postEphemeral({ channel: channelId, user: userId, text });
+  }
+
   async sendChannelMessage(channelId: string, text: string): Promise<void> {
     await this.#client.chat.postMessage({ channel: channelId, text });
   }

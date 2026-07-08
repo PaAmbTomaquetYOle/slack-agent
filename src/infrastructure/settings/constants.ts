@@ -31,6 +31,12 @@ const SOP_MIN_REACTIONS = Number(process.env.SOP_MIN_REACTIONS ?? '3');
 // Empty channel id disables Slack publication of the handover dossier (SA-4);
 // generation and the Kafka round-trip still happen either way.
 const DOSSIER_MANAGERS_CHANNEL_ID = process.env.DOSSIER_MANAGERS_CHANNEL_ID ?? '';
+// Comma-separated channel IDs to watch for questions and suggest related
+// SOPs/answers for (SA-8). Defaults to the same channels as SOP capture.
+const QUESTION_SUGGESTION_MONITORED_CHANNELS = process.env.QUESTION_SUGGESTION_MONITORED_CHANNELS
+  ?? SOP_MONITORED_CHANNELS;
+const QUESTION_MIN_MESSAGE_LENGTH = Number(process.env.QUESTION_MIN_MESSAGE_LENGTH ?? '15');
+const QUESTION_MAX_SUGGESTIONS = Number(process.env.QUESTION_MAX_SUGGESTIONS ?? '3');
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -56,4 +62,7 @@ export const SETTINGS = {
   SOP_KEYWORDS,
   SOP_MIN_REACTIONS,
   DOSSIER_MANAGERS_CHANNEL_ID,
+  QUESTION_SUGGESTION_MONITORED_CHANNELS,
+  QUESTION_MIN_MESSAGE_LENGTH,
+  QUESTION_MAX_SUGGESTIONS,
 };

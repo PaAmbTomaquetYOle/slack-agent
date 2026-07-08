@@ -18,6 +18,7 @@ import type {
   IInterviewService,
   ISopService,
   IDossierService,
+  IQuestionSuggestionService,
 } from '../application/serviceInterfaces';
 import {
   McpClient,
@@ -38,9 +39,17 @@ import {
   AppMentionController,
   InterviewController,
   SopController,
+  QuestionSuggestionController,
 } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
-import { McpService, OffboardingService, InterviewService, SopService, DossierService } from '../application/services';
+import {
+  McpService,
+  OffboardingService,
+  InterviewService,
+  SopService,
+  DossierService,
+  QuestionSuggestionService,
+} from '../application/services';
 import {
   DomainEventBus,
   createOffboardingStartedHandler,
@@ -65,6 +74,7 @@ import {
   DossierGenerationRequestedEvent,
   INBOUND_EVENT_TYPES,
   ExpertResponseDetector,
+  QuestionDetector,
 } from '../domain';
 import { createBackendHttpClient } from './http';
 
@@ -97,6 +107,10 @@ export class AppFactory {
       keywords,
       minReactions: SETTINGS.SOP_MIN_REACTIONS,
     });
+  }
+
+  private createQuestionDetector(): QuestionDetector {
+    return new QuestionDetector({ minLength: SETTINGS.QUESTION_MIN_MESSAGE_LENGTH });
   }
 
   private async createEventInfrastructure(
@@ -218,6 +232,18 @@ export class AppFactory {
       monitoredChannelIds,
     );
     new SopController(sopService).register(app);
+
+    // Question -> related SOP suggestion wiring (SA-8)
+    const questionMonitoredChannelIds = SETTINGS.QUESTION_SUGGESTION_MONITORED_CHANNELS
+      .split(',').map((id) => id.trim()).filter(Boolean);
+    const questionSuggestionService: IQuestionSuggestionService = new QuestionSuggestionService(
+      this.createQuestionDetector(),
+      mcpService,
+      messagingPort,
+      questionMonitoredChannelIds,
+      SETTINGS.QUESTION_MAX_SUGGESTIONS,
+    );
+    new QuestionSuggestionController(questionSuggestionService).register(app);
 
     return { app, eventConsumer };
   }
