@@ -12,6 +12,7 @@ export interface IMessagingPort {
     text: string,
     actions: EphemeralAction[],
   ): Promise<void>;
+  sendEphemeralMessage(channelId: string, userId: string, text: string): Promise<void>;
   sendChannelMessage(channelId: string, text: string): Promise<void>;
   createChannelCanvas(channelId: string, title: string, markdown: string): Promise<void>;
 }
