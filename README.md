@@ -1,6 +1,25 @@
-# slack-agent
+<div align="center">
+
+![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
+[![Slack Bolt](https://img.shields.io/badge/Slack-Bolt%20SDK-4A154B?logo=slack&logoColor=white)](https://slack.dev/bolt-js/)
+[![Gemini](https://img.shields.io/badge/LLM-Gemini-8E75B2?logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+[![CI](https://github.com/PaAmbTomaquetYOle/slack-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/PaAmbTomaquetYOle/slack-agent/actions/workflows/ci.yml)
+
+**🔌 [mcp-server](https://github.com/PaAmbTomaquetYOle/mcp-server)** &nbsp;·&nbsp; **🗄️ [backend](https://github.com/PaAmbTomaquetYOle/backend)** &nbsp;·&nbsp; **💬 slack-agent**
+
+</div>
 
 Repository for the challenge's Slack Agent — part of **BrainTrust**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
+
+### 📚 Contents
+
+- [Architecture](#architecture)
+- [Kafka event contract (AsyncAPI)](#kafka-event-contract-asyncapi)
+- [🚀 Local development](#-local-development)
+- [⚙️ Configuration](#️-configuration)
 
 ## Architecture
 
@@ -41,3 +60,40 @@ Note the backend mints `process_id` when it consumes `offboarding.triggered` and
 - The canonical spec lives at `backend/docs/asyncapi/asyncapi.yml`. A copy is vendored here at [`docs/asyncapi/asyncapi.yml`](docs/asyncapi/asyncapi.yml) for reference — it is not regenerated automatically.
 - slack-agent does **not** consume the Modelina-generated TypeScript classes in `backend/docs/asyncapi/generated/ts/` (they're camelCase classes with `export default`, which don't match the snake_case wire format). Instead, payload shapes are hand-written as snake_case interfaces in `src/domain/events/outboundEvents.ts` (published) and `inboundEvents.ts` (consumed).
 - When the backend changes the contract: re-copy `asyncapi.yml` into `docs/asyncapi/`, diff it against `outboundEvents.ts`/`inboundEvents.ts`, and update the payload interfaces + the forwarders/handlers in `src/application/events/` to match.
+
+## 🚀 Local development
+
+```bash
+npm install
+cp .env.example .env   # fill in SLACK_*, MCP_SERVER_URL, BACKEND_API_URL, GEMINI_API_KEY, ...
+
+npm run dev             # watch mode (nodemon + ts-node)
+npm run build            # tsc -> dist/
+npm test                 # vitest run
+npm run test:coverage    # vitest run --coverage
+```
+
+The bot needs `mcp-server` reachable at `MCP_SERVER_URL` (for the guided interview's tool calls and question suggestions) and `backend` reachable at `BACKEND_API_URL`. Leave `KAFKA_BROKERS` empty to run without Kafka — publishing falls back to a no-op and no consumer starts.
+
+## ⚙️ Configuration
+
+All settings are documented, with defaults and setup notes, in [`.env.example`](.env.example). Highlights:
+
+| Variable | Purpose |
+|---|---|
+| `GEMINI_API_KEY` / `GEMINI_MODEL` | Required for the guided offboarding interview (`GeminiInterviewAgent`). |
+| `MCP_SERVER_URL` | mcp-server's streamable-HTTP endpoint — this repo uses its Jira/Trello/Slack-auth, `search_slack_workspace` and `test_search_query` tools (dossier generation itself is called by backend, not here). |
+| `SOP_MONITORED_CHANNELS` / `SOP_MIN_MESSAGE_LENGTH` / `SOP_KEYWORDS` / `SOP_MIN_REACTIONS` | SA-7 — expert-answer detection thresholds for offering to save a message as an SOP. |
+| `QUESTION_SUGGESTION_MONITORED_CHANNELS` / `QUESTION_MIN_MESSAGE_LENGTH` / `QUESTION_MAX_SUGGESTIONS` | SA-8 — question detection + how many related SOPs to suggest via `test_search_query`. |
+| `DOSSIER_MANAGERS_CHANNEL_ID` | Channel where the generated handover dossier is posted / Canvas is created. |
+| `KAFKA_*` | Broker, topic prefixes, consumer group, DLQ topic — see the event contract above. |
+
+---
+
+<div align="center">
+
+Part of **BrainTrust** — fighting knowledge loss from volunteer turnover in NGOs.
+
+[mcp-server](https://github.com/PaAmbTomaquetYOle/mcp-server) &nbsp;·&nbsp; [backend](https://github.com/PaAmbTomaquetYOle/backend) &nbsp;·&nbsp; MIT © [Pa Amb Tomàquet Y Olé](LICENSE)
+
+</div>
