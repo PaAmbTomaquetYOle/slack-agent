@@ -27,7 +27,7 @@
 
     // Style Options
     // "noImplicitReturns": true,
-    // "noImplicitOverride": true,
+    "noImplicitOverride": true,
     // "noUnusedLocals": true,
     // "noUnusedParameters": true,
     // "noFallthroughCasesInSwitch": true,
@@ -44,6 +44,7 @@
     "esModuleInterop": true
   },
   "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts", "src/**/__tests__/**", "src/testing/**", "node_modules", "dist"],
   "ts-node": {
     "esm": true,
     "experimentalSpecifierResolution": "node"
