@@ -1,5 +1,5 @@
 import type { App, SlackCommandMiddlewareArgs } from '@slack/bolt';
-import type { IAuthService, IMcpService } from '../../application/serviceInterfaces';
+import type { IAuthService, IMcpService } from '../../application';
 import type { McpPromptResult } from '../../domain';
 import { BaseController } from './baseController';
 
