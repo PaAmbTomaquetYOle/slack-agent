@@ -4,9 +4,11 @@ import type { IInterviewService, IOffboardingOrchestrator, IAuthService } from '
 import {
   OffboardingProcess,
   OffboardingStartedEvent,
+  OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
   AuthenticationRequiredError,
+  ProcessId,
 } from '../../domain';
 import type { Interview, DomainEvent } from '../../domain';
 
@@ -28,6 +30,7 @@ interface PendingTrigger {
  * process state to the backend over HTTP; the backend remains the source of truth.
  */
 export class OffboardingOrchestrator implements IOffboardingOrchestrator {
+  readonly #eventBus: IDomainEventBus;
   readonly #repository: IOffboardingProcessRepository;
   readonly #interviewRepository: IInterviewRepository;
   readonly #interviewService: IInterviewService;
@@ -54,6 +57,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     nudgeTimeoutMs: number,
     abandonTimeoutMs: number,
   ) {
+    this.#eventBus = eventBus;
     this.#repository = repository;
     this.#interviewRepository = interviewRepository;
     this.#interviewService = interviewService;
@@ -286,6 +290,9 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     this.#logger.warn('Interview stalled; abandoning', { processId, departingUserId });
     this.#advanceState(processId, (process) => process.cancel());
     this.#activeProcessByUser.delete(departingUserId);
+    // BE-7: cancellation is now a Kafka command (`offboarding.cancellation_requested`),
+    // replacing the old `PATCH .../cancel` REST write — the backend remains the source of truth.
+    await this.#eventBus.publish(new OffboardingCancellationRequestedEvent(new ProcessId(processId)));
     await this.#messagingPort.sendDirectMessage(
       initiatorId,
       `:warning: The offboarding interview for <@${departingUserId}> stalled with no response and was abandoned. You may want to follow up directly.`,

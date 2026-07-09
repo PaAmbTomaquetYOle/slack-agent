@@ -1,5 +1,6 @@
 export type { DomainEvent } from './domainEvent';
 export { OffboardingStartedEvent } from './offboardingStartedEvent';
+export { OffboardingCancellationRequestedEvent } from './offboardingCancellationRequestedEvent';
 export { InterviewStartedEvent } from './interviewStartedEvent';
 export { InterviewCompletedEvent } from './interviewCompletedEvent';
 export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
@@ -7,6 +8,7 @@ export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEve
 export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
 export type {
   OffboardingTriggeredPayload,
+  OffboardingCancellationRequestedPayload,
   InterviewStartedPayload,
   OutboundInterviewTurnPayload,
   InterviewCompletedOutboundPayload,
@@ -16,6 +18,7 @@ export type {
 } from './outboundEvents';
 export {
   OFFBOARDING_TRIGGERED,
+  OFFBOARDING_CANCELLATION_REQUESTED,
   INTERVIEW_STARTED,
   OUTBOUND_INTERVIEW_COMPLETED,
   DOSSIER_GENERATION_REQUESTED,
