@@ -28,14 +28,8 @@ function makeOrchestratorMock(): IOffboardingOrchestrator {
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
   return {
-    create: vi.fn(),
     findById: vi.fn(),
     findAll: vi.fn(),
-    delete: vi.fn(),
-    start: vi.fn(),
-    submitForReview: vi.fn(),
-    complete: vi.fn(),
-    cancel: vi.fn(),
   };
 }
 

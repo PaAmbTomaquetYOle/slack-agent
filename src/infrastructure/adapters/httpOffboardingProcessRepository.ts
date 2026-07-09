@@ -2,42 +2,24 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 import type { IOffboardingProcessRepository } from '../../application/ports';
 import type { OffboardingProcess } from '../../domain';
-import { ProcessId, UserId } from '../../domain';
-import {
-  handleAxiosError,
-  mapOffboardingResponse,
-  mapInterviewTurnToRequest,
-} from '../http';
+import type { ProcessId } from '../../domain';
+import { handleAxiosError, mapOffboardingResponse } from '../http';
 import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../http';
 
 function isNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404;
 }
 
+/**
+ * BE-7: the backend's offboarding REST endpoints are read-only now — writes (create/start/
+ * submit-for-review/complete/cancel/delete) flow over Kafka instead (see the domain-event
+ * forwarders in `application/events`). This adapter only implements the surviving reads.
+ */
 export class HttpOffboardingProcessRepository implements IOffboardingProcessRepository {
   readonly #http: AxiosInstance;
 
   constructor(http: AxiosInstance) {
     this.#http = http;
-  }
-
-  async create(
-    departingUserId: UserId,
-    initiatorId: UserId,
-    employeeName?: string,
-    managerName?: string,
-  ): Promise<OffboardingProcess> {
-    try {
-      const response = await this.#http.post<BackendOffboardingResponse>('/offboarding', {
-        employee_id: departingUserId.value,
-        manager_id: initiatorId.value,
-        ...(employeeName ? { employee_name: employeeName } : {}),
-        ...(managerName ? { manager_name: managerName } : {}),
-      });
-      return mapOffboardingResponse(response.data);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process');
-    }
   }
 
   async findById(id: ProcessId): Promise<OffboardingProcess | null> {
@@ -63,50 +45,6 @@ export class HttpOffboardingProcessRepository implements IOffboardingProcessRepo
       };
     } catch (error) {
       return handleAxiosError(error, 'offboarding process');
-    }
-  }
-
-  async delete(id: ProcessId): Promise<void> {
-    try {
-      await this.#http.delete(`/offboarding/${id.value}`);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process', id.value);
-    }
-  }
-
-  async start(id: ProcessId): Promise<OffboardingProcess> {
-    try {
-      const response = await this.#http.patch<BackendOffboardingResponse>(`/offboarding/${id.value}/start`);
-      return mapOffboardingResponse(response.data);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process', id.value);
-    }
-  }
-
-  async submitForReview(id: ProcessId): Promise<OffboardingProcess> {
-    try {
-      const response = await this.#http.patch<BackendOffboardingResponse>(`/offboarding/${id.value}/submit-for-review`);
-      return mapOffboardingResponse(response.data);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process', id.value);
-    }
-  }
-
-  async complete(id: ProcessId): Promise<OffboardingProcess> {
-    try {
-      const response = await this.#http.patch<BackendOffboardingResponse>(`/offboarding/${id.value}/complete`);
-      return mapOffboardingResponse(response.data);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process', id.value);
-    }
-  }
-
-  async cancel(id: ProcessId): Promise<OffboardingProcess> {
-    try {
-      const response = await this.#http.patch<BackendOffboardingResponse>(`/offboarding/${id.value}/cancel`);
-      return mapOffboardingResponse(response.data);
-    } catch (error) {
-      return handleAxiosError(error, 'offboarding process', id.value);
     }
   }
 }

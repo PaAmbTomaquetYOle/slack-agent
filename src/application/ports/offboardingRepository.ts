@@ -1,22 +1,17 @@
-import type { OffboardingProcess, ProcessId, UserId } from '../../domain';
+import type { OffboardingProcess, ProcessId } from '../../domain';
 
 export interface IOffboardingRepository {
   save(process: OffboardingProcess): Promise<void>;
   findById(id: ProcessId): Promise<OffboardingProcess | null>;
 }
 
+/**
+ * BE-7: the backend's REST surface is read-only — offboarding-process writes now flow over
+ * Kafka (`offboarding.triggered`, `offboarding.cancellation_requested`, ...). This port keeps
+ * only the reads `InterviewService#findActiveProcess` and `OffboardingOrchestrator.recover()`
+ * still need.
+ */
 export interface IOffboardingProcessRepository {
-  create(
-    departingUserId: UserId,
-    initiatorId: UserId,
-    employeeName?: string,
-    managerName?: string,
-  ): Promise<OffboardingProcess>;
   findById(id: ProcessId): Promise<OffboardingProcess | null>;
   findAll(filters?: { employeeId?: string; managerId?: string; state?: string }): Promise<{ items: OffboardingProcess[]; count: number }>;
-  delete(id: ProcessId): Promise<void>;
-  start(id: ProcessId): Promise<OffboardingProcess>;
-  submitForReview(id: ProcessId): Promise<OffboardingProcess>;
-  complete(id: ProcessId): Promise<OffboardingProcess>;
-  cancel(id: ProcessId): Promise<OffboardingProcess>;
 }
