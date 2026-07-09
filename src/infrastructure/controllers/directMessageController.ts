@@ -1,5 +1,5 @@
 import type { App } from '@slack/bolt';
-import type { IAuthService, IInterviewService } from '../../application/serviceInterfaces';
+import type { IAuthService, IInterviewService } from '../../application';
 import { BaseController } from './baseController';
 
 export class DirectMessageController extends BaseController {

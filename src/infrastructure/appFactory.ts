@@ -11,8 +11,6 @@ import type {
   IUserInfoProvider,
   IEventPublisher,
   IEventConsumer,
-} from '../application/ports';
-import type {
   IMcpService,
   IOffboardingService,
   IInterviewService,
@@ -20,7 +18,7 @@ import type {
   IDossierService,
   IQuestionSuggestionService,
   IAuthService,
-} from '../application/serviceInterfaces';
+} from '../application';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -52,8 +50,6 @@ import {
   DossierService,
   QuestionSuggestionService,
   AuthService,
-} from '../application/services';
-import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
@@ -68,7 +64,7 @@ import {
   InterviewCompletedHandler,
   DossierGeneratedHandler,
   SopCreatedHandler,
-} from '../application/events';
+} from '../application';
 import {
   OffboardingStartedEvent,
   InterviewStartedEvent,
