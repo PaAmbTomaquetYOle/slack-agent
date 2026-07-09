@@ -2,6 +2,7 @@ export type { IMcpClient } from './mcpClient';
 export type { IOffboardingRepository } from './offboardingRepository';
 export type { IOffboardingProcessRepository } from './offboardingRepository';
 export type { IInterviewRepository } from './interviewRepository';
+export type { IInterviewSessionStore, InterviewSession } from './interviewSessionStore';
 export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from './interviewAgent';
 export type { IDossierRepository } from './dossierRepository';
 export type { IMessagingPort, EphemeralAction } from './messagingPort';

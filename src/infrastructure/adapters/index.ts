@@ -12,3 +12,4 @@ export { KafkaEventConsumer } from './kafkaEventConsumer';
 export { deserializeEnvelope, EventDeserializationError } from './eventDeserializer';
 export { ConsoleLogger } from './consoleLogger';
 export { InMemoryScheduler } from './inMemoryScheduler';
+export { InMemoryInterviewSessionStore } from './inMemoryInterviewSessionStore';
