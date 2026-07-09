@@ -37,6 +37,10 @@ const QUESTION_SUGGESTION_MONITORED_CHANNELS = process.env.QUESTION_SUGGESTION_M
   ?? SOP_MONITORED_CHANNELS;
 const QUESTION_MIN_MESSAGE_LENGTH = Number(process.env.QUESTION_MIN_MESSAGE_LENGTH ?? '15');
 const QUESTION_MAX_SUGGESTIONS = Number(process.env.QUESTION_MAX_SUGGESTIONS ?? '3');
+// SA-10: how long the orchestrator waits for the departing user to respond (pre-interview or
+// mid-interview) before nudging, and then before giving up and notifying the manager.
+const INTERVIEW_NUDGE_TIMEOUT_MS = Number(process.env.INTERVIEW_NUDGE_TIMEOUT_MS ?? String(24 * 60 * 60 * 1000));
+const INTERVIEW_ABANDON_TIMEOUT_MS = Number(process.env.INTERVIEW_ABANDON_TIMEOUT_MS ?? String(72 * 60 * 60 * 1000));
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -65,4 +69,6 @@ export const SETTINGS = {
   QUESTION_SUGGESTION_MONITORED_CHANNELS,
   QUESTION_MIN_MESSAGE_LENGTH,
   QUESTION_MAX_SUGGESTIONS,
+  INTERVIEW_NUDGE_TIMEOUT_MS,
+  INTERVIEW_ABANDON_TIMEOUT_MS,
 };

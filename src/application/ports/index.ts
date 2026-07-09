@@ -9,3 +9,5 @@ export type { IUserInfoProvider } from './userInfoProvider';
 export type { IEventPublisher } from './eventPublisher';
 export type { IEventConsumer } from './eventConsumer';
 export type { IDeadLetterQueue } from './deadLetterQueue';
+export type { ILogger, LogMeta } from './logger';
+export type { IScheduler } from './scheduler';

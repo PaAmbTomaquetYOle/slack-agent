@@ -1,15 +1,15 @@
 import type { App } from '@slack/bolt';
-import type { IAuthService, IInterviewService } from '../../application';
+import type { IAuthService, IOffboardingOrchestrator } from '../../application';
 import { BaseController } from './baseController';
 
 export class DirectMessageController extends BaseController {
   readonly #authService: IAuthService;
-  readonly #interviewService: IInterviewService;
+  readonly #orchestrator: IOffboardingOrchestrator;
 
-  constructor(authService: IAuthService, interviewService: IInterviewService) {
+  constructor(authService: IAuthService, orchestrator: IOffboardingOrchestrator) {
     super();
     this.#authService = authService;
-    this.#interviewService = interviewService;
+    this.#orchestrator = orchestrator;
   }
 
   register(app: App): void {
@@ -23,7 +23,7 @@ export class DirectMessageController extends BaseController {
         return;
       }
 
-      await this.#interviewService.handleIncomingDirectMessage(message.user, message.text);
+      await this.#orchestrator.handleInterviewMessage(message.user, message.text);
     });
   }
 }
