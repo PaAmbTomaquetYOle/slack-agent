@@ -1,15 +1,42 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { GoogleGenAI, GenerateContentResponse } from '@google/genai';
+import type { GoogleGenAI, GenerateContentResponse, FunctionCall } from '@google/genai';
 import { GeminiInterviewAgent } from '../geminiInterviewAgent';
 import type { InterviewAgentContext } from '../../../application/ports';
-import type { InterviewTurn } from '../../../domain';
+import type { IMcpService, IAuthService } from '../../../application/serviceInterfaces';
+import type { InterviewTurn, McpTool, McpToolResult } from '../../../domain';
+import { AuthenticationRequiredError, INTERVIEW_TOPICS } from '../../../domain';
 
 function makeGenAiMock() {
   return { models: { generateContent: vi.fn() } } as unknown as GoogleGenAI;
 }
 
-function makeResponse(text: string | undefined): GenerateContentResponse {
-  return { text } as unknown as GenerateContentResponse;
+function makeResponse(text: string | undefined, functionCalls?: FunctionCall[]): GenerateContentResponse {
+  return { text, functionCalls } as unknown as GenerateContentResponse;
+}
+
+function makeMcpServiceMock(): IMcpService {
+  return {
+    discoverTools: vi.fn().mockResolvedValue([]),
+    callTool: vi.fn(),
+    listPrompts: vi.fn(),
+    getPrompt: vi.fn(),
+    listResources: vi.fn(),
+    listResourceTemplates: vi.fn(),
+    readResource: vi.fn(),
+    jiraLoginPrompt: vi.fn(),
+    trelloLoginPrompt: vi.fn(),
+    extractPendingJiraTasksPrompt: vi.fn(),
+    extractPendingTrelloTasksPrompt: vi.fn(),
+  };
+}
+
+function makeAuthServiceMock(): IAuthService {
+  return {
+    initiateAuth: vi.fn().mockResolvedValue(undefined),
+    handleAuthCodeMessage: vi.fn().mockResolvedValue(undefined),
+    hasPendingAuth: vi.fn().mockReturnValue(false),
+    isAuthErrorMessage: vi.fn((message: string) => /not authenticated/i.test(message)),
+  };
 }
 
 function makeTurn(overrides: Partial<InterviewTurn> = {}): InterviewTurn {
@@ -29,6 +56,7 @@ function makeTurn(overrides: Partial<InterviewTurn> = {}): InterviewTurn {
 function makeContext(overrides: Partial<InterviewAgentContext> = {}): InterviewAgentContext {
   return {
     employeeName: 'Alice',
+    slackUserId: 'U-DEPARTING',
     pendingTopics: ['key_contacts'],
     turns: [makeTurn(), makeTurn({ speakerRole: 'interviewer', turnType: 'question', content: 'Who else worked on it?', topic: null, sentiment: null, answerText: null, order: 1 })],
     incomingMessage: 'Just me and Bob from IT.',
@@ -46,11 +74,15 @@ const VALID_RESULT = {
 
 describe('GeminiInterviewAgent', () => {
   let client: GoogleGenAI;
+  let mcpService: IMcpService;
+  let authService: IAuthService;
   let agent: GeminiInterviewAgent;
 
   beforeEach(() => {
     client = makeGenAiMock();
-    agent = new GeminiInterviewAgent(client, 'gemini-2.5-flash');
+    mcpService = makeMcpServiceMock();
+    authService = makeAuthServiceMock();
+    agent = new GeminiInterviewAgent(client, 'gemini-2.5-flash', mcpService, authService);
   });
 
   it('sends the turn history mapped to Gemini roles plus the incoming message', async () => {
@@ -106,5 +138,87 @@ describe('GeminiInterviewAgent', () => {
     );
 
     await expect(agent.nextTurn(makeContext())).rejects.toThrow();
+  });
+
+  describe('MCP task tool-calling (first turn only)', () => {
+    function makeFirstTurnContext(overrides: Partial<InterviewAgentContext> = {}): InterviewAgentContext {
+      return {
+        employeeName: 'Alice',
+        slackUserId: 'U-DEPARTING',
+        pendingTopics: [...INTERVIEW_TOPICS],
+        turns: [],
+        incomingMessage: 'Hi there',
+        ...overrides,
+      };
+    }
+
+    const jiraTool: McpTool = {
+      name: 'get_pending_jira_issues',
+      description: 'Get pending Jira issues',
+      inputSchema: { type: 'object' },
+    };
+
+    it("calls the discovered MCP task tool and feeds its result back before the final JSON pass", async () => {
+      vi.mocked(mcpService.discoverTools).mockResolvedValue([jiraTool]);
+      const toolResult: McpToolResult = {
+        content: [{ type: 'text', text: '[{"id":"T-1","title":"Fix bug"}]' }],
+        isError: false,
+      };
+      vi.mocked(mcpService.callTool).mockResolvedValue(toolResult);
+      vi.mocked(client.models.generateContent)
+        .mockResolvedValueOnce(
+          makeResponse(undefined, [{ name: 'get_pending_jira_issues', args: { assignee: 'Alice' } }]),
+        )
+        .mockResolvedValueOnce(makeResponse(undefined)) // no further function calls -> exits the tool loop
+        .mockResolvedValueOnce(makeResponse(JSON.stringify(VALID_RESULT))); // final structured-JSON pass
+
+      const result = await agent.nextTurn(makeFirstTurnContext());
+
+      expect(mcpService.callTool).toHaveBeenCalledWith(
+        'get_pending_jira_issues',
+        expect.objectContaining({ user_id: 'U-DEPARTING', assignee: 'Alice' }),
+      );
+      expect(result).toEqual(VALID_RESULT);
+      expect(client.models.generateContent).toHaveBeenCalledTimes(3);
+      const firstCallArgs = vi.mocked(client.models.generateContent).mock.calls[0]?.[0];
+      expect(firstCallArgs?.config?.tools).toEqual([
+        { functionDeclarations: [{ name: 'get_pending_jira_issues', description: 'Get pending Jira issues', parametersJsonSchema: { type: 'object' } }] },
+      ]);
+    });
+
+    it('does not offer tools on turns after the first', async () => {
+      vi.mocked(client.models.generateContent).mockResolvedValue(makeResponse(JSON.stringify(VALID_RESULT)));
+
+      await agent.nextTurn(makeContext()); // default context has turns.length === 2
+
+      expect(mcpService.discoverTools).not.toHaveBeenCalled();
+      expect(client.models.generateContent).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws AuthenticationRequiredError when a task tool reports the user is not authenticated', async () => {
+      vi.mocked(mcpService.discoverTools).mockResolvedValue([jiraTool]);
+      const toolResult: McpToolResult = {
+        content: [{ type: 'text', text: 'User not authenticated with Jira' }],
+        isError: true,
+      };
+      vi.mocked(mcpService.callTool).mockResolvedValue(toolResult);
+      vi.mocked(client.models.generateContent).mockResolvedValueOnce(
+        makeResponse(undefined, [{ name: 'get_pending_jira_issues', args: { assignee: 'Alice' } }]),
+      );
+
+      await expect(agent.nextTurn(makeFirstTurnContext())).rejects.toBeInstanceOf(AuthenticationRequiredError);
+    });
+
+    it('degrades gracefully (no tools offered) when MCP tool discovery fails', async () => {
+      vi.mocked(mcpService.discoverTools).mockRejectedValue(new Error('mcp-server unreachable'));
+      vi.mocked(client.models.generateContent).mockResolvedValue(makeResponse(JSON.stringify(VALID_RESULT)));
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const result = await agent.nextTurn(makeFirstTurnContext());
+
+      expect(result).toEqual(VALID_RESULT);
+      expect(client.models.generateContent).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
+    });
   });
 });

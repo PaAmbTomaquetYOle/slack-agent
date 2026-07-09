@@ -1,11 +1,12 @@
 import type { IOffboardingProcessRepository, IInterviewRepository, IMessagingPort, IScheduler, ILogger } from '../ports';
 import type { IDomainEventBus } from '../events';
-import type { IInterviewService, IOffboardingOrchestrator } from '../serviceInterfaces';
+import type { IInterviewService, IOffboardingOrchestrator, IAuthService } from '../serviceInterfaces';
 import {
   OffboardingProcess,
   OffboardingStartedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  AuthenticationRequiredError,
 } from '../../domain';
 import type { Interview, DomainEvent } from '../../domain';
 
@@ -33,6 +34,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
   readonly #messagingPort: IMessagingPort;
   readonly #scheduler: IScheduler;
   readonly #logger: ILogger;
+  readonly #authService: IAuthService;
   readonly #nudgeTimeoutMs: number;
   readonly #abandonTimeoutMs: number;
 
@@ -48,6 +50,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     messagingPort: IMessagingPort,
     scheduler: IScheduler,
     logger: ILogger,
+    authService: IAuthService,
     nudgeTimeoutMs: number,
     abandonTimeoutMs: number,
   ) {
@@ -57,6 +60,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     this.#messagingPort = messagingPort;
     this.#scheduler = scheduler;
     this.#logger = logger;
+    this.#authService = authService;
     this.#nudgeTimeoutMs = nudgeTimeoutMs;
     this.#abandonTimeoutMs = abandonTimeoutMs;
 
@@ -68,9 +72,18 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
       this.#onInterviewCompleted(event as InterviewCompletedEvent));
   }
 
-  async handleInterviewMessage(userId: string, text: string): Promise<void> {
+  async handleInterviewMessage(userId: string, text: string, channelId: string): Promise<void> {
     this.#rearmActiveStall(userId);
-    await this.#interviewService.handleIncomingDirectMessage(userId, text);
+    try {
+      await this.#interviewService.handleIncomingDirectMessage(userId, text);
+    } catch (error) {
+      if (error instanceof AuthenticationRequiredError) {
+        this.#logger.info('Interview needs Jira/Trello auth; handing off', { userId, provider: error.provider });
+        await this.#authService.initiateAuth(error.provider, userId, channelId);
+        return;
+      }
+      throw error;
+    }
   }
 
   onDossierGenerated(processId: string): void {

@@ -95,12 +95,12 @@ export class AppFactory {
     return new McpService(this.createMcpClient());
   }
 
-  private createInterviewAgent(): IInterviewAgent {
+  private createInterviewAgent(mcpService: IMcpService, authService: IAuthService): IInterviewAgent {
     if (!SETTINGS.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is required to run the guided offboarding interview.');
     }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
-    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
+    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL, mcpService, authService);
   }
 
   private createExpertResponseDetector(): ExpertResponseDetector {
@@ -200,7 +200,7 @@ export class AppFactory {
     );
 
     // Guided interview wiring
-    const interviewAgent = this.createInterviewAgent();
+    const interviewAgent = this.createInterviewAgent(mcpService, authService);
     const interviewService: IInterviewService = new InterviewService(
       repository,
       interviewRepository,
@@ -220,6 +220,7 @@ export class AppFactory {
       messagingPort,
       new InMemoryScheduler(),
       new ConsoleLogger(),
+      authService,
       SETTINGS.INTERVIEW_NUDGE_TIMEOUT_MS,
       SETTINGS.INTERVIEW_ABANDON_TIMEOUT_MS,
     );

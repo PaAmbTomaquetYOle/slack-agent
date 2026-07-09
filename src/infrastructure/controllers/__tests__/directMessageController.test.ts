@@ -39,7 +39,7 @@ describe('DirectMessageController', () => {
       message: { type: 'message', subtype: undefined, channel_type: 'im', user: 'U-DEPARTING', text: 'Hi there', channel: 'D1', ts: '1', event_ts: '1' },
     });
 
-    expect(orchestrator.handleInterviewMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there');
+    expect(orchestrator.handleInterviewMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there', 'D1');
     expect(authService.handleAuthCodeMessage).not.toHaveBeenCalled();
   });
 

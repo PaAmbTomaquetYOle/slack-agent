@@ -23,7 +23,7 @@ export class DirectMessageController extends BaseController {
         return;
       }
 
-      await this.#orchestrator.handleInterviewMessage(message.user, message.text);
+      await this.#orchestrator.handleInterviewMessage(message.user, message.text, message.channel);
     });
   }
 }

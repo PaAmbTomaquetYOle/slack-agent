@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IOffboardingProcessRepository, IInterviewRepository, IMessagingPort, IScheduler, ILogger } from '../../ports';
-import type { IInterviewService } from '../../serviceInterfaces';
+import type { IInterviewService, IAuthService } from '../../serviceInterfaces';
 import { DomainEventBus } from '../../events';
 import { OffboardingOrchestrator } from '../offboardingOrchestrator';
 import {
@@ -11,6 +11,7 @@ import {
   ProcessId,
   UserId,
   InterviewId,
+  AuthenticationRequiredError,
 } from '../../../domain';
 import type { Interview } from '../../../domain';
 
@@ -83,6 +84,15 @@ function makeInterviewServiceMock(): IInterviewService {
   return { handleIncomingDirectMessage: vi.fn().mockResolvedValue(undefined) };
 }
 
+function makeAuthServiceMock(): IAuthService {
+  return {
+    initiateAuth: vi.fn().mockResolvedValue(undefined),
+    handleAuthCodeMessage: vi.fn().mockResolvedValue(undefined),
+    hasPendingAuth: vi.fn().mockReturnValue(false),
+    isAuthErrorMessage: vi.fn().mockReturnValue(false),
+  };
+}
+
 function makeProcess(overrides: { state?: string } = {}): OffboardingProcess {
   return OffboardingProcess.fromBackend({
     id: new ProcessId('proc-1'),
@@ -103,6 +113,7 @@ describe('OffboardingOrchestrator', () => {
   let messagingPort: IMessagingPort;
   let scheduler: ReturnType<typeof makeFakeScheduler>;
   let logger: ILogger;
+  let authService: IAuthService;
   let orchestrator: OffboardingOrchestrator;
 
   beforeEach(() => {
@@ -113,6 +124,7 @@ describe('OffboardingOrchestrator', () => {
     messagingPort = makeMessagingMock();
     scheduler = makeFakeScheduler();
     logger = makeLoggerMock();
+    authService = makeAuthServiceMock();
     orchestrator = new OffboardingOrchestrator(
       eventBus,
       repository,
@@ -121,6 +133,7 @@ describe('OffboardingOrchestrator', () => {
       messagingPort,
       scheduler,
       logger,
+      authService,
       NUDGE_TIMEOUT_MS,
       ABANDON_TIMEOUT_MS,
     );
@@ -172,10 +185,18 @@ describe('OffboardingOrchestrator', () => {
     await eventBus.publish(new OffboardingStartedEvent(new UserId('U-DEPARTING'), new UserId('U-INITIATOR')));
     await eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
 
-    await orchestrator.handleInterviewMessage('U-DEPARTING', 'still here');
+    await orchestrator.handleInterviewMessage('U-DEPARTING', 'still here', 'D1');
 
     expect(interviewService.handleIncomingDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'still here');
     expect(scheduler.tasks.has('interview-stall:proc-1:nudge')).toBe(true);
+  });
+
+  it('hands off to AuthService when the interview needs Jira/Trello authentication', async () => {
+    vi.mocked(interviewService.handleIncomingDirectMessage).mockRejectedValue(new AuthenticationRequiredError('jira'));
+
+    await orchestrator.handleInterviewMessage('U-DEPARTING', 'hi', 'D1');
+
+    expect(authService.initiateAuth).toHaveBeenCalledWith('jira', 'U-DEPARTING', 'D1');
   });
 
   it('marks the process finished when the orchestrator is notified dossier generation completed', async () => {
@@ -199,7 +220,7 @@ describe('OffboardingOrchestrator', () => {
 
     expect(scheduler.tasks.has('interview-stall:proc-1:nudge')).toBe(false);
     // A subsequent message from the same user no longer finds an active process to re-arm.
-    await orchestrator.handleInterviewMessage('U-DEPARTING', 'hello again');
+    await orchestrator.handleInterviewMessage('U-DEPARTING', 'hello again', 'D1');
     expect(scheduler.tasks.has('interview-stall:proc-1:nudge')).toBe(false);
   });
 
