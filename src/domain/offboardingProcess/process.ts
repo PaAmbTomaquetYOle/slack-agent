@@ -97,4 +97,20 @@ export class OffboardingProcess {
     this.#domainEvents.length = 0;
     return events;
   }
+
+  // In-memory-only transitions for orchestration bookkeeping (SA-10): the backend is the
+  // source of truth and persists via Kafka, so these never trigger a write — they just keep a
+  // locally tracked process' state consistent with what we expect the backend to reach. Throws
+  // InvalidStateTransitionError (via the state objects) on an illegal transition.
+  submitForReview(): void {
+    this.#state = this.#state.submitForReview();
+  }
+
+  complete(): void {
+    this.#state = this.#state.complete();
+  }
+
+  cancel(): void {
+    this.#state = this.#state.cancel();
+  }
 }

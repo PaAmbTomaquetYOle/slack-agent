@@ -5,7 +5,7 @@ import { InterviewCompletedHandler } from '../handlers/interviewCompletedHandler
 import { DossierGeneratedHandler } from '../handlers/dossierGeneratedHandler';
 import { SopCreatedHandler } from '../handlers/sopCreatedHandler';
 import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
-import type { IDossierService } from '../../serviceInterfaces';
+import type { IDossierService, IOffboardingOrchestrator } from '../../serviceInterfaces';
 import { OffboardingProcess, ProcessId, UserId } from '../../../domain';
 import type { KafkaEventEnvelope } from '../../../domain';
 
@@ -15,6 +15,15 @@ function envelope(eventType: string, payload: Record<string, unknown>): KafkaEve
 
 function makeMessagingMock(): IMessagingPort {
   return { sendDirectMessage: vi.fn().mockResolvedValue(undefined) };
+}
+
+function makeOrchestratorMock(): IOffboardingOrchestrator {
+  return {
+    handleInterviewMessage: vi.fn().mockResolvedValue(undefined),
+    recover: vi.fn().mockResolvedValue(undefined),
+    onDossierGenerated: vi.fn(),
+    onOffboardingCompleted: vi.fn(),
+  };
 }
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
@@ -48,17 +57,19 @@ describe('OffboardingStateChangedHandler', () => {
 });
 
 describe('OffboardingCompletedHandler', () => {
-  it('DMs the manager from payload.manager_id', async () => {
+  it('DMs the manager from payload.manager_id and notifies the orchestrator', async () => {
     const messaging = makeMessagingMock();
-    const handler = new OffboardingCompletedHandler(messaging);
+    const orchestrator = makeOrchestratorMock();
+    const handler = new OffboardingCompletedHandler(messaging, orchestrator);
     await handler.handle(envelope('offboarding.completed', {
       process_id: 'proc-1', employee_id: 'emp-1', manager_id: 'mgr-1', dossier_id: 'dos-1',
     }));
     expect(messaging.sendDirectMessage).toHaveBeenCalledWith('mgr-1', expect.stringContaining('proc-1'));
+    expect(orchestrator.onOffboardingCompleted).toHaveBeenCalledWith('proc-1');
   });
 
   it('throws when the payload is missing required fields', async () => {
-    const handler = new OffboardingCompletedHandler(makeMessagingMock());
+    const handler = new OffboardingCompletedHandler(makeMessagingMock(), makeOrchestratorMock());
     await expect(handler.handle(envelope('offboarding.completed', {}))).rejects.toThrow();
   });
 });
@@ -108,13 +119,15 @@ describe('DossierGeneratedHandler', () => {
   let messaging: IMessagingPort;
   let repository: IOffboardingProcessRepository;
   let dossierService: IDossierService;
+  let orchestrator: IOffboardingOrchestrator;
   let handler: DossierGeneratedHandler;
 
   beforeEach(() => {
     messaging = makeMessagingMock();
     repository = makeRepositoryMock();
     dossierService = { handleInterviewCompleted: vi.fn().mockResolvedValue(undefined), publishDossier: vi.fn().mockResolvedValue(undefined) };
-    handler = new DossierGeneratedHandler(messaging, repository, dossierService);
+    orchestrator = makeOrchestratorMock();
+    handler = new DossierGeneratedHandler(messaging, repository, dossierService, orchestrator);
   });
 
   it('resolves the manager via the repository and sends a DM', async () => {
@@ -149,6 +162,7 @@ describe('DossierGeneratedHandler', () => {
       dossier_id: 'dos-1', process_id: 'proc-1', interview_id: 'int-1',
     }));
     expect(dossierService.publishDossier).toHaveBeenCalledWith('proc-1');
+    expect(orchestrator.onDossierGenerated).toHaveBeenCalledWith('proc-1');
   });
 
   it('throws when the process cannot be found', async () => {

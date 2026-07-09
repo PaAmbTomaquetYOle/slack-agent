@@ -18,6 +18,7 @@ import type {
   IDossierService,
   IQuestionSuggestionService,
   IAuthService,
+  IOffboardingOrchestrator,
 } from '../application';
 import {
   McpClient,
@@ -31,6 +32,8 @@ import {
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
   KafkaEventConsumer,
+  ConsoleLogger,
+  InMemoryScheduler,
 } from './adapters';
 import {
   McpPromptController,
@@ -50,6 +53,7 @@ import {
   DossierService,
   QuestionSuggestionService,
   AuthService,
+  OffboardingOrchestrator,
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
@@ -91,12 +95,12 @@ export class AppFactory {
     return new McpService(this.createMcpClient());
   }
 
-  private createInterviewAgent(): IInterviewAgent {
+  private createInterviewAgent(mcpService: IMcpService, authService: IAuthService): IInterviewAgent {
     if (!SETTINGS.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is required to run the guided offboarding interview.');
     }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
-    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
+    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL, mcpService, authService);
   }
 
   private createExpertResponseDetector(): ExpertResponseDetector {
@@ -116,6 +120,7 @@ export class AppFactory {
     repository: IOffboardingProcessRepository,
     messagingPort: IMessagingPort,
     dossierService: IDossierService,
+    orchestrator: IOffboardingOrchestrator,
   ): Promise<EventInfrastructure> {
     if (!SETTINGS.KAFKA_BROKERS) {
       console.warn('KAFKA_BROKERS not set; Kafka is disabled, events will not be published or consumed.');
@@ -143,8 +148,8 @@ export class AppFactory {
       const dispatcher = new InboundEventDispatcher([
         new OffboardingStateChangedHandler(messagingPort),
         new InterviewCompletedHandler(messagingPort, repository),
-        new DossierGeneratedHandler(messagingPort, repository, dossierService),
-        new OffboardingCompletedHandler(messagingPort),
+        new DossierGeneratedHandler(messagingPort, repository, dossierService, orchestrator),
+        new OffboardingCompletedHandler(messagingPort, orchestrator),
         new SopCreatedHandler(messagingPort),
       ]);
       const topics = INBOUND_EVENT_TYPES.map((eventType) => `${SETTINGS.KAFKA_INBOUND_TOPIC_PREFIX}.${eventType}`);
@@ -163,7 +168,7 @@ export class AppFactory {
     return { publisher, consumer };
   }
 
-  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null }> {
+  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null; orchestrator: IOffboardingOrchestrator }> {
     const app = new App(APP_OPTIONS);
 
     // MCP wiring (existing)
@@ -194,10 +199,37 @@ export class AppFactory {
       SETTINGS.DOSSIER_MANAGERS_CHANNEL_ID,
     );
 
+    // Guided interview wiring
+    const interviewAgent = this.createInterviewAgent(mcpService, authService);
+    const interviewService: IInterviewService = new InterviewService(
+      repository,
+      interviewRepository,
+      interviewAgent,
+      userInfoProvider,
+      messagingPort,
+      eventBus,
+    );
+
+    // Orchestration (SA-10): coordinates the flow via the event bus, tracks process state
+    // in-memory, and nudges/abandons interviews the departing user goes silent on.
+    const orchestrator: IOffboardingOrchestrator = new OffboardingOrchestrator(
+      eventBus,
+      repository,
+      interviewRepository,
+      interviewService,
+      messagingPort,
+      new InMemoryScheduler(),
+      new ConsoleLogger(),
+      authService,
+      SETTINGS.INTERVIEW_NUDGE_TIMEOUT_MS,
+      SETTINGS.INTERVIEW_ABANDON_TIMEOUT_MS,
+    );
+
     const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(
       repository,
       messagingPort,
       dossierService,
+      orchestrator,
     );
 
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
@@ -214,17 +246,7 @@ export class AppFactory {
     new OffboardingController(offboardingService).register(app);
     new AppMentionController().register(app);
 
-    // Guided interview wiring
-    const interviewAgent = this.createInterviewAgent();
-    const interviewService: IInterviewService = new InterviewService(
-      repository,
-      interviewRepository,
-      interviewAgent,
-      userInfoProvider,
-      messagingPort,
-      eventBus,
-    );
-    new DirectMessageController(authService, interviewService).register(app);
+    new DirectMessageController(authService, orchestrator).register(app);
 
     // SOP detection wiring
     const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);
@@ -248,6 +270,6 @@ export class AppFactory {
     );
     new QuestionSuggestionController(questionSuggestionService).register(app);
 
-    return { app, eventConsumer };
+    return { app, eventConsumer, orchestrator };
   }
 }

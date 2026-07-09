@@ -9,7 +9,7 @@ import type {
 import type { IDomainEventBus } from '../events';
 import type { IInterviewService } from '../serviceInterfaces';
 import type { InterviewTopic, InterviewTurn, OffboardingProcess } from '../../domain';
-import { INTERVIEW_TOPICS, InterviewCompletedEvent, InterviewStartedEvent } from '../../domain';
+import { INTERVIEW_TOPICS, InterviewCompletedEvent, InterviewStartedEvent, AuthenticationRequiredError } from '../../domain';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 
@@ -65,11 +65,18 @@ export class InterviewService implements IInterviewService {
     try {
       result = await this.#interviewAgent.nextTurn({
         employeeName,
+        slackUserId: userId,
         pendingTopics,
         turns: interview.turns,
         incomingMessage: text,
       });
     } catch (error) {
+      if (error instanceof AuthenticationRequiredError) {
+        // Persist what the employee said so it isn't lost, then let the orchestrator hand off
+        // to the existing Jira/Trello auth flow instead of sending the generic fallback reply.
+        await this.#interviewRepository.addTurns(process.id, [intervieweeTurn]);
+        throw error;
+      }
       console.error('Interview agent failed to produce the next turn:', error);
       await this.#interviewRepository.addTurns(process.id, [intervieweeTurn]);
       await this.#messagingPort.sendDirectMessage(userId, FALLBACK_REPLY);

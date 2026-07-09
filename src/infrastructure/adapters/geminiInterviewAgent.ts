@@ -1,8 +1,10 @@
 import { Type } from '@google/genai';
-import type { GoogleGenAI, Content, Schema } from '@google/genai';
+import type { GoogleGenAI, Content, Schema, FunctionDeclaration, Part, FunctionCall } from '@google/genai';
 import type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from '../../application/ports';
-import { INTERVIEW_TOPICS } from '../../domain';
-import type { InterviewTopic } from '../../domain';
+import type { IMcpService } from '../../application/serviceInterfaces';
+import type { IAuthService } from '../../application/serviceInterfaces';
+import { INTERVIEW_TOPICS, AuthenticationRequiredError } from '../../domain';
+import type { InterviewTopic, AuthProvider, McpToolResult } from '../../domain';
 
 const RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
@@ -15,6 +17,18 @@ const RESPONSE_SCHEMA: Schema = {
   },
   required: ['replyText', 'topic', 'sentiment', 'answerText', 'isComplete'],
 };
+
+// SA-10: the only MCP tools exposed to the model. Deliberately excludes the auth tools
+// (generate_*_auth_url / complete_*_auth) — completing an OAuth handoff needs a Slack button and
+// a follow-up DM with the credential, which the existing AuthService flow already does well.
+// When a task tool reports the user isn't authenticated, this agent throws
+// AuthenticationRequiredError instead of trying to self-heal, and the orchestrator hands off to
+// AuthService.initiateAuth.
+const TOOL_PROVIDERS: Record<string, AuthProvider> = {
+  get_pending_jira_issues: 'jira',
+  get_pending_trello_cards: 'trello',
+};
+const MAX_TOOL_ITERATIONS = 4;
 
 function isInterviewTopicOrNull(value: unknown): value is InterviewTopic | null {
   return value === null || (typeof value === 'string' && (INTERVIEW_TOPICS as readonly string[]).includes(value));
@@ -39,18 +53,46 @@ function isInterviewAgentTurnResult(value: unknown): value is InterviewAgentTurn
 export class GeminiInterviewAgent implements IInterviewAgent {
   readonly #client: GoogleGenAI;
   readonly #model: string;
+  readonly #mcpService: IMcpService;
+  readonly #authService: IAuthService;
+  #toolDeclarations: FunctionDeclaration[] | null = null;
 
-  constructor(client: GoogleGenAI, model: string) {
+  constructor(client: GoogleGenAI, model: string, mcpService: IMcpService, authService: IAuthService) {
     this.#client = client;
     this.#model = model;
+    this.#mcpService = mcpService;
+    this.#authService = authService;
   }
 
   async nextTurn(context: InterviewAgentContext): Promise<InterviewAgentTurnResult> {
+    const isFirstTurn = context.turns.length === 0;
+    const toolDeclarations = isFirstTurn ? await this.#getToolDeclarations() : [];
+    let contents = this.#buildContents(context);
+
+    for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS && toolDeclarations.length > 0; iteration++) {
+      const response = await this.#client.models.generateContent({
+        model: this.#model,
+        contents,
+        config: {
+          systemInstruction: this.#buildSystemInstruction(context, isFirstTurn),
+          tools: [{ functionDeclarations: toolDeclarations }],
+        },
+      });
+      const calls = response.functionCalls;
+      if (!calls || calls.length === 0) break;
+
+      contents = [
+        ...contents,
+        { role: 'model', parts: calls.map((call): Part => ({ functionCall: call })) },
+        { role: 'user', parts: await this.#executeToolCalls(calls, context) },
+      ];
+    }
+
     const response = await this.#client.models.generateContent({
       model: this.#model,
-      contents: this.#buildContents(context),
+      contents,
       config: {
-        systemInstruction: this.#buildSystemInstruction(context),
+        systemInstruction: this.#buildSystemInstruction(context, isFirstTurn),
         responseMimeType: 'application/json',
         responseSchema: RESPONSE_SCHEMA,
       },
@@ -63,6 +105,57 @@ export class GeminiInterviewAgent implements IInterviewAgent {
     return this.#parseResult(text);
   }
 
+  async #executeToolCalls(calls: FunctionCall[], context: InterviewAgentContext): Promise<Part[]> {
+    const parts: Part[] = [];
+    for (const call of calls) {
+      if (!call.name) continue;
+      const response = await this.#callMcpTool(call.name, call.args ?? {}, context);
+      parts.push({ functionResponse: { name: call.name, response } });
+    }
+    return parts;
+  }
+
+  async #callMcpTool(
+    name: string,
+    args: Record<string, unknown>,
+    context: InterviewAgentContext,
+  ): Promise<Record<string, unknown>> {
+    const toolArgs = { ...args, user_id: context.slackUserId, assignee: args['assignee'] ?? context.employeeName };
+    let result: McpToolResult;
+    try {
+      result = await this.#mcpService.callTool(name, toolArgs);
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+    const text = GeminiInterviewAgent.#textFromResult(result);
+    if (result.isError) {
+      if (this.#authService.isAuthErrorMessage(text)) {
+        const provider = TOOL_PROVIDERS[name];
+        if (provider) throw new AuthenticationRequiredError(provider);
+      }
+      return { error: text || `${name} returned an error` };
+    }
+    return { output: text };
+  }
+
+  async #getToolDeclarations(): Promise<FunctionDeclaration[]> {
+    if (this.#toolDeclarations) return this.#toolDeclarations;
+    try {
+      const tools = await this.#mcpService.discoverTools();
+      this.#toolDeclarations = tools
+        .filter((tool) => tool.name in TOOL_PROVIDERS)
+        .map((tool): FunctionDeclaration => ({
+          name: tool.name,
+          ...(tool.description ? { description: tool.description } : {}),
+          parametersJsonSchema: tool.inputSchema,
+        }));
+    } catch (error) {
+      console.warn('Failed to discover MCP tools; continuing the interview without task data.', error);
+      this.#toolDeclarations = [];
+    }
+    return this.#toolDeclarations;
+  }
+
   #buildContents(context: InterviewAgentContext): Content[] {
     const history: Content[] = context.turns.map((turn) => ({
       role: turn.speakerRole === 'interviewer' ? 'model' : 'user',
@@ -71,8 +164,8 @@ export class GeminiInterviewAgent implements IInterviewAgent {
     return [...history, { role: 'user', parts: [{ text: context.incomingMessage }] }];
   }
 
-  #buildSystemInstruction(context: InterviewAgentContext): string {
-    return [
+  #buildSystemInstruction(context: InterviewAgentContext, isFirstTurn: boolean): string {
+    const lines = [
       `Sos un entrevistador empático de RRHH conduciendo, vía Slack DM, la entrevista de` +
         ` offboarding de ${context.employeeName}, un empleado que está dejando la organización.`,
       `Tu objetivo es cubrir de forma conversacional (nunca como un formulario) los siguientes` +
@@ -84,7 +177,17 @@ export class GeminiInterviewAgent implements IInterviewAgent {
         ' cubre la respuesta entrante del empleado (o null si todavía no cubre ninguno); `sentiment`' +
         ' y `answerText` resumen esa respuesta (o null); `isComplete` es true solo cuando los' +
         ' 5 temas ya fueron cubiertos y correspondería cerrar la entrevista con un mensaje de cierre.',
-    ].join('\n');
+    ];
+    if (isFirstTurn) {
+      lines.push(
+        'Antes de tu primera pregunta, si tenés disponibles las herramientas' +
+          ' get_pending_jira_issues y/o get_pending_trello_cards, llamalas para ver las tareas' +
+          ` pendientes de ${context.employeeName} y usá esa información para orientar la` +
+          ' conversación sobre proyectos actuales y procesos pendientes. Si la herramienta falla' +
+          ' o no hay tareas, continuá la entrevista con normalidad sin mencionar el error.',
+      );
+    }
+    return lines.join('\n');
   }
 
   #parseResult(text: string): InterviewAgentTurnResult {
@@ -98,5 +201,9 @@ export class GeminiInterviewAgent implements IInterviewAgent {
       throw new Error('Gemini response did not match the expected InterviewAgentTurnResult shape');
     }
     return parsed;
+  }
+
+  static #textFromResult(result: McpToolResult): string {
+    return result.content.filter((block) => block.type === 'text').map((block) => block.text ?? '').join(' ');
   }
 }

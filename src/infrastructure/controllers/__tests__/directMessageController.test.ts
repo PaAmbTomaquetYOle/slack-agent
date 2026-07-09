@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IAuthService, IInterviewService } from '../../../application';
+import type { IAuthService, IOffboardingOrchestrator } from '../../../application';
 import { DirectMessageController } from '../directMessageController';
 import { makeAppMock } from '../../../testing/slackMocks';
 
-function makeInterviewServiceMock(): IInterviewService {
-  return { handleIncomingDirectMessage: vi.fn().mockResolvedValue(undefined) };
+function makeOrchestratorMock(): IOffboardingOrchestrator {
+  return {
+    handleInterviewMessage: vi.fn().mockResolvedValue(undefined),
+    recover: vi.fn().mockResolvedValue(undefined),
+    onDossierGenerated: vi.fn(),
+    onOffboardingCompleted: vi.fn(),
+  };
 }
 
 function makeAuthServiceMock(): IAuthService {
@@ -18,23 +23,23 @@ function makeAuthServiceMock(): IAuthService {
 
 describe('DirectMessageController', () => {
   let authService: IAuthService;
-  let interviewService: IInterviewService;
+  let orchestrator: IOffboardingOrchestrator;
   let app: ReturnType<typeof makeAppMock>['app'];
   let trigger: ReturnType<typeof makeAppMock>['trigger'];
 
   beforeEach(() => {
     authService = makeAuthServiceMock();
-    interviewService = makeInterviewServiceMock();
+    orchestrator = makeOrchestratorMock();
     ({ app, trigger } = makeAppMock());
-    new DirectMessageController(authService, interviewService).register(app);
+    new DirectMessageController(authService, orchestrator).register(app);
   });
 
-  it('forwards a plain DM text message to the interview service when no auth is pending', async () => {
+  it('forwards a plain DM text message to the orchestrator when no auth is pending', async () => {
     await trigger('message', '*', {
       message: { type: 'message', subtype: undefined, channel_type: 'im', user: 'U-DEPARTING', text: 'Hi there', channel: 'D1', ts: '1', event_ts: '1' },
     });
 
-    expect(interviewService.handleIncomingDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there');
+    expect(orchestrator.handleInterviewMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there', 'D1');
     expect(authService.handleAuthCodeMessage).not.toHaveBeenCalled();
   });
 
@@ -46,7 +51,7 @@ describe('DirectMessageController', () => {
     });
 
     expect(authService.handleAuthCodeMessage).toHaveBeenCalledWith('U-DEPARTING', 'auth-code-123');
-    expect(interviewService.handleIncomingDirectMessage).not.toHaveBeenCalled();
+    expect(orchestrator.handleInterviewMessage).not.toHaveBeenCalled();
   });
 
   it('ignores messages in non-DM channels', async () => {
@@ -54,7 +59,7 @@ describe('DirectMessageController', () => {
       message: { type: 'message', subtype: undefined, channel_type: 'channel', user: 'U1', text: 'hi', channel: 'C1', ts: '1', event_ts: '1' },
     });
 
-    expect(interviewService.handleIncomingDirectMessage).not.toHaveBeenCalled();
+    expect(orchestrator.handleInterviewMessage).not.toHaveBeenCalled();
   });
 
   it('ignores messages with a subtype (edits, joins, bot messages)', async () => {
@@ -62,7 +67,7 @@ describe('DirectMessageController', () => {
       message: { type: 'message', subtype: 'message_changed', channel_type: 'im', channel: 'D1', ts: '1', event_ts: '1', hidden: true, message: {}, previous_message: {} },
     });
 
-    expect(interviewService.handleIncomingDirectMessage).not.toHaveBeenCalled();
+    expect(orchestrator.handleInterviewMessage).not.toHaveBeenCalled();
   });
 
   it('ignores DMs with no text', async () => {
@@ -70,6 +75,6 @@ describe('DirectMessageController', () => {
       message: { type: 'message', subtype: undefined, channel_type: 'im', user: 'U-DEPARTING', channel: 'D1', ts: '1', event_ts: '1' },
     });
 
-    expect(interviewService.handleIncomingDirectMessage).not.toHaveBeenCalled();
+    expect(orchestrator.handleInterviewMessage).not.toHaveBeenCalled();
   });
 });

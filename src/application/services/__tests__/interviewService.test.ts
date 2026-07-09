@@ -145,6 +145,7 @@ describe('InterviewService', () => {
     expect(interviewRepository.start).toHaveBeenCalledWith(process.id);
     expect(interviewAgent.nextTurn).toHaveBeenCalledWith({
       employeeName: 'Alice',
+      slackUserId: 'U-DEPARTING',
       pendingTopics: [...INTERVIEW_TOPICS],
       turns: [],
       incomingMessage: 'Hi there',
@@ -200,6 +201,7 @@ describe('InterviewService', () => {
     expect(interviewRepository.start).not.toHaveBeenCalled();
     expect(interviewAgent.nextTurn).toHaveBeenCalledWith({
       employeeName: 'Alice',
+      slackUserId: 'U-DEPARTING',
       pendingTopics: INTERVIEW_TOPICS.filter((t) => t !== 'current_projects'),
       turns: [existingTurn],
       incomingMessage: 'We migrated the CRM last month.',
