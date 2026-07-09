@@ -36,6 +36,7 @@ export class SlackMessagingAdapter implements IMessagingPort {
             action_id: action.actionId,
             text: { type: 'plain_text', text: action.text },
             value: action.value,
+            ...(action.url ? { url: action.url } : {}),
           })),
         },
       ],
