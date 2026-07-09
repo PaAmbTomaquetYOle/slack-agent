@@ -1,14 +1,16 @@
 import type { App, SlackCommandMiddlewareArgs } from '@slack/bolt';
-import type { IMcpService } from '../../application/serviceInterfaces';
+import type { IAuthService, IMcpService } from '../../application/serviceInterfaces';
 import type { McpPromptResult } from '../../domain';
 import { BaseController } from './baseController';
 
 export class McpPromptController extends BaseController {
   readonly #mcpService: IMcpService;
+  readonly #authService: IAuthService;
 
-  constructor(mcpService: IMcpService) {
+  constructor(mcpService: IMcpService, authService: IAuthService) {
     super();
     this.#mcpService = mcpService;
+    this.#authService = authService;
   }
 
   register(app: App): void {
@@ -51,8 +53,7 @@ export class McpPromptController extends BaseController {
       const result = await this.#mcpService.getPrompt('extract_pending_jira_tasks', { assignee });
       await respond({ response_type: 'in_channel', text: this.#render(result) });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await respond(`:warning: MCP server unavailable: ${message}`);
+      await this.#handleExtractError('jira', error, command.user_id, command.channel_id, respond);
     }
   }
 
@@ -67,9 +68,23 @@ export class McpPromptController extends BaseController {
       const result = await this.#mcpService.getPrompt('extract_pending_trello_tasks', { assignee });
       await respond({ response_type: 'in_channel', text: this.#render(result) });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      await respond(`:warning: MCP server unavailable: ${message}`);
+      await this.#handleExtractError('trello', error, command.user_id, command.channel_id, respond);
     }
+  }
+
+  async #handleExtractError(
+    provider: 'jira' | 'trello',
+    error: unknown,
+    userId: string,
+    channelId: string,
+    respond: SlackCommandMiddlewareArgs['respond'],
+  ): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    if (this.#authService.isAuthErrorMessage(message)) {
+      await this.#authService.initiateAuth(provider, userId, channelId);
+      return;
+    }
+    await respond(`:warning: MCP server unavailable: ${message}`);
   }
 
   #render(result: McpPromptResult): string {
