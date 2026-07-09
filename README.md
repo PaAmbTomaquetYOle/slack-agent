@@ -46,13 +46,15 @@ d2 --theme 0 --pad 40 --scale 2 docs/architecture/architecture.d2 docs/architect
 
 ## Kafka event contract (AsyncAPI)
 
-slack-agent and the backend exchange domain events over Kafka following an [AsyncAPI 3.0.0](https://www.asyncapi.com/) contract (BE-9/BE-11). Topics:
+slack-agent and the backend exchange domain events over Kafka following an [AsyncAPI 3.0.0](https://www.asyncapi.com/) contract (BE-9/BE-11, BE-7). **BE-7 made the backend's REST surface read-only** — every write (offboarding state, interview turns, dossier creation, cancellation) now goes out as a Kafka command/event; slack-agent's HTTP adapters (`http*Repository.ts`) keep only their read methods, used for `OffboardingOrchestrator.recover()` and active-process lookups. Topics:
 
-- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `interview.started`, `interview.completed`, `dossier.generation_requested`, `sop.creation_requested`.
+- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `offboarding.cancellation_requested` (BE-7, replaces the old `PATCH .../cancel`), `interview.started`, `interview.completed`, `dossier.generation_requested`, `sop.creation_requested`.
 - `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`.
 - `offboarding.dlq` — dead-letter queue for either direction (malformed envelopes or handler failures).
 
-Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits.
+Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits. The broker requires **SASL_SSL / SCRAM-SHA-512** (BE-7) — see `KAFKA_SASL_*`/`KAFKA_SSL_CA` below.
+
+Because the interview REST endpoints are gone, `InterviewService` keeps each in-flight conversation in an in-memory `IInterviewSessionStore` and only crosses over to Kafka at `interview.started` (empty marker) and `interview.completed` (carries every turn). A process restart mid-interview loses unsent turns.
 
 Note the backend mints `process_id` when it consumes `offboarding.triggered` and owns dossier generation (reads the interview transcript from its DB) — slack-agent's outbound payloads for those two events carry no process_id/content, only what the backend needs to act.
 
@@ -65,7 +67,7 @@ Note the backend mints `process_id` when it consumes `offboarding.triggered` and
 
 ```bash
 npm install
-cp .env.example .env   # fill in SLACK_*, MCP_SERVER_URL, BACKEND_API_URL, GEMINI_API_KEY, ...
+cp .env.example .env   # fill in SLACK_*, MCP_SERVER_URL, BACKEND_API_URL, BACKEND_CLIENT_ID/SECRET, GEMINI_API_KEY, ...
 
 npm run dev             # watch mode (nodemon + ts-node)
 npm run build            # tsc -> dist/
@@ -86,7 +88,8 @@ All settings are documented, with defaults and setup notes, in [`.env.example`](
 | `SOP_MONITORED_CHANNELS` / `SOP_MIN_MESSAGE_LENGTH` / `SOP_KEYWORDS` / `SOP_MIN_REACTIONS` | SA-7 — expert-answer detection thresholds for offering to save a message as an SOP. |
 | `QUESTION_SUGGESTION_MONITORED_CHANNELS` / `QUESTION_MIN_MESSAGE_LENGTH` / `QUESTION_MAX_SUGGESTIONS` | SA-8 — question detection + how many related SOPs to suggest via `test_search_query`. |
 | `DOSSIER_MANAGERS_CHANNEL_ID` | Channel where the generated handover dossier is posted / Canvas is created. |
-| `KAFKA_*` | Broker, topic prefixes, consumer group, DLQ topic — see the event contract above. |
+| `BACKEND_CLIENT_ID` / `BACKEND_CLIENT_SECRET` | Client-credentials used by `BackendTokenProvider` to fetch a Bearer token from `POST {BACKEND_API_URL}/auth/token` (BE-7) — slack-agent no longer self-signs its JWT. |
+| `KAFKA_*` | Broker, topic prefixes, consumer group, DLQ topic — see the event contract above. `KAFKA_SASL_MECHANISM`/`KAFKA_SASL_USERNAME`/`KAFKA_SASL_PASSWORD`/`KAFKA_SSL_CA` configure the SASL_SSL connection the broker now requires (BE-7). |
 
 ---
 
