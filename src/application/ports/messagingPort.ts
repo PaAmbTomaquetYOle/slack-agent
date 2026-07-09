@@ -2,6 +2,7 @@ export interface EphemeralAction {
   actionId: string;
   text: string;
   value: string;
+  url?: string;
 }
 
 export interface IMessagingPort {
