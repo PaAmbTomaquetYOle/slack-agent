@@ -1,5 +1,5 @@
 import type { WebClient } from '@slack/web-api';
-import type { EphemeralAction, IMessagingPort } from '../../application/ports';
+import type { EphemeralAction, IMessagingPort } from '../../application';
 
 export class SlackMessagingAdapter implements IMessagingPort {
   readonly #client: WebClient;
@@ -36,6 +36,7 @@ export class SlackMessagingAdapter implements IMessagingPort {
             action_id: action.actionId,
             text: { type: 'plain_text', text: action.text },
             value: action.value,
+            ...(action.url ? { url: action.url } : {}),
           })),
         },
       ],

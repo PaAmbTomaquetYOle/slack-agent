@@ -11,15 +11,14 @@ import type {
   IUserInfoProvider,
   IEventPublisher,
   IEventConsumer,
-} from '../application/ports';
-import type {
   IMcpService,
   IOffboardingService,
   IInterviewService,
   ISopService,
   IDossierService,
   IQuestionSuggestionService,
-} from '../application/serviceInterfaces';
+  IAuthService,
+} from '../application';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -37,7 +36,8 @@ import {
   McpPromptController,
   OffboardingController,
   AppMentionController,
-  InterviewController,
+  DirectMessageController,
+  AuthActionController,
   SopController,
   QuestionSuggestionController,
 } from './controllers';
@@ -49,8 +49,7 @@ import {
   SopService,
   DossierService,
   QuestionSuggestionService,
-} from '../application/services';
-import {
+  AuthService,
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
@@ -65,7 +64,7 @@ import {
   InterviewCompletedHandler,
   DossierGeneratedHandler,
   SopCreatedHandler,
-} from '../application/events';
+} from '../application';
 import {
   OffboardingStartedEvent,
   InterviewStartedEvent,
@@ -169,7 +168,6 @@ export class AppFactory {
 
     // MCP wiring (existing)
     const mcpService = this.createMcpService();
-    new McpPromptController(mcpService).register(app);
 
     // HTTP client (shared)
     const httpClient = createBackendHttpClient();
@@ -180,6 +178,11 @@ export class AppFactory {
     const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
+
+    // Jira/Trello OAuth wiring (SA-12)
+    const authService: IAuthService = new AuthService(mcpService, messagingPort);
+    new McpPromptController(mcpService, authService).register(app);
+    new AuthActionController().register(app);
 
     const eventBus = new DomainEventBus();
     const dossierService: IDossierService = new DossierService(
@@ -221,7 +224,7 @@ export class AppFactory {
       messagingPort,
       eventBus,
     );
-    new InterviewController(interviewService).register(app);
+    new DirectMessageController(authService, interviewService).register(app);
 
     // SOP detection wiring
     const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);

@@ -2,6 +2,7 @@ export { BaseController } from './baseController';
 export { McpPromptController } from './mcpPromptController';
 export { OffboardingController } from './offboardingController';
 export { AppMentionController } from './appMentionController';
-export { InterviewController } from './interviewController';
+export { DirectMessageController } from './directMessageController';
+export { AuthActionController } from './authActionController';
 export { SopController } from './sopController';
 export { QuestionSuggestionController } from './questionSuggestionController';

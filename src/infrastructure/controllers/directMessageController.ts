@@ -1,12 +1,14 @@
 import type { App } from '@slack/bolt';
-import type { IInterviewService } from '../../application/serviceInterfaces';
+import type { IAuthService, IInterviewService } from '../../application';
 import { BaseController } from './baseController';
 
-export class InterviewController extends BaseController {
+export class DirectMessageController extends BaseController {
+  readonly #authService: IAuthService;
   readonly #interviewService: IInterviewService;
 
-  constructor(interviewService: IInterviewService) {
+  constructor(authService: IAuthService, interviewService: IInterviewService) {
     super();
+    this.#authService = authService;
     this.#interviewService = interviewService;
   }
 
@@ -15,6 +17,12 @@ export class InterviewController extends BaseController {
       if (message.subtype !== undefined) return;
       if (message.channel_type !== 'im') return;
       if (!message.text) return;
+
+      if (this.#authService.hasPendingAuth(message.user)) {
+        await this.#authService.handleAuthCodeMessage(message.user, message.text);
+        return;
+      }
+
       await this.#interviewService.handleIncomingDirectMessage(message.user, message.text);
     });
   }
