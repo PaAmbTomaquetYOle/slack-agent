@@ -3,8 +3,6 @@ import {
   mapOffboardingResponse,
   mapInterviewResponse,
   mapDossierResponse,
-  mapInterviewTurnToRequest,
-  mapDossierSectionToRequest,
 } from '../mappers';
 import type {
   BackendOffboardingResponse,
@@ -175,41 +173,5 @@ describe('mapDossierResponse', () => {
     };
     const dossier = mapDossierResponse(data);
     expect(dossier.sections[0]?.areas?.[0]?.expertiseLevel).toBe('expert');
-  });
-});
-
-describe('mapInterviewTurnToRequest', () => {
-  it('converts turn to snake_case request shape', () => {
-    const turn = {
-      turnType: 'question' as const,
-      speakerRole: 'interviewer' as const,
-      timestamp: new Date('2024-01-02T10:05:00Z'),
-      content: 'Question?',
-      order: 0,
-      topic: 'topic',
-      sentiment: null,
-      answerText: 'Answer.',
-    };
-    const req = mapInterviewTurnToRequest(turn);
-    expect(req.turn_type).toBe('question');
-    expect(req.speaker_role).toBe('interviewer');
-    expect(req.answer_text).toBe('Answer.');
-    expect(req.timestamp).toBe('2024-01-02T10:05:00.000Z');
-  });
-});
-
-describe('mapDossierSectionToRequest', () => {
-  it('converts knowledge area expertiseLevel to expertise_level', () => {
-    const section = {
-      title: 'Knowledge',
-      sectionType: 'knowledge_areas' as const,
-      responsibilities: null,
-      contacts: null,
-      tasks: null,
-      areas: [{ topic: 'T', description: 'D', expertiseLevel: 'expert' }],
-    };
-    const req = mapDossierSectionToRequest(section);
-    expect(req.section_type).toBe('knowledge_areas');
-    expect(req.areas?.[0]?.expertise_level).toBe('expert');
   });
 });

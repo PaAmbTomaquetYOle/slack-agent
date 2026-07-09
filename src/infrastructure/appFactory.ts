@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { App } from '@slack/bolt';
 import { Kafka } from 'kafkajs';
 import type { Producer } from 'kafkajs';
@@ -34,6 +35,7 @@ import {
   KafkaEventConsumer,
   ConsoleLogger,
   InMemoryScheduler,
+  InMemoryInterviewSessionStore,
 } from './adapters';
 import {
   McpPromptController,
@@ -57,6 +59,7 @@ import {
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
+  createKafkaOffboardingCancellationRequestedForwarder,
   createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaSopCreationRequestedForwarder,
@@ -71,6 +74,7 @@ import {
 } from '../application';
 import {
   OffboardingStartedEvent,
+  OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
@@ -130,6 +134,13 @@ export class AppFactory {
     const kafka = new Kafka({
       clientId: SETTINGS.KAFKA_CLIENT_ID,
       brokers: SETTINGS.KAFKA_BROKERS.split(','),
+      // BE-7: broker requires SASL_SSL/SCRAM-SHA-512, PLAINTEXT is no longer accepted.
+      ssl: SETTINGS.KAFKA_SSL_CA ? { ca: [readFileSync(SETTINGS.KAFKA_SSL_CA, 'utf-8')] } : true,
+      sasl: {
+        mechanism: SETTINGS.KAFKA_SASL_MECHANISM as 'scram-sha-512',
+        username: SETTINGS.KAFKA_SASL_USERNAME,
+        password: SETTINGS.KAFKA_SASL_PASSWORD,
+      },
     });
 
     let producer: Producer;
@@ -199,11 +210,12 @@ export class AppFactory {
       SETTINGS.DOSSIER_MANAGERS_CHANNEL_ID,
     );
 
-    // Guided interview wiring
+    // Guided interview wiring (BE-7: turns live in memory now — the backend's interview REST
+    // endpoints are read-only, so InterviewService no longer depends on the HTTP repository).
     const interviewAgent = this.createInterviewAgent(mcpService, authService);
     const interviewService: IInterviewService = new InterviewService(
       repository,
-      interviewRepository,
+      new InMemoryInterviewSessionStore(),
       interviewAgent,
       userInfoProvider,
       messagingPort,
@@ -234,6 +246,10 @@ export class AppFactory {
 
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
+    eventBus.subscribe(
+      OffboardingCancellationRequestedEvent.EVENT_NAME,
+      createKafkaOffboardingCancellationRequestedForwarder(publisher),
+    );
     eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));

@@ -6,6 +6,7 @@ import { OffboardingOrchestrator } from '../offboardingOrchestrator';
 import {
   OffboardingProcess,
   OffboardingStartedEvent,
+  OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
   ProcessId,
@@ -48,25 +49,14 @@ function makeLoggerMock(): ILogger {
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
   return {
-    create: vi.fn(),
     findById: vi.fn(),
     findAll: vi.fn().mockResolvedValue({ items: [], count: 0 }),
-    delete: vi.fn(),
-    start: vi.fn(),
-    submitForReview: vi.fn(),
-    complete: vi.fn(),
-    cancel: vi.fn(),
   };
 }
 
 function makeInterviewRepositoryMock(): IInterviewRepository {
   return {
-    upsert: vi.fn(),
     findByProcessId: vi.fn().mockResolvedValue(null),
-    start: vi.fn(),
-    complete: vi.fn(),
-    cancel: vi.fn(),
-    addTurns: vi.fn(),
   };
 }
 
@@ -267,11 +257,20 @@ describe('OffboardingOrchestrator', () => {
       };
       vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(interview);
       vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-07-01T00:00:10.000Z').getTime());
+      const publishSpy = vi.spyOn(eventBus, 'publish');
 
       await orchestrator.recover();
 
       expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith('U-INITIATOR', expect.stringContaining('U-DEPARTING'));
       expect(process.stateName).toBe('cancelled');
+      // BE-7: cancellation is a Kafka command now, not a REST PATCH — the orchestrator publishes
+      // OffboardingCancellationRequestedEvent, forwarded to Kafka in appFactory.
+      expect(publishSpy).toHaveBeenCalledWith(expect.any(OffboardingCancellationRequestedEvent));
+      const cancellationEvent = publishSpy.mock.calls
+        .map((call) => call[0])
+        .find((event): event is OffboardingCancellationRequestedEvent =>
+          event instanceof OffboardingCancellationRequestedEvent);
+      expect(cancellationEvent?.processId.value).toBe('proc-1');
       vi.spyOn(Date, 'now').mockRestore();
     });
   });

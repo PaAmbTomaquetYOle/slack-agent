@@ -25,6 +25,8 @@ const sampleDossier: BackendDossierResponse = {
   sections: [],
 };
 
+// BE-7: the backend's dossier REST endpoint is read-only now — only findByProcessId remains.
+// Creation flows over Kafka via `dossier.generation_requested` (see DossierService).
 describe('HttpDossierRepository', () => {
   let http: AxiosInstance;
   let repo: HttpDossierRepository;
@@ -32,38 +34,6 @@ describe('HttpDossierRepository', () => {
   beforeEach(() => {
     http = makeAxiosMock();
     repo = new HttpDossierRepository(http);
-  });
-
-  it('create() POSTs to /offboarding/{id}/dossier', async () => {
-    vi.mocked(http.post).mockResolvedValue(axiosResponse(sampleDossier, 201));
-    const result = await repo.create(new ProcessId('proc-1'));
-    expect(http.post).toHaveBeenCalledWith('/offboarding/proc-1/dossier', { sections: [] });
-    expect(result.id.value).toBe('dos-1');
-  });
-
-  it('create() includes summary when provided', async () => {
-    vi.mocked(http.post).mockResolvedValue(axiosResponse({ ...sampleDossier, summary: 'Summary text' }, 201));
-    await repo.create(new ProcessId('proc-1'), 'Summary text');
-    expect(http.post).toHaveBeenCalledWith('/offboarding/proc-1/dossier', {
-      sections: [],
-      summary: 'Summary text',
-    });
-  });
-
-  it('create() maps sections correctly', async () => {
-    vi.mocked(http.post).mockResolvedValue(axiosResponse(sampleDossier, 201));
-    const section = {
-      title: 'Responsibilities',
-      sectionType: 'responsibilities' as const,
-      responsibilities: ['Task A', 'Task B'],
-      contacts: null,
-      tasks: null,
-      areas: null,
-    };
-    await repo.create(new ProcessId('proc-1'), undefined, [section]);
-    expect(http.post).toHaveBeenCalledWith('/offboarding/proc-1/dossier', {
-      sections: [expect.objectContaining({ section_type: 'responsibilities', responsibilities: ['Task A', 'Task B'] })],
-    });
   });
 
   it('findByProcessId() GETs /offboarding/{id}/dossier', async () => {

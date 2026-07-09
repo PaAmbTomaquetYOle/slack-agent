@@ -7,19 +7,13 @@ import type { Dossier } from '../../../domain';
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
   return {
-    create: vi.fn(),
     findById: vi.fn(),
     findAll: vi.fn(),
-    delete: vi.fn(),
-    start: vi.fn(),
-    submitForReview: vi.fn(),
-    complete: vi.fn(),
-    cancel: vi.fn(),
   };
 }
 
 function makeDossierRepositoryMock(): IDossierRepository {
-  return { create: vi.fn(), findByProcessId: vi.fn() };
+  return { findByProcessId: vi.fn() };
 }
 
 function makeUserInfoProviderMock(): IUserInfoProvider {

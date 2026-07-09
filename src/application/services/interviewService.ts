@@ -1,6 +1,6 @@
 import type {
   IOffboardingProcessRepository,
-  IInterviewRepository,
+  IInterviewSessionStore,
   IInterviewAgent,
   InterviewAgentTurnResult,
   IUserInfoProvider,
@@ -13,9 +13,16 @@ import { INTERVIEW_TOPICS, InterviewCompletedEvent, InterviewStartedEvent, Authe
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 
+/**
+ * BE-7: the backend's REST surface is read-only, so this service no longer persists interview
+ * turns over HTTP. It keeps the conversation in the in-memory `IInterviewSessionStore` and only
+ * signals the backend at the two points it cares about: `interview.started` (via the domain
+ * event) and `interview.completed`, which carries every turn (via the domain event, forwarded to
+ * Kafka in `appFactory`). A process restart mid-interview loses unsent turns — accepted trade-off.
+ */
 export class InterviewService implements IInterviewService {
   readonly #offboardingProcessRepository: IOffboardingProcessRepository;
-  readonly #interviewRepository: IInterviewRepository;
+  readonly #interviewSessionStore: IInterviewSessionStore;
   readonly #interviewAgent: IInterviewAgent;
   readonly #userInfoProvider: IUserInfoProvider;
   readonly #messagingPort: IMessagingPort;
@@ -23,14 +30,14 @@ export class InterviewService implements IInterviewService {
 
   constructor(
     offboardingProcessRepository: IOffboardingProcessRepository,
-    interviewRepository: IInterviewRepository,
+    interviewSessionStore: IInterviewSessionStore,
     interviewAgent: IInterviewAgent,
     userInfoProvider: IUserInfoProvider,
     messagingPort: IMessagingPort,
     eventBus: IDomainEventBus,
   ) {
     this.#offboardingProcessRepository = offboardingProcessRepository;
-    this.#interviewRepository = interviewRepository;
+    this.#interviewSessionStore = interviewSessionStore;
     this.#interviewAgent = interviewAgent;
     this.#userInfoProvider = userInfoProvider;
     this.#messagingPort = messagingPort;
@@ -41,13 +48,13 @@ export class InterviewService implements IInterviewService {
     const process = await this.#findActiveProcess(userId);
     if (!process) return;
 
-    let interview = await this.#interviewRepository.findByProcessId(process.id);
-    if (!interview) {
-      interview = await this.#interviewRepository.start(process.id);
+    let session = this.#interviewSessionStore.find(process.id);
+    if (!session) {
+      session = this.#interviewSessionStore.start(process.id);
       await this.#eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
     }
 
-    const pendingTopics = this.#pendingTopics(interview.turns);
+    const pendingTopics = this.#pendingTopics(session.turns);
     const employeeName = (await this.#userInfoProvider.getDisplayName(userId)) ?? userId;
 
     const intervieweeTurn: InterviewTurn = {
@@ -55,7 +62,7 @@ export class InterviewService implements IInterviewService {
       speakerRole: 'interviewee',
       timestamp: new Date(),
       content: text,
-      order: interview.turns.length,
+      order: session.turns.length,
       topic: null,
       sentiment: null,
       answerText: null,
@@ -67,18 +74,18 @@ export class InterviewService implements IInterviewService {
         employeeName,
         slackUserId: userId,
         pendingTopics,
-        turns: interview.turns,
+        turns: session.turns,
         incomingMessage: text,
       });
     } catch (error) {
       if (error instanceof AuthenticationRequiredError) {
         // Persist what the employee said so it isn't lost, then let the orchestrator hand off
         // to the existing Jira/Trello auth flow instead of sending the generic fallback reply.
-        await this.#interviewRepository.addTurns(process.id, [intervieweeTurn]);
+        this.#interviewSessionStore.appendTurns(process.id, [intervieweeTurn]);
         throw error;
       }
       console.error('Interview agent failed to produce the next turn:', error);
-      await this.#interviewRepository.addTurns(process.id, [intervieweeTurn]);
+      this.#interviewSessionStore.appendTurns(process.id, [intervieweeTurn]);
       await this.#messagingPort.sendDirectMessage(userId, FALLBACK_REPLY);
       return;
     }
@@ -102,20 +109,20 @@ export class InterviewService implements IInterviewService {
 
     // Cross-check the agent's isComplete claim against topics we can independently
     // verify are covered — an LLM hallucinating completion must not end the interview.
-    const stillPending = this.#pendingTopics([...interview.turns, classifiedIntervieweeTurn]);
+    const stillPending = this.#pendingTopics([...session.turns, classifiedIntervieweeTurn]);
     const isComplete = result.isComplete && stillPending.length === 0;
 
-    const updatedInterview = await this.#interviewRepository.addTurns(process.id, [
+    const updatedSession = this.#interviewSessionStore.appendTurns(process.id, [
       classifiedIntervieweeTurn,
       interviewerTurn,
     ]);
     await this.#messagingPort.sendDirectMessage(userId, result.replyText);
 
     if (isComplete) {
-      await this.#interviewRepository.complete(process.id);
       await this.#eventBus.publish(
-        new InterviewCompletedEvent(process.id, updatedInterview.id, updatedInterview.turns),
+        new InterviewCompletedEvent(process.id, updatedSession.id, updatedSession.turns),
       );
+      this.#interviewSessionStore.end(process.id);
     }
   }
 
