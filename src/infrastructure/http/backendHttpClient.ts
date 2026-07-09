@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import jwt from 'jsonwebtoken';
 import { SETTINGS } from '../settings';
+import { BackendTokenProvider } from './backendTokenProvider';
 
 export function createBackendHttpClient(): AxiosInstance {
   const instance = axios.create({
@@ -10,17 +10,16 @@ export function createBackendHttpClient(): AxiosInstance {
     headers: { 'Content-Type': 'application/json' },
   });
 
-  instance.interceptors.request.use((config) => {
-    const now = Math.floor(Date.now() / 1000);
-    const token = jwt.sign(
-      {
-        iss: SETTINGS.BACKEND_JWT_ISSUER,
-        aud: 'braintrust-backend',
-        iat: now,
-        exp: now + 300,
-      },
-      SETTINGS.BACKEND_JWT_SECRET,
-    );
+  // BE-7: the backend mints the JWT now (correct `aud`), reached via the client-credentials
+  // token endpoint; slack-agent just fetches/caches/refreshes it instead of self-signing.
+  const tokenProvider = new BackendTokenProvider(
+    SETTINGS.BACKEND_API_URL,
+    SETTINGS.BACKEND_CLIENT_ID,
+    SETTINGS.BACKEND_CLIENT_SECRET,
+  );
+
+  instance.interceptors.request.use(async (config) => {
+    const token = await tokenProvider.getToken();
     config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
