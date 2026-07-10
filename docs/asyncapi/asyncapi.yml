@@ -41,9 +41,10 @@ info:
     - `slack-agent.*` — inbound, published by slack-agent, consumed by backend.
     - `offboarding.*` — outbound, published by backend, consumed by slack-agent.
 
-    Note: slack-agent does not yet produce the inbound events — it currently
-    talks to the backend over REST. This contract defines the target shape so
-    both sides can converge on it.
+    Writes (create, cancel, lifecycle transitions, dossier generation, SOP
+    creation) are Kafka-only. The REST API is read-only (GET/list/search plus
+    POST /auth/token) — slack-agent and mcp-server must produce/consume these
+    events rather than call REST write endpoints.
   license:
     name: UNLICENSED
 
@@ -71,6 +72,13 @@ channels:
     messages:
       offboardingTriggered:
         $ref: '#/components/messages/OffboardingTriggered'
+
+  slackAgentOffboardingCancellationRequested:
+    address: slack-agent.offboarding.cancellation_requested
+    description: Cancels the offboarding process.
+    messages:
+      offboardingCancellationRequested:
+        $ref: '#/components/messages/OffboardingCancellationRequested'
 
   slackAgentInterviewStarted:
     address: slack-agent.interview.started
@@ -108,6 +116,31 @@ channels:
     messages:
       sopCreationRequested:
         $ref: '#/components/messages/SopCreationRequested'
+
+  slackAgentKnowledgeInteractionRegistered:
+    address: slack-agent.knowledge_graph.interaction_registered
+    description: >
+      Records that a person interacted with a topic (knows about it, or
+      answered about it in an interview) in the Neo4j knowledge graph.
+    messages:
+      knowledgeInteractionRegistered:
+        $ref: '#/components/messages/KnowledgeInteractionRegistered'
+
+  slackAgentKnowledgeDocumentRegistered:
+    address: slack-agent.knowledge_graph.document_registered
+    description: >
+      Records a document, its author, and the topics it references in the
+      knowledge graph.
+    messages:
+      knowledgeDocumentRegistered:
+        $ref: '#/components/messages/KnowledgeDocumentRegistered'
+
+  slackAgentKnowledgeChannelActivityRegistered:
+    address: slack-agent.knowledge_graph.channel_activity_registered
+    description: Records that a person is active in a Slack channel.
+    messages:
+      knowledgeChannelActivityRegistered:
+        $ref: '#/components/messages/KnowledgeChannelActivityRegistered'
 
   # ---------------------------------------------------------------------
   # Outbound — published by backend, consumed by slack-agent.
@@ -148,6 +181,16 @@ channels:
       sopCreated:
         $ref: '#/components/messages/SopCreated'
 
+  offboardingKnowledgeGraphUpdated:
+    address: offboarding.knowledge_graph.updated
+    description: >
+      Notifies that a node or relationship was written to the knowledge
+      graph. A lightweight, best-effort notification — published defensively
+      and never blocks the write it follows.
+    messages:
+      knowledgeGraphUpdated:
+        $ref: '#/components/messages/KnowledgeGraphUpdated'
+
   # ---------------------------------------------------------------------
   # Dead-letter queue — single fixed topic for both directions.
   # ---------------------------------------------------------------------
@@ -170,6 +213,13 @@ operations:
       $ref: '#/channels/slackAgentOffboardingTriggered'
     messages:
       - $ref: '#/channels/slackAgentOffboardingTriggered/messages/offboardingTriggered'
+
+  onOffboardingCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentOffboardingCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentOffboardingCancellationRequested/messages/offboardingCancellationRequested'
 
   onInterviewStarted:
     action: receive
@@ -198,6 +248,27 @@ operations:
       $ref: '#/channels/slackAgentSopCreationRequested'
     messages:
       - $ref: '#/channels/slackAgentSopCreationRequested/messages/sopCreationRequested'
+
+  onKnowledgeInteractionRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeInteractionRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeInteractionRegistered/messages/knowledgeInteractionRegistered'
+
+  onKnowledgeDocumentRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeDocumentRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeDocumentRegistered/messages/knowledgeDocumentRegistered'
+
+  onKnowledgeChannelActivityRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeChannelActivityRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeChannelActivityRegistered/messages/knowledgeChannelActivityRegistered'
 
   sendOffboardingStateChanged:
     action: send
@@ -234,6 +305,13 @@ operations:
     messages:
       - $ref: '#/channels/offboardingSopCreated/messages/sopCreated'
 
+  sendKnowledgeGraphUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingKnowledgeGraphUpdated'
+    messages:
+      - $ref: '#/channels/offboardingKnowledgeGraphUpdated/messages/knowledgeGraphUpdated'
+
   sendDeadLetter:
     action: send
     channel:
@@ -249,6 +327,13 @@ components:
       summary: Requests creation of a new offboarding process.
       payload:
         $ref: '#/components/schemas/OffboardingTriggeredEnvelope'
+
+    OffboardingCancellationRequested:
+      name: offboarding.cancellation_requested
+      title: Offboarding cancellation requested
+      summary: Requests cancellation of an offboarding process.
+      payload:
+        $ref: '#/components/schemas/OffboardingCancellationRequestedEnvelope'
 
     InterviewStartedInbound:
       name: interview.started
@@ -277,6 +362,29 @@ components:
       summary: Requests creation of a SOP from a Slack-originated request.
       payload:
         $ref: '#/components/schemas/SopCreationRequestedEnvelope'
+
+    KnowledgeInteractionRegistered:
+      name: knowledge_graph.interaction_registered
+      title: Knowledge graph interaction registered
+      summary: Records that a person interacted with a topic in the knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeInteractionRegisteredEnvelope'
+
+    KnowledgeDocumentRegistered:
+      name: knowledge_graph.document_registered
+      title: Knowledge graph document registered
+      summary: >
+        Records a document, its author, and the topics it references in the
+        knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeDocumentRegisteredEnvelope'
+
+    KnowledgeChannelActivityRegistered:
+      name: knowledge_graph.channel_activity_registered
+      title: Knowledge graph channel activity registered
+      summary: Records that a person is active in a Slack channel.
+      payload:
+        $ref: '#/components/schemas/KnowledgeChannelActivityRegisteredEnvelope'
 
     OffboardingStateChanged:
       name: offboarding.state_changed
@@ -312,6 +420,13 @@ components:
       summary: A SOP document was created.
       payload:
         $ref: '#/components/schemas/SopCreatedEnvelope'
+
+    KnowledgeGraphUpdated:
+      name: knowledge_graph.updated
+      title: Knowledge graph updated
+      summary: A node or relationship was written to the knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeGraphUpdatedEnvelope'
 
     DeadLetter:
       name: dead_letter
@@ -412,6 +527,25 @@ components:
               $ref: '#/components/schemas/OffboardingTriggeredPayload'
           required: [payload]
 
+    OffboardingCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    OffboardingCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: offboarding.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/OffboardingCancellationRequestedPayload'
+          required: [payload]
+
     InterviewStartedInboundPayload:
       type: object
       description: >
@@ -505,6 +639,101 @@ components:
               const: sop.creation_requested
             payload:
               $ref: '#/components/schemas/SopCreationRequestedPayload'
+          required: [payload]
+
+    KnowledgeInteractionRegisteredPayload:
+      type: object
+      properties:
+        person_id:
+          type: string
+          description: External Slack user ID of the person.
+        person_name:
+          type: string
+        topic_name:
+          type: string
+        interaction_type:
+          type: string
+          enum: [knows, answered]
+          description: >
+            "knows" creates/strengthens a KNOWS_ABOUT relationship; "answered"
+            creates an ANSWERED_ABOUT relationship (from an interview answer).
+        department:
+          type: string
+          nullable: true
+        topic_description:
+          type: string
+          nullable: true
+      required: [person_id, person_name, topic_name, interaction_type]
+
+    KnowledgeInteractionRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.interaction_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeInteractionRegisteredPayload'
+          required: [payload]
+
+    KnowledgeDocumentRegisteredPayload:
+      type: object
+      properties:
+        document_id:
+          type: string
+        title:
+          type: string
+        author_id:
+          type: string
+          description: External Slack user ID of the document's author.
+        author_name:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+          description: Topic names this document references.
+        url:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+      required: [document_id, title, author_id, author_name, topics]
+
+    KnowledgeDocumentRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.document_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeDocumentRegisteredPayload'
+          required: [payload]
+
+    KnowledgeChannelActivityRegisteredPayload:
+      type: object
+      properties:
+        person_id:
+          type: string
+        person_name:
+          type: string
+        channel_id:
+          type: string
+        channel_name:
+          type: string
+      required: [person_id, person_name, channel_id, channel_name]
+
+    KnowledgeChannelActivityRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.channel_activity_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeChannelActivityRegisteredPayload'
           required: [payload]
 
     # --- Outbound payloads --------------------------------------------
@@ -647,4 +876,28 @@ components:
               const: sop.created
             payload:
               $ref: '#/components/schemas/SopCreatedPayload'
+          required: [payload]
+
+    KnowledgeGraphUpdatedPayload:
+      type: object
+      properties:
+        entity_type:
+          type: string
+          enum: [person, document]
+        entity_id:
+          type: string
+        action:
+          type: string
+          enum: [interaction, created, activity]
+      required: [entity_type, entity_id, action]
+
+    KnowledgeGraphUpdatedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.updated
+            payload:
+              $ref: '#/components/schemas/KnowledgeGraphUpdatedPayload'
           required: [payload]
