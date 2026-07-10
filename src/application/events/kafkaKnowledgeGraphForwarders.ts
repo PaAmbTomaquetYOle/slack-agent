@@ -1,5 +1,9 @@
 import type { DomainEvent, InterviewCompletedEvent, SopCreationRequestedEvent } from '../../domain';
-import { KNOWLEDGE_GRAPH_INTERACTION_REGISTERED, KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED } from '../../domain';
+import {
+  KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
+  KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
+  KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
+} from '../../domain';
 import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../ports';
 
 const INTERVIEW_INTERACTION_TYPE = 'interview_topic';
@@ -76,6 +80,37 @@ export function createSopKnowledgeGraphForwarder(publisher: IEventPublisher, use
         author_id: authorId,
         author_name: authorName,
         topics: [],
+      },
+    });
+  };
+}
+
+/**
+ * Bridges the in-process DomainEventBus to Kafka: when an expert answer is accepted for
+ * SOP capture, that acceptance is also the strongest available signal of channel activity —
+ * so this publishes a `knowledge_graph.channel_activity_registered` event linking the author
+ * to the channel the exchange happened in, for the backend's channel-activity knowledge graph.
+ */
+export function createKafkaChannelActivityRegisteredForwarder(
+  publisher: IEventPublisher,
+  userInfoProvider: IUserInfoProvider,
+) {
+  return async (event: DomainEvent): Promise<void> => {
+    if (!isSopCreationRequestedEvent(event)) {
+      throw new Error(`Unexpected event type: ${event.eventName}`);
+    }
+
+    const personId = event.authorId.value;
+    const personName = (await userInfoProvider.getDisplayName(personId)) ?? personId;
+    const channelId = event.channelId.value;
+
+    await publisher.publish({
+      eventType: KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
+      payload: {
+        person_id: personId,
+        person_name: personName,
+        channel_id: channelId,
+        channel_name: channelId,
       },
     });
   };

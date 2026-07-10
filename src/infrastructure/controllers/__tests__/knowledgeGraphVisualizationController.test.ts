@@ -20,6 +20,10 @@ function makePortMock(overrides: Partial<IKnowledgeGraphReadPort> = {}): IKnowle
   };
 }
 
+function makeReqMock(url = '/api/knowledge-graph/data') {
+  return { url } as never;
+}
+
 describe('KnowledgeGraphVisualizationController', () => {
   it('exposes GET /knowledge-graph and GET /api/knowledge-graph/data custom routes', () => {
     const controller = new KnowledgeGraphVisualizationController(makePortMock());
@@ -57,7 +61,7 @@ describe('KnowledgeGraphVisualizationController', () => {
     const controller = new KnowledgeGraphVisualizationController(port);
     const res = makeResMock();
 
-    await controller.customRoutes[1]!.handler({} as never, res);
+    await controller.customRoutes[1]!.handler(makeReqMock(), res);
 
     expect(res.writeHead).toHaveBeenCalledWith(200, expect.objectContaining({ 'Content-Type': expect.stringContaining('application/json') }));
     const body = JSON.parse((vi.mocked(res.end).mock.calls[0]?.[0]) as string);
@@ -68,6 +72,34 @@ describe('KnowledgeGraphVisualizationController', () => {
       ]),
     );
     expect(body.edges).toEqual([{ source: 'person:U1', target: 'topic:kubernetes', weight: 0.9 }]);
+    expect(body.pagination).toEqual({
+      persons: { page: 1, size: 100, total: 1, total_pages: 1 },
+      topics: { page: 1, size: 100, total: 1, total_pages: 1 },
+    });
+    expect(port.fetchAllPersons).toHaveBeenCalledWith(1, 100);
+    expect(port.fetchAllTopics).toHaveBeenCalledWith(1, 100);
+  });
+
+  it('forwards page/size query params to the read port', async () => {
+    const port = makePortMock();
+    const controller = new KnowledgeGraphVisualizationController(port);
+    const res = makeResMock();
+
+    await controller.customRoutes[1]!.handler(makeReqMock('/api/knowledge-graph/data?page=3&size=25'), res);
+
+    expect(port.fetchAllPersons).toHaveBeenCalledWith(3, 25);
+    expect(port.fetchAllTopics).toHaveBeenCalledWith(3, 25);
+  });
+
+  it('clamps size to the backend maximum and falls back to defaults for invalid params', async () => {
+    const port = makePortMock();
+    const controller = new KnowledgeGraphVisualizationController(port);
+    const res = makeResMock();
+
+    await controller.customRoutes[1]!.handler(makeReqMock('/api/knowledge-graph/data?page=abc&size=500'), res);
+
+    expect(port.fetchAllPersons).toHaveBeenCalledWith(1, 100);
+    expect(port.fetchAllTopics).toHaveBeenCalledWith(1, 100);
   });
 
   it('responds with a 502 and error body when fetching graph data fails', async () => {
@@ -76,7 +108,7 @@ describe('KnowledgeGraphVisualizationController', () => {
     const res = makeResMock();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await controller.customRoutes[1]!.handler({} as never, res);
+    await controller.customRoutes[1]!.handler(makeReqMock(), res);
 
     expect(res.writeHead).toHaveBeenCalledWith(502, expect.anything());
     consoleErrorSpy.mockRestore();

@@ -1,10 +1,13 @@
-import type { ServerResponse } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { CustomRoute } from '@slack/bolt';
 import type { IKnowledgeGraphReadPort } from '../../application/ports';
 import { KNOWLEDGE_GRAPH_PAGE_HTML } from './knowledgeGraphPage';
 
-const PERSON_PAGE_SIZE = 100;
-const TOPIC_PAGE_SIZE = 100;
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 100;
+// Matches the backend's `size` query param upper bound (`Query(ge=1, le=100)`) on
+// GET /knowledge-graph/persons and GET /knowledge-graph/topics.
+const MAX_PAGE_SIZE = 100;
 const EXPERTS_PER_TOPIC_LIMIT = 10;
 
 interface GraphNode {
@@ -20,9 +23,20 @@ interface GraphEdge {
   weight: number;
 }
 
+interface GraphPagination {
+  page: number;
+  size: number;
+  total: number;
+  total_pages: number;
+}
+
 interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
+  pagination: {
+    persons: GraphPagination;
+    topics: GraphPagination;
+  };
 }
 
 /**
@@ -40,7 +54,7 @@ export class KnowledgeGraphVisualizationController {
   get customRoutes(): CustomRoute[] {
     return [
       { path: '/knowledge-graph', method: 'GET', handler: (_req, res) => this.#serveHtml(res) },
-      { path: '/api/knowledge-graph/data', method: 'GET', handler: (_req, res) => this.#serveData(res) },
+      { path: '/api/knowledge-graph/data', method: 'GET', handler: (req, res) => this.#serveData(req, res) },
     ];
   }
 
@@ -49,9 +63,10 @@ export class KnowledgeGraphVisualizationController {
     res.end(KNOWLEDGE_GRAPH_PAGE_HTML);
   }
 
-  async #serveData(res: ServerResponse): Promise<void> {
+  async #serveData(req: IncomingMessage, res: ServerResponse): Promise<void> {
     try {
-      const data = await this.#buildGraphData();
+      const { page, size } = this.#parsePaginationParams(req);
+      const data = await this.#buildGraphData(page, size);
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(data));
     } catch (error) {
@@ -61,10 +76,24 @@ export class KnowledgeGraphVisualizationController {
     }
   }
 
-  async #buildGraphData(): Promise<GraphData> {
+  #parsePaginationParams(req: IncomingMessage): { page: number; size: number } {
+    const searchParams = new URL(req.url ?? '/', 'http://localhost').searchParams;
+    const page = this.#parsePositiveInt(searchParams.get('page'), DEFAULT_PAGE, 1, Number.MAX_SAFE_INTEGER);
+    const size = this.#parsePositiveInt(searchParams.get('size'), DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
+    return { page, size };
+  }
+
+  #parsePositiveInt(raw: string | null, fallback: number, min: number, max: number): number {
+    if (raw === null) return fallback;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.min(max, Math.max(min, parsed));
+  }
+
+  async #buildGraphData(page: number, size: number): Promise<GraphData> {
     const [personsPage, topicsPage] = await Promise.all([
-      this.#knowledgeGraphReadPort.fetchAllPersons(1, PERSON_PAGE_SIZE),
-      this.#knowledgeGraphReadPort.fetchAllTopics(1, TOPIC_PAGE_SIZE),
+      this.#knowledgeGraphReadPort.fetchAllPersons(page, size),
+      this.#knowledgeGraphReadPort.fetchAllTopics(page, size),
     ]);
 
     const nodes: GraphNode[] = [
@@ -93,19 +122,25 @@ export class KnowledgeGraphVisualizationController {
       }));
     });
 
-    if (personsPage.total > personsPage.items.length) {
-      console.warn(
-        `Knowledge graph visualization: showing ${personsPage.items.length} of ${personsPage.total} persons.`,
-      );
-    }
-    if (topicsPage.total > topicsPage.items.length) {
-      console.warn(
-        `Knowledge graph visualization: showing ${topicsPage.items.length} of ${topicsPage.total} topics.`,
-      );
-    }
-
-    return { nodes, edges };
+    return {
+      nodes,
+      edges,
+      pagination: {
+        persons: {
+          page: personsPage.page,
+          size: personsPage.size,
+          total: personsPage.total,
+          total_pages: personsPage.total_pages,
+        },
+        topics: {
+          page: topicsPage.page,
+          size: topicsPage.size,
+          total: topicsPage.total,
+          total_pages: topicsPage.total_pages,
+        },
+      },
+    };
   }
 }
 
-export type { GraphNode, GraphEdge, GraphData };
+export type { GraphNode, GraphEdge, GraphData, GraphPagination };

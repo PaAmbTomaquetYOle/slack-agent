@@ -72,6 +72,7 @@ import {
   createDossierGenerationTriggerHandler,
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,
+  createKafkaChannelActivityRegisteredForwarder,
   ExpertRecommendationService,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
@@ -282,6 +283,10 @@ export class AppFactory {
     eventBus.subscribe(
       SopCreationRequestedEvent.EVENT_NAME,
       createSopKnowledgeGraphForwarder(publisher, userInfoProvider),
+    );
+    eventBus.subscribe(
+      SopCreationRequestedEvent.EVENT_NAME,
+      createKafkaChannelActivityRegisteredForwarder(publisher, userInfoProvider),
     );
 
     const offboardingService: IOffboardingService = new OffboardingService(eventBus, userInfoProvider);
