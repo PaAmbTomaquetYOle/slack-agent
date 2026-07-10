@@ -2,6 +2,8 @@ import type { InterviewTopic, InterviewTurn } from '../../domain';
 
 export interface InterviewAgentContext {
   employeeName: string;
+  /** The departing employee's Slack user id, forwarded as `user_id` to MCP task-extraction tools. */
+  slackUserId: string;
   pendingTopics: readonly InterviewTopic[];
   turns: readonly InterviewTurn[];
   incomingMessage: string;

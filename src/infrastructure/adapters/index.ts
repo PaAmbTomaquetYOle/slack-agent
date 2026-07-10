@@ -10,3 +10,7 @@ export { KafkaEventPublisher } from './kafkaEventPublisher';
 export { KafkaDeadLetterQueue } from './kafkaDeadLetterQueue';
 export { KafkaEventConsumer } from './kafkaEventConsumer';
 export { deserializeEnvelope, EventDeserializationError } from './eventDeserializer';
+export { ConsoleLogger } from './consoleLogger';
+export { InMemoryScheduler } from './inMemoryScheduler';
+export { InMemoryInterviewSessionStore } from './inMemoryInterviewSessionStore';
+export { HttpKnowledgeGraphAdapter } from './httpKnowledgeGraphAdapter';

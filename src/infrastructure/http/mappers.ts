@@ -126,32 +126,3 @@ export function mapDossierResponse(data: BackendDossierResponse): Dossier {
     sections: data.sections.map(mapDossierSectionResponse),
   };
 }
-
-// ─── Request mappers (domain → backend) ──────────────────────────────────────
-
-export function mapInterviewTurnToRequest(turn: InterviewTurn): BackendInterviewTurnResponse {
-  return {
-    turn_type: turn.turnType,
-    speaker_role: turn.speakerRole,
-    timestamp: turn.timestamp.toISOString(),
-    content: turn.content,
-    order: turn.order,
-    topic: turn.topic,
-    sentiment: turn.sentiment,
-    answer_text: turn.answerText,
-  };
-}
-
-export function mapDossierSectionToRequest(section: DossierSection): BackendDossierSectionResponse {
-  const areas = section.areas
-    ? section.areas.map(a => ({ topic: a.topic, description: a.description, expertise_level: a.expertiseLevel }))
-    : null;
-  return {
-    title: section.title,
-    section_type: section.sectionType,
-    responsibilities: section.responsibilities ? [...section.responsibilities] : null,
-    contacts: section.contacts ? [...section.contacts] : null,
-    tasks: section.tasks ? [...section.tasks] : null,
-    areas,
-  };
-}

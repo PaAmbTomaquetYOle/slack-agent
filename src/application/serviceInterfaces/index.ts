@@ -5,3 +5,7 @@ export type { ISopService } from './sopService';
 export type { IDossierService } from './dossierService';
 export type { IQuestionSuggestionService } from './questionSuggestionService';
 export { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from './sopService';
+export type { IAuthService } from './authService';
+export { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from './authService';
+export type { IOffboardingOrchestrator } from './offboardingOrchestrator';
+export type { IExpertRecommendationService } from './expertRecommendationService';

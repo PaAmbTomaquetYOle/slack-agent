@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { App } from '@slack/bolt';
 import { Kafka } from 'kafkajs';
 import type { Producer } from 'kafkajs';
@@ -11,15 +12,17 @@ import type {
   IUserInfoProvider,
   IEventPublisher,
   IEventConsumer,
-} from '../application/ports';
-import type {
   IMcpService,
   IOffboardingService,
   IInterviewService,
   ISopService,
   IDossierService,
   IQuestionSuggestionService,
-} from '../application/serviceInterfaces';
+  IAuthService,
+  IOffboardingOrchestrator,
+  IExpertRecommendationService,
+  IKnowledgeGraphReadPort,
+} from '../application';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -27,19 +30,26 @@ import {
   HttpOffboardingProcessRepository,
   HttpInterviewRepository,
   HttpDossierRepository,
+  HttpKnowledgeGraphAdapter,
   GeminiInterviewAgent,
   NoOpEventPublisher,
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
   KafkaEventConsumer,
+  ConsoleLogger,
+  InMemoryScheduler,
+  InMemoryInterviewSessionStore,
 } from './adapters';
 import {
   McpPromptController,
   OffboardingController,
   AppMentionController,
-  InterviewController,
+  DirectMessageController,
+  AuthActionController,
   SopController,
   QuestionSuggestionController,
+  ExpertRecommendationController,
+  KnowledgeGraphVisualizationController,
 } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import {
@@ -49,25 +59,30 @@ import {
   SopService,
   DossierService,
   QuestionSuggestionService,
-} from '../application/services';
-import {
+  AuthService,
+  OffboardingOrchestrator,
   DomainEventBus,
   createOffboardingStartedHandler,
   createKafkaOffboardingStartedForwarder,
+  createKafkaOffboardingCancellationRequestedForwarder,
   createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaSopCreationRequestedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
   createDossierGenerationTriggerHandler,
+  createInterviewKnowledgeGraphForwarder,
+  createSopKnowledgeGraphForwarder,
+  ExpertRecommendationService,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
   OffboardingCompletedHandler,
   InterviewCompletedHandler,
   DossierGeneratedHandler,
   SopCreatedHandler,
-} from '../application/events';
+} from '../application';
 import {
   OffboardingStartedEvent,
+  OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
@@ -92,12 +107,12 @@ export class AppFactory {
     return new McpService(this.createMcpClient());
   }
 
-  private createInterviewAgent(): IInterviewAgent {
+  private createInterviewAgent(mcpService: IMcpService, authService: IAuthService): IInterviewAgent {
     if (!SETTINGS.GEMINI_API_KEY) {
       throw new Error('GEMINI_API_KEY is required to run the guided offboarding interview.');
     }
     const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
-    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL);
+    return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL, mcpService, authService);
   }
 
   private createExpertResponseDetector(): ExpertResponseDetector {
@@ -117,6 +132,7 @@ export class AppFactory {
     repository: IOffboardingProcessRepository,
     messagingPort: IMessagingPort,
     dossierService: IDossierService,
+    orchestrator: IOffboardingOrchestrator,
   ): Promise<EventInfrastructure> {
     if (!SETTINGS.KAFKA_BROKERS) {
       console.warn('KAFKA_BROKERS not set; Kafka is disabled, events will not be published or consumed.');
@@ -126,6 +142,13 @@ export class AppFactory {
     const kafka = new Kafka({
       clientId: SETTINGS.KAFKA_CLIENT_ID,
       brokers: SETTINGS.KAFKA_BROKERS.split(','),
+      // BE-7: broker requires SASL_SSL/SCRAM-SHA-512, PLAINTEXT is no longer accepted.
+      ssl: SETTINGS.KAFKA_SSL_CA ? { ca: [readFileSync(SETTINGS.KAFKA_SSL_CA, 'utf-8')] } : true,
+      sasl: {
+        mechanism: SETTINGS.KAFKA_SASL_MECHANISM as 'scram-sha-512',
+        username: SETTINGS.KAFKA_SASL_USERNAME,
+        password: SETTINGS.KAFKA_SASL_PASSWORD,
+      },
     });
 
     let producer: Producer;
@@ -144,8 +167,8 @@ export class AppFactory {
       const dispatcher = new InboundEventDispatcher([
         new OffboardingStateChangedHandler(messagingPort),
         new InterviewCompletedHandler(messagingPort, repository),
-        new DossierGeneratedHandler(messagingPort, repository, dossierService),
-        new OffboardingCompletedHandler(messagingPort),
+        new DossierGeneratedHandler(messagingPort, repository, dossierService, orchestrator),
+        new OffboardingCompletedHandler(messagingPort, orchestrator),
         new SopCreatedHandler(messagingPort),
       ]);
       const topics = INBOUND_EVENT_TYPES.map((eventType) => `${SETTINGS.KAFKA_INBOUND_TOPIC_PREFIX}.${eventType}`);
@@ -164,15 +187,20 @@ export class AppFactory {
     return { publisher, consumer };
   }
 
-  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null }> {
-    const app = new App(APP_OPTIONS);
-
+  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null; orchestrator: IOffboardingOrchestrator }> {
     // MCP wiring (existing)
     const mcpService = this.createMcpService();
-    new McpPromptController(mcpService).register(app);
 
-    // HTTP client (shared)
+    // HTTP client (shared) — created before the App so its custom routes (SA-9 knowledge
+    // graph visualization) can be registered on the Socket Mode receiver at construction time.
     const httpClient = createBackendHttpClient();
+    const knowledgeGraphReadPort: IKnowledgeGraphReadPort = new HttpKnowledgeGraphAdapter(httpClient);
+    const knowledgeGraphVisualizationController = new KnowledgeGraphVisualizationController(knowledgeGraphReadPort);
+
+    const app = new App({
+      ...APP_OPTIONS,
+      customRoutes: knowledgeGraphVisualizationController.customRoutes,
+    });
 
     // Offboarding wiring
     const repository: IOffboardingProcessRepository = new HttpOffboardingProcessRepository(httpClient);
@@ -180,6 +208,11 @@ export class AppFactory {
     const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
+
+    // Jira/Trello OAuth wiring (SA-12)
+    const authService: IAuthService = new AuthService(mcpService, messagingPort);
+    new McpPromptController(mcpService, authService).register(app);
+    new AuthActionController().register(app);
 
     const eventBus = new DomainEventBus();
     const dossierService: IDossierService = new DossierService(
@@ -191,14 +224,46 @@ export class AppFactory {
       SETTINGS.DOSSIER_MANAGERS_CHANNEL_ID,
     );
 
+    // Guided interview wiring (BE-7: turns live in memory now — the backend's interview REST
+    // endpoints are read-only, so InterviewService no longer depends on the HTTP repository).
+    const interviewAgent = this.createInterviewAgent(mcpService, authService);
+    const interviewService: IInterviewService = new InterviewService(
+      repository,
+      new InMemoryInterviewSessionStore(),
+      interviewAgent,
+      userInfoProvider,
+      messagingPort,
+      eventBus,
+    );
+
+    // Orchestration (SA-10): coordinates the flow via the event bus, tracks process state
+    // in-memory, and nudges/abandons interviews the departing user goes silent on.
+    const orchestrator: IOffboardingOrchestrator = new OffboardingOrchestrator(
+      eventBus,
+      repository,
+      interviewRepository,
+      interviewService,
+      messagingPort,
+      new InMemoryScheduler(),
+      new ConsoleLogger(),
+      authService,
+      SETTINGS.INTERVIEW_NUDGE_TIMEOUT_MS,
+      SETTINGS.INTERVIEW_ABANDON_TIMEOUT_MS,
+    );
+
     const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(
       repository,
       messagingPort,
       dossierService,
+      orchestrator,
     );
 
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createKafkaOffboardingStartedForwarder(publisher));
+    eventBus.subscribe(
+      OffboardingCancellationRequestedEvent.EVENT_NAME,
+      createKafkaOffboardingCancellationRequestedForwarder(publisher),
+    );
     eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
@@ -207,21 +272,35 @@ export class AppFactory {
       createKafkaDossierGenerationRequestedForwarder(publisher),
     );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
+
+    // Knowledge graph population (SA-9): feed the graph from completed interviews and
+    // accepted SOP answers so /find-expert has data to recommend from.
+    eventBus.subscribe(
+      InterviewCompletedEvent.EVENT_NAME,
+      createInterviewKnowledgeGraphForwarder(publisher, repository, userInfoProvider),
+    );
+    eventBus.subscribe(
+      SopCreationRequestedEvent.EVENT_NAME,
+      createSopKnowledgeGraphForwarder(publisher, userInfoProvider),
+    );
+
     const offboardingService: IOffboardingService = new OffboardingService(eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
-    new AppMentionController().register(app);
 
-    // Guided interview wiring
-    const interviewAgent = this.createInterviewAgent();
-    const interviewService: IInterviewService = new InterviewService(
-      repository,
-      interviewRepository,
-      interviewAgent,
-      userInfoProvider,
+    // Expert recommendation wiring (SA-9): /find-expert, /knowledge-graph, and the
+    // "who knows about X?" app mention pattern all resolve through the same service.
+    const expertRecommendationService: IExpertRecommendationService = new ExpertRecommendationService(
+      mcpService,
       messagingPort,
-      eventBus,
+      SETTINGS.EXPERT_MAX_RESULTS,
     );
-    new InterviewController(interviewService).register(app);
+    new ExpertRecommendationController(
+      expertRecommendationService,
+      `${SETTINGS.KNOWLEDGE_GRAPH_BASE_URL}/knowledge-graph`,
+    ).register(app);
+    new AppMentionController(expertRecommendationService).register(app);
+
+    new DirectMessageController(authService, orchestrator).register(app);
 
     // SOP detection wiring
     const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);
@@ -245,6 +324,6 @@ export class AppFactory {
     );
     new QuestionSuggestionController(questionSuggestionService).register(app);
 
-    return { app, eventConsumer };
+    return { app, eventConsumer, orchestrator };
   }
 }
