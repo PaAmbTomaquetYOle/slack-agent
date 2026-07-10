@@ -7,3 +7,4 @@ export { AuthActionController } from './authActionController';
 export { SopController } from './sopController';
 export { QuestionSuggestionController } from './questionSuggestionController';
 export { ExpertRecommendationController } from './expertRecommendationController';
+export { KnowledgeGraphVisualizationController } from './knowledgeGraphVisualizationController';
