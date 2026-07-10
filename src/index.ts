@@ -1,9 +1,10 @@
 import { AppFactory, SETTINGS } from './infrastructure';
 
 (async () => {
-  const { app, eventConsumer } = await new AppFactory().create();
+  const { app, eventConsumer, orchestrator } = await new AppFactory().create();
   await app.start(SETTINGS.PORT);
   console.log('The Slack bot is up and listening on port', SETTINGS.PORT);
+  await orchestrator.recover();
 
   const shutdown = async (): Promise<void> => {
     if (eventConsumer) {

@@ -1,4 +1,5 @@
 export * from './mcp';
+export * from './auth';
 export * from './exceptions';
 export * from './valueObjects';
 export * from './events';

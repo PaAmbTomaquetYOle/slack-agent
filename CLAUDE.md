@@ -10,7 +10,16 @@ A Slack agent that fights knowledge loss caused by high employee turnover. When 
 2. **Phase 2 (Dynamic SOPs):** The agent monitors channels where newcomers ask questions. When a veteran gives a detailed answer about a procedure, the agent offers to save it as a Standard Operating Procedure (SOP), using the Real-Time Search API to link it to similar past questions.
 3. **Phase 3 (Knowledge Graph backend):** A graph database (e.g. Neo4j) maps who interacts with whom, which documents are shared, and which topics each person dominates. On a crisis the agent recommends experts ("based on 2 years of history, Laura and Carlos are the experts on this — contact them") rather than only searching documents.
 
-The codebase is currently an early scaffold: the hexagonal skeleton, Slack bootstrap, MCP client integration, and offboarding domain state machine exist, but business logic is not yet implemented.
+Phase 1 business logic is implemented: the offboarding state machine, the guided Slack DM interview, dossier generation, and the SA-10 orchestrator coordinating trigger → interview → dossier are all wired up. Phase 2/3 work (dynamic SOPs, knowledge graph) is partial or not yet started.
+
+### Backend contract (BE-7)
+
+slack-agent talks to `backend` over two channels with a strict split:
+
+- **Kafka is the only write path.** The backend's REST surface is **read-only** — it no longer exposes `POST/PATCH/DELETE` for offboarding/interview/dossier. All state changes (trigger, interview turns, completion, cancellation, dossier generation, SOP creation) are Kafka command/event topics; see "Kafka event contract" in `README.md`. `httpOffboardingProcessRepository.ts`, `httpInterviewRepository.ts`, and `httpDossierRepository.ts` implement only their surviving read methods (`findById`/`findAll`/`findByProcessId`), kept for `OffboardingOrchestrator.recover()` and `InterviewService#findActiveProcess`.
+- **Interview turns live in memory.** Since the backend can't persist them over REST anymore, `InterviewService` keeps the conversation in `IInterviewSessionStore` (`InMemoryInterviewSessionStore`) and only crosses over to Kafka at `interview.started` and `interview.completed` (the latter carrying every turn). A process restart mid-interview loses unsent turns — accepted trade-off.
+- **Kafka requires SASL_SSL/SCRAM-SHA-512.** The broker no longer accepts PLAINTEXT; see `KAFKA_SASL_*`/`KAFKA_SSL_CA` in `.env.example` and the `Kafka` client construction in `appFactory.ts`.
+- **REST reads use a backend-issued token.** slack-agent no longer self-signs its JWT. `BackendTokenProvider` (`infrastructure/http/backendTokenProvider.ts`) exchanges `BACKEND_CLIENT_ID`/`BACKEND_CLIENT_SECRET` for an access token via `POST {BACKEND_API_URL}/auth/token` (client-credentials grant), caching and refreshing it; `createBackendHttpClient` attaches it as `Authorization: Bearer <token>`.
 
 ## Commands
 
@@ -55,7 +64,7 @@ Dependency direction: `infrastructure` → `application` → `domain`. Outer lay
 
 - `OffboardingProcess` holds a `state: OffboardingProcessState`.
 - Concrete states: `NotStartedState`, `InProgressState`, `PendingRevisionState`, `FinishedState` — each returns its `OffboardingStateEnum` value.
-- State transitions are not yet wired to application services; this is the next Phase 1 implementation area.
+- State transitions are wired via `OffboardingOrchestrator` (SA-10), which advances the in-memory process object as it reacts to domain events (`OffboardingStartedEvent`, `InterviewStartedEvent`, `InterviewCompletedEvent`) and inbound Kafka events (`onDossierGenerated`, `onOffboardingCompleted`). The backend, not this in-memory copy, remains the durable source of truth.
 
 ### Conventions
 

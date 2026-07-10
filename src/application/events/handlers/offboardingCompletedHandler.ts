@@ -1,5 +1,6 @@
 import type { KafkaEventEnvelope, OffboardingCompletedPayload } from '../../../domain';
 import type { IMessagingPort } from '../../ports';
+import type { IOffboardingOrchestrator } from '../../serviceInterfaces';
 import type { IInboundEventHandler } from '../inboundEventHandler';
 import { OFFBOARDING_COMPLETED } from '../../../domain';
 
@@ -12,9 +13,11 @@ function isOffboardingCompletedPayload(payload: unknown): payload is Offboarding
 export class OffboardingCompletedHandler implements IInboundEventHandler {
   readonly eventType = OFFBOARDING_COMPLETED;
   readonly #messaging: IMessagingPort;
+  readonly #orchestrator: IOffboardingOrchestrator;
 
-  constructor(messaging: IMessagingPort) {
+  constructor(messaging: IMessagingPort, orchestrator: IOffboardingOrchestrator) {
     this.#messaging = messaging;
+    this.#orchestrator = orchestrator;
   }
 
   async handle(envelope: KafkaEventEnvelope): Promise<void> {
@@ -26,5 +29,6 @@ export class OffboardingCompletedHandler implements IInboundEventHandler {
       payload.manager_id,
       `The offboarding process (${payload.process_id}) is complete. The handover dossier is ready. :white_check_mark:`,
     );
+    this.#orchestrator.onOffboardingCompleted(payload.process_id);
   }
 }

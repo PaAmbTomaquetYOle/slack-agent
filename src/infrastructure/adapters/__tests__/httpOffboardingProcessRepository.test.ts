@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AxiosInstance, AxiosResponse } from 'axios';
 import { HttpOffboardingProcessRepository } from '../httpOffboardingProcessRepository';
-import { ProcessId, UserId } from '../../../domain';
-import { BackendConnectionError, BackendNotFoundError, BackendValidationError } from '../../http';
+import { ProcessId } from '../../../domain';
+import { BackendConnectionError, BackendError } from '../../http';
 import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../../http';
 
 function makeAxiosMock() {
@@ -30,6 +30,8 @@ const sampleResponse: BackendOffboardingResponse = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
+// BE-7: the backend's offboarding REST endpoints are read-only now — only findById/findAll
+// remain on this adapter. Writes flow over Kafka (see the domain-event forwarders).
 describe('HttpOffboardingProcessRepository', () => {
   let http: AxiosInstance;
   let repo: HttpOffboardingProcessRepository;
@@ -37,27 +39,6 @@ describe('HttpOffboardingProcessRepository', () => {
   beforeEach(() => {
     http = makeAxiosMock();
     repo = new HttpOffboardingProcessRepository(http);
-  });
-
-  describe('create()', () => {
-    it('POSTs to /offboarding with employee_id and manager_id', async () => {
-      vi.mocked(http.post).mockResolvedValue(axiosResponse(sampleResponse, 201));
-      const result = await repo.create(new UserId('emp-1'), new UserId('mgr-1'));
-      expect(http.post).toHaveBeenCalledWith('/offboarding', { employee_id: 'emp-1', manager_id: 'mgr-1' });
-      expect(result.id.value).toBe('proc-1');
-      expect(result.departingUserId.value).toBe('emp-1');
-    });
-
-    it('includes employee_name and manager_name when provided', async () => {
-      vi.mocked(http.post).mockResolvedValue(axiosResponse(sampleResponse, 201));
-      await repo.create(new UserId('emp-1'), new UserId('mgr-1'), 'Juan Perez', 'Ana Gomez');
-      expect(http.post).toHaveBeenCalledWith('/offboarding', {
-        employee_id: 'emp-1',
-        manager_id: 'mgr-1',
-        employee_name: 'Juan Perez',
-        manager_name: 'Ana Gomez',
-      });
-    });
   });
 
   describe('findById()', () => {
@@ -76,6 +57,15 @@ describe('HttpOffboardingProcessRepository', () => {
       vi.mocked(http.get).mockRejectedValue(error);
       const result = await repo.findById(new ProcessId('missing'));
       expect(result).toBeNull();
+    });
+
+    it('throws BackendError on a non-404 backend error', async () => {
+      const error = Object.assign(new Error('Server Error'), {
+        isAxiosError: true,
+        response: { status: 500, data: {} },
+      });
+      vi.mocked(http.get).mockRejectedValue(error);
+      await expect(repo.findById(new ProcessId('proc-1'))).rejects.toThrow(BackendError);
     });
   });
 
@@ -97,72 +87,14 @@ describe('HttpOffboardingProcessRepository', () => {
         params: { employee_id: 'emp-1', state: 'in_progress' },
       });
     });
-  });
-
-  describe('delete()', () => {
-    it('DELETEs /offboarding/{id}', async () => {
-      vi.mocked(http.delete).mockResolvedValue({ status: 204, data: undefined, statusText: 'No Content', headers: {}, config: {} as never });
-      await repo.delete(new ProcessId('proc-1'));
-      expect(http.delete).toHaveBeenCalledWith('/offboarding/proc-1');
-    });
-  });
-
-  describe('state transitions', () => {
-    it('start() PATCHes /offboarding/{id}/start', async () => {
-      vi.mocked(http.patch).mockResolvedValue(axiosResponse({ ...sampleResponse, state: 'in_progress' }));
-      const result = await repo.start(new ProcessId('proc-1'));
-      expect(http.patch).toHaveBeenCalledWith('/offboarding/proc-1/start');
-      expect(result.stateName).toBe('in_progress');
-    });
-
-    it('submitForReview() PATCHes /offboarding/{id}/submit-for-review', async () => {
-      vi.mocked(http.patch).mockResolvedValue(axiosResponse({ ...sampleResponse, state: 'pending_revision' }));
-      const result = await repo.submitForReview(new ProcessId('proc-1'));
-      expect(http.patch).toHaveBeenCalledWith('/offboarding/proc-1/submit-for-review');
-      expect(result.stateName).toBe('pending_revision');
-    });
-
-    it('complete() PATCHes /offboarding/{id}/complete', async () => {
-      vi.mocked(http.patch).mockResolvedValue(axiosResponse({ ...sampleResponse, state: 'finished' }));
-      const result = await repo.complete(new ProcessId('proc-1'));
-      expect(http.patch).toHaveBeenCalledWith('/offboarding/proc-1/complete');
-      expect(result.stateName).toBe('finished');
-    });
-
-    it('cancel() PATCHes /offboarding/{id}/cancel', async () => {
-      vi.mocked(http.patch).mockResolvedValue(axiosResponse({ ...sampleResponse, state: 'cancelled' }));
-      const result = await repo.cancel(new ProcessId('proc-1'));
-      expect(http.patch).toHaveBeenCalledWith('/offboarding/proc-1/cancel');
-      expect(result.stateName).toBe('cancelled');
-    });
-  });
-
-  describe('error handling', () => {
-    it('throws BackendNotFoundError on 404', async () => {
-      const error = Object.assign(new Error('Not Found'), {
-        isAxiosError: true,
-        response: { status: 404, data: {} },
-      });
-      vi.mocked(http.patch).mockRejectedValue(error);
-      await expect(repo.start(new ProcessId('proc-1'))).rejects.toThrow(BackendNotFoundError);
-    });
-
-    it('throws BackendValidationError on 422', async () => {
-      const error = Object.assign(new Error('Unprocessable'), {
-        isAxiosError: true,
-        response: { status: 422, data: { detail: 'Invalid state' } },
-      });
-      vi.mocked(http.post).mockRejectedValue(error);
-      await expect(repo.create(new UserId('e'), new UserId('m'))).rejects.toThrow(BackendValidationError);
-    });
 
     it('throws BackendConnectionError on network error', async () => {
       const error = Object.assign(new Error('Network Error'), {
         isAxiosError: true,
         response: undefined,
       });
-      vi.mocked(http.post).mockRejectedValue(error);
-      await expect(repo.create(new UserId('e'), new UserId('m'))).rejects.toThrow(BackendConnectionError);
+      vi.mocked(http.get).mockRejectedValue(error);
+      await expect(repo.findAll()).rejects.toThrow(BackendConnectionError);
     });
   });
 });
