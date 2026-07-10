@@ -13,6 +13,9 @@ export const INTERVIEW_STARTED = 'interview.started' as const;
 export const OUTBOUND_INTERVIEW_COMPLETED = 'interview.completed' as const;
 export const DOSSIER_GENERATION_REQUESTED = 'dossier.generation_requested' as const;
 export const SOP_CREATION_REQUESTED = 'sop.creation_requested' as const;
+export const KNOWLEDGE_GRAPH_INTERACTION_REGISTERED = 'knowledge_graph.interaction_registered' as const;
+export const KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED = 'knowledge_graph.document_registered' as const;
+export const KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED = 'knowledge_graph.channel_activity_registered' as const;
 
 export interface OffboardingTriggeredPayload {
   employee_id: string;
@@ -56,10 +59,45 @@ export interface SopCreationRequestedPayload {
   tags?: string[];
 }
 
+export interface KnowledgeGraphInteractionRegisteredPayload {
+  person_id: string;
+  person_name: string;
+  topic_name: string;
+  interaction_type: string;
+  department?: string;
+  topic_description?: string;
+}
+
+export interface KnowledgeGraphDocumentRegisteredPayload {
+  document_id: string;
+  title: string;
+  author_id: string;
+  author_name: string;
+  topics: string[];
+  url?: string;
+  source?: string;
+}
+
+export interface KnowledgeGraphChannelActivityRegisteredPayload {
+  person_id: string;
+  person_name: string;
+  channel_id: string;
+  channel_name: string;
+}
+
 export type OutboundEvent =
   | { eventType: typeof OFFBOARDING_TRIGGERED; payload: OffboardingTriggeredPayload }
   | { eventType: typeof OFFBOARDING_CANCELLATION_REQUESTED; payload: OffboardingCancellationRequestedPayload }
   | { eventType: typeof INTERVIEW_STARTED; payload: InterviewStartedPayload }
   | { eventType: typeof OUTBOUND_INTERVIEW_COMPLETED; payload: InterviewCompletedOutboundPayload }
   | { eventType: typeof DOSSIER_GENERATION_REQUESTED; payload: DossierGenerationRequestedPayload }
-  | { eventType: typeof SOP_CREATION_REQUESTED; payload: SopCreationRequestedPayload };
+  | { eventType: typeof SOP_CREATION_REQUESTED; payload: SopCreationRequestedPayload }
+  | {
+      eventType: typeof KNOWLEDGE_GRAPH_INTERACTION_REGISTERED;
+      payload: KnowledgeGraphInteractionRegisteredPayload;
+    }
+  | { eventType: typeof KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED; payload: KnowledgeGraphDocumentRegisteredPayload }
+  | {
+      eventType: typeof KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED;
+      payload: KnowledgeGraphChannelActivityRegisteredPayload;
+    };
