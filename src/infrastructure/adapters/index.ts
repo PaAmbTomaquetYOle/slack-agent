@@ -13,3 +13,4 @@ export { deserializeEnvelope, EventDeserializationError } from './eventDeseriali
 export { ConsoleLogger } from './consoleLogger';
 export { InMemoryScheduler } from './inMemoryScheduler';
 export { InMemoryInterviewSessionStore } from './inMemoryInterviewSessionStore';
+export { HttpKnowledgeGraphAdapter } from './httpKnowledgeGraphAdapter';
