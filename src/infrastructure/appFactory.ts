@@ -20,6 +20,8 @@ import type {
   IQuestionSuggestionService,
   IAuthService,
   IOffboardingOrchestrator,
+  IExpertRecommendationService,
+  IKnowledgeGraphReadPort,
 } from '../application';
 import {
   McpClient,
@@ -28,6 +30,7 @@ import {
   HttpOffboardingProcessRepository,
   HttpInterviewRepository,
   HttpDossierRepository,
+  HttpKnowledgeGraphAdapter,
   GeminiInterviewAgent,
   NoOpEventPublisher,
   KafkaEventPublisher,
@@ -45,6 +48,8 @@ import {
   AuthActionController,
   SopController,
   QuestionSuggestionController,
+  ExpertRecommendationController,
+  KnowledgeGraphVisualizationController,
 } from './controllers';
 import { APP_OPTIONS, SETTINGS } from './settings';
 import {
@@ -65,6 +70,9 @@ import {
   createKafkaSopCreationRequestedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
   createDossierGenerationTriggerHandler,
+  createInterviewKnowledgeGraphForwarder,
+  createSopKnowledgeGraphForwarder,
+  ExpertRecommendationService,
   InboundEventDispatcher,
   OffboardingStateChangedHandler,
   OffboardingCompletedHandler,
@@ -180,13 +188,19 @@ export class AppFactory {
   }
 
   async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null; orchestrator: IOffboardingOrchestrator }> {
-    const app = new App(APP_OPTIONS);
-
     // MCP wiring (existing)
     const mcpService = this.createMcpService();
 
-    // HTTP client (shared)
+    // HTTP client (shared) — created before the App so its custom routes (SA-9 knowledge
+    // graph visualization) can be registered on the Socket Mode receiver at construction time.
     const httpClient = createBackendHttpClient();
+    const knowledgeGraphReadPort: IKnowledgeGraphReadPort = new HttpKnowledgeGraphAdapter(httpClient);
+    const knowledgeGraphVisualizationController = new KnowledgeGraphVisualizationController(knowledgeGraphReadPort);
+
+    const app = new App({
+      ...APP_OPTIONS,
+      customRoutes: knowledgeGraphVisualizationController.customRoutes,
+    });
 
     // Offboarding wiring
     const repository: IOffboardingProcessRepository = new HttpOffboardingProcessRepository(httpClient);
@@ -258,9 +272,33 @@ export class AppFactory {
       createKafkaDossierGenerationRequestedForwarder(publisher),
     );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
+
+    // Knowledge graph population (SA-9): feed the graph from completed interviews and
+    // accepted SOP answers so /find-expert has data to recommend from.
+    eventBus.subscribe(
+      InterviewCompletedEvent.EVENT_NAME,
+      createInterviewKnowledgeGraphForwarder(publisher, repository, userInfoProvider),
+    );
+    eventBus.subscribe(
+      SopCreationRequestedEvent.EVENT_NAME,
+      createSopKnowledgeGraphForwarder(publisher, userInfoProvider),
+    );
+
     const offboardingService: IOffboardingService = new OffboardingService(eventBus, userInfoProvider);
     new OffboardingController(offboardingService).register(app);
-    new AppMentionController().register(app);
+
+    // Expert recommendation wiring (SA-9): /find-expert, /knowledge-graph, and the
+    // "who knows about X?" app mention pattern all resolve through the same service.
+    const expertRecommendationService: IExpertRecommendationService = new ExpertRecommendationService(
+      mcpService,
+      messagingPort,
+      SETTINGS.EXPERT_MAX_RESULTS,
+    );
+    new ExpertRecommendationController(
+      expertRecommendationService,
+      `${SETTINGS.KNOWLEDGE_GRAPH_BASE_URL}/knowledge-graph`,
+    ).register(app);
+    new AppMentionController(expertRecommendationService).register(app);
 
     new DirectMessageController(authService, orchestrator).register(app);
 
