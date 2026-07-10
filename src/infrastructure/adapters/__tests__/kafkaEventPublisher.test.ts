@@ -5,7 +5,10 @@ import { OFFBOARDING_TRIGGERED, DOSSIER_GENERATION_REQUESTED } from '../../../do
 import type { OutboundEvent } from '../../../domain';
 
 function makeProducerMock() {
-  return { send: vi.fn().mockResolvedValue(undefined) } as unknown as Producer;
+  return {
+    send: vi.fn().mockResolvedValue(undefined),
+    sendBatch: vi.fn().mockResolvedValue(undefined),
+  } as unknown as Producer;
 }
 
 describe('KafkaEventPublisher', () => {
@@ -73,12 +76,39 @@ describe('KafkaEventPublisher', () => {
     await expect(publisher.publish(event)).resolves.toBeUndefined();
   });
 
-  it('publishMany publishes each event', async () => {
+  it('publishMany sends all events in a single sendBatch call', async () => {
     const events: OutboundEvent[] = [
       { eventType: DOSSIER_GENERATION_REQUESTED, payload: { process_id: 'proc-1' } },
       { eventType: DOSSIER_GENERATION_REQUESTED, payload: { process_id: 'proc-2' } },
     ];
     await publisher.publishMany(events);
-    expect(producer.send).toHaveBeenCalledTimes(2);
+    expect(producer.send).not.toHaveBeenCalled();
+    expect(producer.sendBatch).toHaveBeenCalledTimes(1);
+  });
+
+  it('publishMany groups messages by topic', async () => {
+    const events: OutboundEvent[] = [
+      { eventType: OFFBOARDING_TRIGGERED, payload: { process_id: 'proc-1', employee_id: 'emp-1', manager_id: 'mgr-1' } },
+      { eventType: DOSSIER_GENERATION_REQUESTED, payload: { process_id: 'proc-1' } },
+      { eventType: OFFBOARDING_TRIGGERED, payload: { process_id: 'proc-2', employee_id: 'emp-2', manager_id: 'mgr-2' } },
+    ];
+    await publisher.publishMany(events);
+    const call = vi.mocked(producer.sendBatch).mock.calls[0]?.[0];
+    expect(call?.topicMessages).toHaveLength(2);
+    const offboardingGroup = call?.topicMessages.find((t) => t.topic === 'slack-agent.offboarding.triggered');
+    const dossierGroup = call?.topicMessages.find((t) => t.topic === 'slack-agent.dossier.generation_requested');
+    expect(offboardingGroup?.messages).toHaveLength(2);
+    expect(dossierGroup?.messages).toHaveLength(1);
+  });
+
+  it('publishMany does not throw when sendBatch rejects', async () => {
+    vi.mocked(producer.sendBatch).mockRejectedValue(new Error('broker unreachable'));
+    const events: OutboundEvent[] = [{ eventType: DOSSIER_GENERATION_REQUESTED, payload: { process_id: 'proc-1' } }];
+    await expect(publisher.publishMany(events)).resolves.toBeUndefined();
+  });
+
+  it('publishMany does nothing for an empty array', async () => {
+    await publisher.publishMany([]);
+    expect(producer.sendBatch).not.toHaveBeenCalled();
   });
 });
