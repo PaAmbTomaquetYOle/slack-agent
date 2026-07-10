@@ -6,6 +6,7 @@ export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOff
 export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
+export { createInterviewKnowledgeGraphForwarder, createSopKnowledgeGraphForwarder } from './kafkaKnowledgeGraphForwarders';
 export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder';
 export { createDossierGenerationTriggerHandler } from './dossierGenerationTriggerHandler';
 export type { IInboundEventHandler } from './inboundEventHandler';

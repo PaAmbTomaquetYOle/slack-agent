@@ -14,6 +14,9 @@ export type {
   InterviewCompletedOutboundPayload,
   DossierGenerationRequestedPayload,
   SopCreationRequestedPayload,
+  KnowledgeGraphInteractionRegisteredPayload,
+  KnowledgeGraphDocumentRegisteredPayload,
+  KnowledgeGraphChannelActivityRegisteredPayload,
   OutboundEvent,
 } from './outboundEvents';
 export {
@@ -23,6 +26,9 @@ export {
   OUTBOUND_INTERVIEW_COMPLETED,
   DOSSIER_GENERATION_REQUESTED,
   SOP_CREATION_REQUESTED,
+  KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
+  KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
+  KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
 } from './outboundEvents';
 export type {
   OffboardingStateChangedPayload,

@@ -49,6 +49,11 @@ const QUESTION_MAX_SUGGESTIONS = Number(process.env.QUESTION_MAX_SUGGESTIONS ?? 
 // mid-interview) before nudging, and then before giving up and notifying the manager.
 const INTERVIEW_NUDGE_TIMEOUT_MS = Number(process.env.INTERVIEW_NUDGE_TIMEOUT_MS ?? String(24 * 60 * 60 * 1000));
 const INTERVIEW_ABANDON_TIMEOUT_MS = Number(process.env.INTERVIEW_ABANDON_TIMEOUT_MS ?? String(72 * 60 * 60 * 1000));
+// SA-9: max experts returned by /find-expert and the "who knows about X?" app mention pattern.
+const EXPERT_MAX_RESULTS = Number(process.env.EXPERT_MAX_RESULTS ?? '3');
+// SA-9: externally reachable base URL for the knowledge graph visualization page, shared via
+// the /knowledge-graph slash command. Defaults to the local Socket Mode HTTP server address.
+const KNOWLEDGE_GRAPH_BASE_URL = process.env.KNOWLEDGE_GRAPH_BASE_URL ?? `http://localhost:${PORT}`;
 
 export const SETTINGS = {
   SLACK_BOT_TOKEN,
@@ -83,4 +88,6 @@ export const SETTINGS = {
   QUESTION_MAX_SUGGESTIONS,
   INTERVIEW_NUDGE_TIMEOUT_MS,
   INTERVIEW_ABANDON_TIMEOUT_MS,
+  EXPERT_MAX_RESULTS,
+  KNOWLEDGE_GRAPH_BASE_URL,
 };
