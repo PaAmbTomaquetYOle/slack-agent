@@ -12,3 +12,12 @@ export type { IEventConsumer } from './eventConsumer';
 export type { IDeadLetterQueue } from './deadLetterQueue';
 export type { ILogger, LogMeta } from './logger';
 export type { IScheduler } from './scheduler';
+export type {
+  IKnowledgeGraphReadPort,
+  KnowledgeGraphPerson,
+  KnowledgeGraphTopic,
+  KnowledgeGraphDocument,
+  KnowledgeGraphExpert,
+  KnowledgeGraphPage,
+  KnowledgeGraphPersonProfile,
+} from './knowledgeGraphReadPort';
