@@ -5,6 +5,8 @@ export type { IInterviewRepository } from './interviewRepository';
 export type { ITaskRepository } from './taskRepository';
 export type { IInterviewSessionStore, InterviewSession } from './interviewSessionStore';
 export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult, ExtractedTask } from './interviewAgent';
+export type { IReviewInterviewAgent, ReviewInterviewAgentContext } from './reviewInterviewAgent';
+export type { IActiveReviewStore } from './activeReviewStore';
 export type { IDossierRepository } from './dossierRepository';
 export type { ISopCandidateReadRepository, PendingSopCandidate } from './sopCandidateReadRepository';
 export type { IMessagingPort, EphemeralAction } from './messagingPort';
