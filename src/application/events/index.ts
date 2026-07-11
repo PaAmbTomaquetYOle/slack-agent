@@ -6,6 +6,7 @@ export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOff
 export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder';
+export { createKafkaTasksExtractedForwarder } from './kafkaTasksExtractedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
 export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder';
 export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder';

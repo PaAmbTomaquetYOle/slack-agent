@@ -1,4 +1,4 @@
-import type { IOffboardingProcessRepository, IInterviewRepository, IMessagingPort, IScheduler, ILogger } from '../ports';
+import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../ports';
 import type { IDomainEventBus } from '../events';
 import type { IInterviewService, IOffboardingOrchestrator, IAuthService } from '../serviceInterfaces';
 import {
@@ -7,6 +7,7 @@ import {
   OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  TasksExtractedEvent,
   AuthenticationRequiredError,
   ProcessId,
 } from '../../domain';
@@ -33,6 +34,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
   readonly #eventBus: IDomainEventBus;
   readonly #repository: IOffboardingProcessRepository;
   readonly #interviewRepository: IInterviewRepository;
+  readonly #taskRepository: ITaskRepository;
   readonly #interviewService: IInterviewService;
   readonly #messagingPort: IMessagingPort;
   readonly #scheduler: IScheduler;
@@ -49,6 +51,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     eventBus: IDomainEventBus,
     repository: IOffboardingProcessRepository,
     interviewRepository: IInterviewRepository,
+    taskRepository: ITaskRepository,
     interviewService: IInterviewService,
     messagingPort: IMessagingPort,
     scheduler: IScheduler,
@@ -60,6 +63,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     this.#eventBus = eventBus;
     this.#repository = repository;
     this.#interviewRepository = interviewRepository;
+    this.#taskRepository = taskRepository;
     this.#interviewService = interviewService;
     this.#messagingPort = messagingPort;
     this.#scheduler = scheduler;
@@ -74,6 +78,8 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
       this.#onInterviewStarted(event as InterviewStartedEvent));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, (event: DomainEvent) =>
       this.#onInterviewCompleted(event as InterviewCompletedEvent));
+    eventBus.subscribe(TasksExtractedEvent.EVENT_NAME, (event: DomainEvent) =>
+      this.#onTasksExtracted(event as TasksExtractedEvent));
   }
 
   async handleInterviewMessage(userId: string, text: string, channelId: string): Promise<void> {
@@ -164,6 +170,17 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
     this.#logger.info('Interview completed', { processId });
   }
 
+  async #onTasksExtracted(event: TasksExtractedEvent): Promise<void> {
+    const processId = event.processId.value;
+    const process = this.#processes.get(processId);
+    if (!process) {
+      this.#logger.warn('No tracked process for tasks extracted', { processId });
+      return;
+    }
+    process.assignTasks([...event.tasks]);
+    this.#logger.info('Tasks extracted assigned to tracked process', { processId, count: event.tasks.length });
+  }
+
   #rearmActiveStall(departingUserId: string): void {
     const processId = this.#activeProcessByUser.get(departingUserId);
     if (!processId) return;
@@ -184,6 +201,8 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
   async #rehydrate(process: OffboardingProcess): Promise<void> {
     const departingUserId = process.departingUserId.value;
     const initiatorId = process.initiatorId.value;
+    const tasks = await this.#taskRepository.findByProcessId(process.id);
+    if (tasks.length > 0) process.assignTasks(tasks);
     const interview = await this.#interviewRepository.findByProcessId(process.id);
 
     if (!interview) {

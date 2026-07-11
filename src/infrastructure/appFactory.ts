@@ -6,6 +6,7 @@ import { GoogleGenAI } from '@google/genai';
 import type {
   IOffboardingProcessRepository,
   IInterviewRepository,
+  ITaskRepository,
   IInterviewAgent,
   IDossierRepository,
   ISopCandidateReadRepository,
@@ -30,6 +31,7 @@ import {
   SlackUserInfoProvider,
   HttpOffboardingProcessRepository,
   HttpInterviewRepository,
+  HttpTaskRepository,
   HttpDossierRepository,
   HttpSopCandidateRepository,
   HttpKnowledgeGraphAdapter,
@@ -70,6 +72,7 @@ import {
   createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
   createKafkaInterviewTurnRecordedForwarder,
+  createKafkaTasksExtractedForwarder,
   createKafkaSopCreationRequestedForwarder,
   createKafkaSopCandidateOfferedForwarder,
   createKafkaSopCandidateDecidedForwarder,
@@ -92,6 +95,7 @@ import {
   InterviewStartedEvent,
   InterviewCompletedEvent,
   InterviewTurnRecordedEvent,
+  TasksExtractedEvent,
   SopCreationRequestedEvent,
   SopCandidateOfferedEvent,
   SopCandidateDecidedEvent,
@@ -219,6 +223,7 @@ export class AppFactory {
     // Offboarding wiring
     const repository: IOffboardingProcessRepository = new HttpOffboardingProcessRepository(httpClient);
     const interviewRepository: IInterviewRepository = new HttpInterviewRepository(httpClient);
+    const taskRepository: ITaskRepository = new HttpTaskRepository(httpClient);
     const dossierRepository: IDossierRepository = new HttpDossierRepository(httpClient);
     const messagingPort: IMessagingPort = new SlackMessagingAdapter(app.client);
     const userInfoProvider: IUserInfoProvider = new SlackUserInfoProvider(app.client);
@@ -257,6 +262,7 @@ export class AppFactory {
       eventBus,
       repository,
       interviewRepository,
+      taskRepository,
       interviewService,
       messagingPort,
       new InMemoryScheduler(),
@@ -284,6 +290,10 @@ export class AppFactory {
     eventBus.subscribe(
       InterviewTurnRecordedEvent.EVENT_NAME,
       createKafkaInterviewTurnRecordedForwarder(publisher),
+    );
+    eventBus.subscribe(
+      TasksExtractedEvent.EVENT_NAME,
+      createKafkaTasksExtractedForwarder(publisher),
     );
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
     eventBus.subscribe(

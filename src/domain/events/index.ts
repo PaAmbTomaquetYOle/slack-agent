@@ -4,6 +4,7 @@ export { OffboardingCancellationRequestedEvent } from './offboardingCancellation
 export { InterviewStartedEvent } from './interviewStartedEvent';
 export { InterviewCompletedEvent } from './interviewCompletedEvent';
 export { InterviewTurnRecordedEvent } from './interviewTurnRecordedEvent';
+export { TasksExtractedEvent } from './tasksExtractedEvent';
 export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
 export { SopCandidateOfferedEvent } from './sopCandidateOfferedEvent';
 export { SopCandidateDecidedEvent } from './sopCandidateDecidedEvent';
@@ -16,6 +17,8 @@ export type {
   OutboundInterviewTurnPayload,
   InterviewCompletedOutboundPayload,
   InterviewTurnRecordedPayload,
+  OutboundTaskPayload,
+  TasksExtractedPayload,
   DossierGenerationRequestedPayload,
   SopCreationRequestedPayload,
   SopCandidateOfferedPayload,
@@ -31,6 +34,7 @@ export {
   INTERVIEW_STARTED,
   OUTBOUND_INTERVIEW_COMPLETED,
   INTERVIEW_TURN_RECORDED,
+  TASKS_EXTRACTED,
   DOSSIER_GENERATION_REQUESTED,
   SOP_CREATION_REQUESTED,
   SOP_CANDIDATE_OFFERED,
