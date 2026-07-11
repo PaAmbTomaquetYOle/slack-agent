@@ -161,6 +161,20 @@ describe('SopService', () => {
           authorId: expect.objectContaining({ value: 'U1' }),
           messageText: HIGH_VALUE_TEXT,
           messageTs: '333.1',
+          title: HIGH_VALUE_TEXT,
+        }),
+      );
+    });
+
+    it('uses the author-supplied title when given', async () => {
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '333.5');
+
+      await service.handleSopDecision('C-monitored', '333.5', true, 'Custom title');
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          title: 'Custom title',
         }),
       );
     });
@@ -208,6 +222,18 @@ describe('SopService', () => {
       expect(eventBus.publish).toHaveBeenCalledWith(expect.objectContaining({ messageTs: 'keep' }));
 
       consoleWarnSpy.mockRestore();
+    });
+  });
+
+  describe('deriveSopTitle', () => {
+    it('derives a default title from the tracked candidate text', async () => {
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '444.1');
+
+      expect(service.deriveSopTitle('C-monitored', '444.1')).toBe(HIGH_VALUE_TEXT);
+    });
+
+    it('returns null for an untracked candidate', () => {
+      expect(service.deriveSopTitle('C-monitored', 'unknown-ts')).toBeNull();
     });
   });
 

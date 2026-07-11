@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ISopService } from '../../../application/serviceInterfaces';
-import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../../application/serviceInterfaces';
+import type { ISopService } from '../../../application';
+import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../../application';
 import { SopController } from '../sopController';
 import { makeAppMock, makeWebClientMock, makeAckFn } from '../../../testing/slackMocks';
 
@@ -10,6 +10,7 @@ function makeSopServiceMock(): ISopService {
     handleChannelMessage: vi.fn().mockResolvedValue(undefined),
     handleReactionAdded: vi.fn().mockResolvedValue(undefined),
     handleSopDecision: vi.fn().mockResolvedValue(undefined),
+    deriveSopTitle: vi.fn().mockReturnValue('Derived default title'),
   };
 }
 
@@ -103,17 +104,44 @@ describe('SopController', () => {
     expect(sopService.handleReactionAdded).not.toHaveBeenCalled();
   });
 
-  it('acks and forwards an accepted SOP decision', async () => {
+  it('acks and opens the title modal, prefilled with the derived default', async () => {
     const ack = makeAckFn();
+    const client = makeWebClientMock();
 
     await trigger('action', SOP_ACCEPT_ACTION_ID, {
       ack,
-      body: { channel: { id: 'C1' }, user: { id: 'U1' } },
+      body: { channel: { id: 'C1' }, user: { id: 'U1' }, trigger_id: 'T1' },
       action: { action_id: SOP_ACCEPT_ACTION_ID, value: '111.1' },
+      client,
     });
 
     expect(ack).toHaveBeenCalled();
-    expect(sopService.handleSopDecision).toHaveBeenCalledWith('C1', '111.1', true);
+    expect(sopService.deriveSopTitle).toHaveBeenCalledWith('C1', '111.1');
+    expect(sopService.handleSopDecision).not.toHaveBeenCalled();
+    expect(client.views.open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trigger_id: 'T1',
+        view: expect.objectContaining({
+          callback_id: 'sop_title_modal',
+          private_metadata: JSON.stringify({ channelId: 'C1', messageTs: '111.1' }),
+        }),
+      }),
+    );
+  });
+
+  it('does not open a modal when the candidate is no longer tracked', async () => {
+    vi.mocked(sopService.deriveSopTitle).mockReturnValue(null);
+    const ack = makeAckFn();
+    const client = makeWebClientMock();
+
+    await trigger('action', SOP_ACCEPT_ACTION_ID, {
+      ack,
+      body: { channel: { id: 'C1' }, user: { id: 'U1' }, trigger_id: 'T1' },
+      action: { action_id: SOP_ACCEPT_ACTION_ID, value: '111.1' },
+      client,
+    });
+
+    expect(client.views.open).not.toHaveBeenCalled();
   });
 
   it('acks and forwards a declined SOP decision', async () => {
@@ -129,16 +157,76 @@ describe('SopController', () => {
     expect(sopService.handleSopDecision).toHaveBeenCalledWith('C1', '111.1', false);
   });
 
-  it('does nothing if the action body is missing channel or value', async () => {
+  it('does nothing if the accept action body is missing channel, value, or trigger_id', async () => {
     const ack = makeAckFn();
+    const client = makeWebClientMock();
 
     await trigger('action', SOP_ACCEPT_ACTION_ID, {
       ack,
       body: { user: { id: 'U1' } },
       action: { action_id: SOP_ACCEPT_ACTION_ID },
+      client,
+    });
+
+    expect(ack).toHaveBeenCalled();
+    expect(client.views.open).not.toHaveBeenCalled();
+  });
+
+  it('does nothing if the decline action body is missing channel or value', async () => {
+    const ack = makeAckFn();
+
+    await trigger('action', SOP_DECLINE_ACTION_ID, {
+      ack,
+      body: { user: { id: 'U1' } },
+      action: { action_id: SOP_DECLINE_ACTION_ID },
     });
 
     expect(ack).toHaveBeenCalled();
     expect(sopService.handleSopDecision).not.toHaveBeenCalled();
+  });
+
+  describe('title modal submission', () => {
+    function makeViewSubmitArgs(title: string | undefined, metadata = { channelId: 'C1', messageTs: '111.1' }) {
+      const ack = makeAckFn();
+      const view = {
+        private_metadata: JSON.stringify(metadata),
+        state: {
+          values: {
+            sop_title_block: { sop_title_input: { value: title } },
+          },
+        },
+      };
+      return { ack, view };
+    }
+
+    it('forwards the accepted decision with the author-entered title', async () => {
+      await trigger('view', 'sop_title_modal', makeViewSubmitArgs('My chosen title'));
+
+      expect(sopService.handleSopDecision).toHaveBeenCalledWith('C1', '111.1', true, 'My chosen title');
+    });
+
+    it('trims the entered title', async () => {
+      await trigger('view', 'sop_title_modal', makeViewSubmitArgs('  spaced title  '));
+
+      expect(sopService.handleSopDecision).toHaveBeenCalledWith('C1', '111.1', true, 'spaced title');
+    });
+
+    it('does nothing when the title is blank', async () => {
+      await trigger('view', 'sop_title_modal', makeViewSubmitArgs('   '));
+
+      expect(sopService.handleSopDecision).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when private_metadata is malformed', async () => {
+      const ack = makeAckFn();
+      const view = {
+        private_metadata: 'not-json',
+        state: { values: { sop_title_block: { sop_title_input: { value: 'Title' } } } },
+      };
+
+      await trigger('view', 'sop_title_modal', { ack, view });
+
+      expect(sopService.handleSopDecision).not.toHaveBeenCalled();
+    });
   });
 });
