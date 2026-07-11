@@ -100,6 +100,18 @@ channels:
       interviewCompletedInbound:
         $ref: '#/components/messages/InterviewCompletedInbound'
 
+  slackAgentInterviewTurnRecorded:
+    address: slack-agent.interview.turn_recorded
+    description: >
+      Appends newly recorded turns to the process's interview incrementally
+      (SA-16), instead of only receiving the full turn list at
+      `interview.completed`. Kafka delivery across topics is not ordered, so
+      the handler creates/starts the interview defensively and dedups by
+      turn order to stay idempotent under at-least-once redelivery.
+    messages:
+      interviewTurnRecorded:
+        $ref: '#/components/messages/InterviewTurnRecorded'
+
   slackAgentDossierGenerationRequested:
     address: slack-agent.dossier.generation_requested
     description: >
@@ -116,6 +128,26 @@ channels:
     messages:
       sopCreationRequested:
         $ref: '#/components/messages/SopCreationRequested'
+
+  slackAgentSopCandidateOffered:
+    address: slack-agent.sop.candidate_offered
+    description: >
+      Persists that a candidate message was offered to its author as a
+      possible SOP (SA-16), so a slack-agent restart before the author
+      responds doesn't lose the candidate.
+    messages:
+      sopCandidateOffered:
+        $ref: '#/components/messages/SopCandidateOffered'
+
+  slackAgentSopCandidateDecided:
+    address: slack-agent.sop.candidate_decided
+    description: >
+      Records the author's accept/reject decision for a previously offered
+      SOP candidate (SA-16). The SOP itself is still only created, on
+      acceptance, via `sop.creation_requested`.
+    messages:
+      sopCandidateDecided:
+        $ref: '#/components/messages/SopCandidateDecided'
 
   slackAgentKnowledgeInteractionRegistered:
     address: slack-agent.knowledge_graph.interaction_registered
@@ -235,6 +267,13 @@ operations:
     messages:
       - $ref: '#/channels/slackAgentInterviewCompleted/messages/interviewCompletedInbound'
 
+  onInterviewTurnRecorded:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentInterviewTurnRecorded'
+    messages:
+      - $ref: '#/channels/slackAgentInterviewTurnRecorded/messages/interviewTurnRecorded'
+
   onDossierGenerationRequested:
     action: receive
     channel:
@@ -248,6 +287,20 @@ operations:
       $ref: '#/channels/slackAgentSopCreationRequested'
     messages:
       - $ref: '#/channels/slackAgentSopCreationRequested/messages/sopCreationRequested'
+
+  onSopCandidateOffered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentSopCandidateOffered'
+    messages:
+      - $ref: '#/channels/slackAgentSopCandidateOffered/messages/sopCandidateOffered'
+
+  onSopCandidateDecided:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentSopCandidateDecided'
+    messages:
+      - $ref: '#/channels/slackAgentSopCandidateDecided/messages/sopCandidateDecided'
 
   onKnowledgeInteractionRegistered:
     action: receive
@@ -349,6 +402,13 @@ components:
       payload:
         $ref: '#/components/schemas/InterviewCompletedInboundEnvelope'
 
+    InterviewTurnRecorded:
+      name: interview.turn_recorded
+      title: Interview turn(s) recorded
+      summary: Delivers newly recorded interview turns to persist incrementally.
+      payload:
+        $ref: '#/components/schemas/InterviewTurnRecordedEnvelope'
+
     DossierGenerationRequested:
       name: dossier.generation_requested
       title: Dossier generation requested
@@ -362,6 +422,20 @@ components:
       summary: Requests creation of a SOP from a Slack-originated request.
       payload:
         $ref: '#/components/schemas/SopCreationRequestedEnvelope'
+
+    SopCandidateOffered:
+      name: sop.candidate_offered
+      title: SOP candidate offered
+      summary: A candidate message was offered to its author as a possible SOP.
+      payload:
+        $ref: '#/components/schemas/SopCandidateOfferedEnvelope'
+
+    SopCandidateDecided:
+      name: sop.candidate_decided
+      title: SOP candidate decided
+      summary: The author accepted or rejected a previously offered SOP candidate.
+      payload:
+        $ref: '#/components/schemas/SopCandidateDecidedEnvelope'
 
     KnowledgeInteractionRegistered:
       name: knowledge_graph.interaction_registered
@@ -592,6 +666,32 @@ components:
               $ref: '#/components/schemas/InterviewCompletedInboundPayload'
           required: [payload]
 
+    InterviewTurnRecordedPayload:
+      type: object
+      description: >
+        Same shape as InterviewCompletedInboundPayload — turns are appended
+        to the process's interview rather than replacing the full set.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    InterviewTurnRecordedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: interview.turn_recorded
+            payload:
+              $ref: '#/components/schemas/InterviewTurnRecordedPayload'
+          required: [payload]
+
     DossierGenerationRequestedPayload:
       type: object
       description: >
@@ -639,6 +739,53 @@ components:
               const: sop.creation_requested
             payload:
               $ref: '#/components/schemas/SopCreationRequestedPayload'
+          required: [payload]
+
+    SopCandidateOfferedPayload:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        author_id:
+          type: string
+        message_ts:
+          type: string
+          description: Slack message timestamp identifying the candidate, unique within its channel.
+        content:
+          type: string
+      required: [channel_id, author_id, message_ts, content]
+
+    SopCandidateOfferedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.candidate_offered
+            payload:
+              $ref: '#/components/schemas/SopCandidateOfferedPayload'
+          required: [payload]
+
+    SopCandidateDecidedPayload:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        message_ts:
+          type: string
+        accepted:
+          type: boolean
+      required: [channel_id, message_ts, accepted]
+
+    SopCandidateDecidedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.candidate_decided
+            payload:
+              $ref: '#/components/schemas/SopCandidateDecidedPayload'
           required: [payload]
 
     KnowledgeInteractionRegisteredPayload:
