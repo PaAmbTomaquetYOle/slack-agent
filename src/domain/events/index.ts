@@ -9,6 +9,8 @@ export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
 export { SopCandidateOfferedEvent } from './sopCandidateOfferedEvent';
 export { SopCandidateDecidedEvent } from './sopCandidateDecidedEvent';
 export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEvent';
+export { ReviewInterviewCompletedEvent } from './reviewInterviewCompletedEvent';
+export { ReviewDossierGenerationRequestedEvent } from './reviewDossierGenerationRequestedEvent';
 export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
 export type {
   OffboardingTriggeredPayload,
@@ -26,6 +28,8 @@ export type {
   KnowledgeGraphInteractionRegisteredPayload,
   KnowledgeGraphDocumentRegisteredPayload,
   KnowledgeGraphChannelActivityRegisteredPayload,
+  ReviewInterviewCompletedPayload,
+  ReviewDossierGenerationRequestedPayload,
   OutboundEvent,
 } from './outboundEvents';
 export {
@@ -42,6 +46,10 @@ export {
   KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
   KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
   KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
+  MONTHLY_REVIEW_INTERVIEW_COMPLETED,
+  MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED,
+  ANNUAL_REVIEW_INTERVIEW_COMPLETED,
+  ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED,
 } from './outboundEvents';
 export type {
   OffboardingStateChangedPayload,
@@ -49,6 +57,7 @@ export type {
   DossierGeneratedPayload,
   OffboardingCompletedPayload,
   SopCreatedPayload,
+  ReviewStateChangedPayload,
 } from './inboundEvents';
 export {
   OFFBOARDING_STATE_CHANGED,
@@ -56,5 +65,7 @@ export {
   DOSSIER_GENERATED,
   OFFBOARDING_COMPLETED,
   SOP_CREATED,
+  MONTHLY_REVIEW_STATE_CHANGED,
+  ANNUAL_REVIEW_STATE_CHANGED,
   INBOUND_EVENT_TYPES,
 } from './inboundEvents';

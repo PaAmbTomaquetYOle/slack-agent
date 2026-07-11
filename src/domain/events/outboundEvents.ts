@@ -20,6 +20,13 @@ export const SOP_CANDIDATE_DECIDED = 'sop.candidate_decided' as const;
 export const KNOWLEDGE_GRAPH_INTERACTION_REGISTERED = 'knowledge_graph.interaction_registered' as const;
 export const KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED = 'knowledge_graph.document_registered' as const;
 export const KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED = 'knowledge_graph.channel_activity_registered' as const;
+// SA-20: own event types, not shared with offboarding's (see BE-23) — reviews are triggered by
+// the backend's scheduler, not a Slack command, and their interview flow is dispatched
+// independently of the offboarding one.
+export const MONTHLY_REVIEW_INTERVIEW_COMPLETED = 'monthly_review.interview_completed' as const;
+export const MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED = 'monthly_review.dossier_generation_requested' as const;
+export const ANNUAL_REVIEW_INTERVIEW_COMPLETED = 'annual_review.interview_completed' as const;
+export const ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED = 'annual_review.dossier_generation_requested' as const;
 
 export interface OffboardingTriggeredPayload {
   employee_id: string;
@@ -122,6 +129,15 @@ export interface KnowledgeGraphChannelActivityRegisteredPayload {
   channel_name: string;
 }
 
+export interface ReviewInterviewCompletedPayload {
+  process_id: string;
+  turns?: OutboundInterviewTurnPayload[];
+}
+
+export interface ReviewDossierGenerationRequestedPayload {
+  process_id: string;
+}
+
 export type OutboundEvent =
   | { eventType: typeof OFFBOARDING_TRIGGERED; payload: OffboardingTriggeredPayload }
   | { eventType: typeof OFFBOARDING_CANCELLATION_REQUESTED; payload: OffboardingCancellationRequestedPayload }
@@ -141,4 +157,14 @@ export type OutboundEvent =
   | {
       eventType: typeof KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED;
       payload: KnowledgeGraphChannelActivityRegisteredPayload;
+    }
+  | { eventType: typeof MONTHLY_REVIEW_INTERVIEW_COMPLETED; payload: ReviewInterviewCompletedPayload }
+  | {
+      eventType: typeof MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED;
+      payload: ReviewDossierGenerationRequestedPayload;
+    }
+  | { eventType: typeof ANNUAL_REVIEW_INTERVIEW_COMPLETED; payload: ReviewInterviewCompletedPayload }
+  | {
+      eventType: typeof ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED;
+      payload: ReviewDossierGenerationRequestedPayload;
     };
