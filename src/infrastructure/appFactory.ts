@@ -67,6 +67,7 @@ import {
   createKafkaOffboardingCancellationRequestedForwarder,
   createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
+  createKafkaInterviewTurnRecordedForwarder,
   createKafkaSopCreationRequestedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
   createDossierGenerationTriggerHandler,
@@ -86,6 +87,7 @@ import {
   OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  InterviewTurnRecordedEvent,
   SopCreationRequestedEvent,
   DossierGenerationRequestedEvent,
   INBOUND_EVENT_TYPES,
@@ -231,6 +233,7 @@ export class AppFactory {
     const interviewService: IInterviewService = new InterviewService(
       repository,
       new InMemoryInterviewSessionStore(),
+      interviewRepository,
       interviewAgent,
       userInfoProvider,
       messagingPort,
@@ -267,6 +270,10 @@ export class AppFactory {
     );
     eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
+    eventBus.subscribe(
+      InterviewTurnRecordedEvent.EVENT_NAME,
+      createKafkaInterviewTurnRecordedForwarder(publisher),
+    );
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
     eventBus.subscribe(
       DossierGenerationRequestedEvent.EVENT_NAME,

@@ -3,6 +3,7 @@ export { OffboardingStartedEvent } from './offboardingStartedEvent';
 export { OffboardingCancellationRequestedEvent } from './offboardingCancellationRequestedEvent';
 export { InterviewStartedEvent } from './interviewStartedEvent';
 export { InterviewCompletedEvent } from './interviewCompletedEvent';
+export { InterviewTurnRecordedEvent } from './interviewTurnRecordedEvent';
 export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
 export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEvent';
 export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
@@ -12,6 +13,7 @@ export type {
   InterviewStartedPayload,
   OutboundInterviewTurnPayload,
   InterviewCompletedOutboundPayload,
+  InterviewTurnRecordedPayload,
   DossierGenerationRequestedPayload,
   SopCreationRequestedPayload,
   KnowledgeGraphInteractionRegisteredPayload,
@@ -24,6 +26,7 @@ export {
   OFFBOARDING_CANCELLATION_REQUESTED,
   INTERVIEW_STARTED,
   OUTBOUND_INTERVIEW_COMPLETED,
+  INTERVIEW_TURN_RECORDED,
   DOSSIER_GENERATION_REQUESTED,
   SOP_CREATION_REQUESTED,
   KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,

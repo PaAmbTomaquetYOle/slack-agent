@@ -11,6 +11,7 @@ export const OFFBOARDING_TRIGGERED = 'offboarding.triggered' as const;
 export const OFFBOARDING_CANCELLATION_REQUESTED = 'offboarding.cancellation_requested' as const;
 export const INTERVIEW_STARTED = 'interview.started' as const;
 export const OUTBOUND_INTERVIEW_COMPLETED = 'interview.completed' as const;
+export const INTERVIEW_TURN_RECORDED = 'interview.turn_recorded' as const;
 export const DOSSIER_GENERATION_REQUESTED = 'dossier.generation_requested' as const;
 export const SOP_CREATION_REQUESTED = 'sop.creation_requested' as const;
 export const KNOWLEDGE_GRAPH_INTERACTION_REGISTERED = 'knowledge_graph.interaction_registered' as const;
@@ -46,6 +47,11 @@ export interface OutboundInterviewTurnPayload {
 export interface InterviewCompletedOutboundPayload {
   process_id: string;
   turns?: OutboundInterviewTurnPayload[];
+}
+
+export interface InterviewTurnRecordedPayload {
+  process_id: string;
+  turns: OutboundInterviewTurnPayload[];
 }
 
 export interface DossierGenerationRequestedPayload {
@@ -90,6 +96,7 @@ export type OutboundEvent =
   | { eventType: typeof OFFBOARDING_CANCELLATION_REQUESTED; payload: OffboardingCancellationRequestedPayload }
   | { eventType: typeof INTERVIEW_STARTED; payload: InterviewStartedPayload }
   | { eventType: typeof OUTBOUND_INTERVIEW_COMPLETED; payload: InterviewCompletedOutboundPayload }
+  | { eventType: typeof INTERVIEW_TURN_RECORDED; payload: InterviewTurnRecordedPayload }
   | { eventType: typeof DOSSIER_GENERATION_REQUESTED; payload: DossierGenerationRequestedPayload }
   | { eventType: typeof SOP_CREATION_REQUESTED; payload: SopCreationRequestedPayload }
   | {
