@@ -18,6 +18,7 @@ Repository for the challenge's Slack Agent — part of **BrainTrust**, a system 
 
 - [Architecture](#architecture)
 - [Kafka event contract (AsyncAPI)](#kafka-event-contract-asyncapi)
+- [🗓 Periodic review interviews](#-periodic-review-interviews)
 - [🚀 Local development](#-local-development)
 - [⚙️ Configuration](#️-configuration)
 
@@ -48,8 +49,8 @@ d2 --theme 0 --pad 40 --scale 2 docs/architecture/architecture.d2 docs/architect
 
 slack-agent and the backend exchange domain events over Kafka following an [AsyncAPI 3.0.0](https://www.asyncapi.com/) contract (BE-9/BE-11, BE-7). **BE-7 made the backend's REST surface read-only** — every write (offboarding state, interview turns, dossier creation, cancellation) now goes out as a Kafka command/event; slack-agent's HTTP adapters (`http*Repository.ts`) keep only their read methods, used for `OffboardingOrchestrator.recover()` and active-process lookups. Topics:
 
-- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `offboarding.cancellation_requested` (BE-7, replaces the old `PATCH .../cancel`), `interview.started`, `interview.turn_recorded` (SA-16, per-turn), `interview.completed`, `tasks.extracted` (SA-18), `dossier.generation_requested`, `sop.creation_requested`, `sop.candidate_offered` (SA-16), `sop.candidate_decided` (SA-16).
-- `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`.
+- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `offboarding.cancellation_requested` (BE-7, replaces the old `PATCH .../cancel`), `interview.started`, `interview.turn_recorded` (SA-16, per-turn), `interview.completed`, `tasks.extracted` (SA-18), `dossier.generation_requested`, `sop.creation_requested`, `sop.candidate_offered` (SA-16), `sop.candidate_decided` (SA-16), plus SA-20's `monthly_review.*`/`annual_review.*` equivalents (`triggered`, `cancellation_requested`, `interview_completed`, `dossier_generation_requested`) — see below.
+- `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`, plus `monthly_review.state_changed`/`monthly_review.completed`/`annual_review.state_changed`/`annual_review.completed` (SA-20).
 - `offboarding.dlq` — dead-letter queue for either direction (malformed envelopes or handler failures).
 
 Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits. The broker requires **SASL_SSL / SCRAM-SHA-512** (BE-7) — see `KAFKA_SASL_*`/`KAFKA_SSL_CA` below.
@@ -64,6 +65,15 @@ Note the backend mints `process_id` when it consumes `offboarding.triggered` and
 - The canonical spec lives at `backend/docs/asyncapi/asyncapi.yml`. A copy is vendored here at [`docs/asyncapi/asyncapi.yml`](docs/asyncapi/asyncapi.yml) for reference — it is not regenerated automatically.
 - slack-agent does **not** consume the Modelina-generated TypeScript classes in `backend/docs/asyncapi/generated/ts/` (they're camelCase classes with `export default`, which don't match the snake_case wire format). Instead, payload shapes are hand-written as snake_case interfaces in `src/domain/events/outboundEvents.ts` (published) and `inboundEvents.ts` (consumed).
 - When the backend changes the contract: re-copy `asyncapi.yml` into `docs/asyncapi/`, diff it against `outboundEvents.ts`/`inboundEvents.ts`, and update the payload interfaces + the forwarders/handlers in `src/application/events/` to match.
+
+## 🗓 Periodic review interviews
+
+SA-20: alongside offboarding (triggered by a user in Slack), the backend automatically starts `MonthlyReviewProcess`/`AnnualReviewProcess` instances on a schedule (BE-24) — a lightweight monthly check-in on recent work, and an exhaustive annual knowledge-retention review. slack-agent runs the guided interview for these exactly like it does for offboarding, but through a **parallel, simpler stack** (`ReviewInterviewService`/`GeminiReviewInterviewAgent`), not a generalization of `OffboardingOrchestrator`/`InterviewService`:
+
+- **No HTTP read model.** Unlike offboarding, the backend exposes no REST endpoint for review processes (BE-23 kept them Kafka-only) — there is nothing to poll to answer "does this employee have an active review?" `IActiveReviewStore` (in-memory, `InMemoryActiveReviewStore`) tracks it instead, populated when `{monthly,annual}_review.state_changed` reaches `in_progress`. **Known limitation:** this does not survive a restart — a future issue could add a backend read endpoint to support rehydration, mirroring `OffboardingOrchestrator.recover()`.
+- **No nudge/abandon.** These processes aren't time-critical departures; `DirectMessageController` just forwards every DM to both `OffboardingOrchestrator.handleInterviewMessage` and `ReviewInterviewService.handleIncomingDirectMessage` — each is a safe no-op when it has nothing tracked for the sender.
+- **No Jira/Trello task extraction.** `GeminiReviewInterviewAgent` calls no MCP tools; it reuses `INTERVIEW_TOPICS`' vocabulary but scopes which ones apply per review type (`reviewTopicsFor`): monthly asks about `current_projects` only, annual asks about all five — see `src/domain/interview/reviewInterviewTopics.ts`.
+- **Own wire events**, not shared with offboarding's (BE-23): `{monthly,annual}_review.triggered`/`cancellation_requested`/`interview_completed`/`dossier_generation_requested` inbound (`slack-agent.*`), `{monthly,annual}_review.state_changed`/`completed` outbound (`offboarding.*`). `ReviewInterviewCompletedEvent`/`ReviewDossierGenerationRequestedEvent` are single local event classes carrying a `reviewScope: 'monthly' | 'annual'` field — their Kafka forwarders pick the wire event type from it, so one subscription covers both scopes.
 
 ## 🚀 Local development
 

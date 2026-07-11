@@ -24,6 +24,9 @@ import type {
   IOffboardingOrchestrator,
   IExpertRecommendationService,
   IKnowledgeGraphReadPort,
+  IReviewInterviewAgent,
+  IActiveReviewStore,
+  IReviewInterviewService,
 } from '../application';
 import {
   McpClient,
@@ -36,6 +39,8 @@ import {
   HttpSopCandidateRepository,
   HttpKnowledgeGraphAdapter,
   GeminiInterviewAgent,
+  GeminiReviewInterviewAgent,
+  InMemoryActiveReviewStore,
   NoOpEventPublisher,
   KafkaEventPublisher,
   KafkaDeadLetterQueue,
@@ -60,6 +65,7 @@ import {
   McpService,
   OffboardingService,
   InterviewService,
+  ReviewInterviewService,
   SopService,
   DossierService,
   QuestionSuggestionService,
@@ -78,6 +84,9 @@ import {
   createKafkaSopCandidateDecidedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
   createDossierGenerationTriggerHandler,
+  createKafkaReviewInterviewCompletedForwarder,
+  createKafkaReviewDossierGenerationRequestedForwarder,
+  createReviewDossierGenerationTriggerHandler,
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,
   createKafkaChannelActivityRegisteredForwarder,
@@ -88,6 +97,7 @@ import {
   InterviewCompletedHandler,
   DossierGeneratedHandler,
   SopCreatedHandler,
+  ReviewStateChangedHandler,
 } from '../application';
 import {
   OffboardingStartedEvent,
@@ -100,6 +110,10 @@ import {
   SopCandidateOfferedEvent,
   SopCandidateDecidedEvent,
   DossierGenerationRequestedEvent,
+  ReviewInterviewCompletedEvent,
+  ReviewDossierGenerationRequestedEvent,
+  MONTHLY_REVIEW_STATE_CHANGED,
+  ANNUAL_REVIEW_STATE_CHANGED,
   INBOUND_EVENT_TYPES,
   ExpertResponseDetector,
   QuestionDetector,
@@ -128,6 +142,16 @@ export class AppFactory {
     return new GeminiInterviewAgent(client, SETTINGS.GEMINI_MODEL, mcpService, authService);
   }
 
+  // SA-20: a separate, simpler agent for monthly/annual review interviews — no MCP tool calls,
+  // review-appropriate framing. See GeminiReviewInterviewAgent's docstring.
+  private createReviewInterviewAgent(): IReviewInterviewAgent {
+    if (!SETTINGS.GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is required to run the guided review interview.');
+    }
+    const client = new GoogleGenAI({ apiKey: SETTINGS.GEMINI_API_KEY });
+    return new GeminiReviewInterviewAgent(client, SETTINGS.GEMINI_MODEL);
+  }
+
   private createExpertResponseDetector(): ExpertResponseDetector {
     const keywords = SETTINGS.SOP_KEYWORDS.split(',').map((keyword) => keyword.trim()).filter(Boolean);
     return new ExpertResponseDetector({
@@ -146,6 +170,7 @@ export class AppFactory {
     messagingPort: IMessagingPort,
     dossierService: IDossierService,
     orchestrator: IOffboardingOrchestrator,
+    activeReviewStore: IActiveReviewStore,
   ): Promise<EventInfrastructure> {
     if (!SETTINGS.KAFKA_BROKERS) {
       console.warn('KAFKA_BROKERS not set; Kafka is disabled, events will not be published or consumed.');
@@ -183,6 +208,8 @@ export class AppFactory {
         new DossierGeneratedHandler(messagingPort, repository, dossierService, orchestrator),
         new OffboardingCompletedHandler(messagingPort, orchestrator),
         new SopCreatedHandler(messagingPort),
+        new ReviewStateChangedHandler(MONTHLY_REVIEW_STATE_CHANGED, 'monthly', activeReviewStore, messagingPort),
+        new ReviewStateChangedHandler(ANNUAL_REVIEW_STATE_CHANGED, 'annual', activeReviewStore, messagingPort),
       ]);
       const topics = INBOUND_EVENT_TYPES.map((eventType) => `${SETTINGS.KAFKA_INBOUND_TOPIC_PREFIX}.${eventType}`);
       const kafkaConsumer = new KafkaEventConsumer(
@@ -272,11 +299,28 @@ export class AppFactory {
       SETTINGS.INTERVIEW_ABANDON_TIMEOUT_MS,
     );
 
+    // Review interview wiring (SA-20): parallel to offboarding's, not generalized from it — the
+    // orchestration logic is genuinely different (backend-scheduler-triggered, no nudge/abandon,
+    // no Jira/Trello task extraction) and there is no HTTP read model to key an active-process
+    // lookup off, so it needs its own in-memory tracker (IActiveReviewStore) instead of
+    // IOffboardingProcessRepository.
+    const activeReviewStore: IActiveReviewStore = new InMemoryActiveReviewStore();
+    const reviewInterviewAgent = this.createReviewInterviewAgent();
+    const reviewInterviewService: IReviewInterviewService = new ReviewInterviewService(
+      activeReviewStore,
+      new InMemoryInterviewSessionStore(),
+      reviewInterviewAgent,
+      userInfoProvider,
+      messagingPort,
+      eventBus,
+    );
+
     const { publisher, consumer: eventConsumer } = await this.createEventInfrastructure(
       repository,
       messagingPort,
       dossierService,
       orchestrator,
+      activeReviewStore,
     );
 
     eventBus.subscribe(OffboardingStartedEvent.EVENT_NAME, createOffboardingStartedHandler(messagingPort));
@@ -310,6 +354,21 @@ export class AppFactory {
       createKafkaSopCandidateDecidedForwarder(publisher),
     );
 
+    // SA-20: monthly/annual review interview completion -> dossier generation, mirroring the
+    // offboarding InterviewCompleted -> DossierGenerationRequested chain above.
+    eventBus.subscribe(
+      ReviewInterviewCompletedEvent.EVENT_NAME,
+      createKafkaReviewInterviewCompletedForwarder(publisher),
+    );
+    eventBus.subscribe(
+      ReviewInterviewCompletedEvent.EVENT_NAME,
+      createReviewDossierGenerationTriggerHandler(eventBus),
+    );
+    eventBus.subscribe(
+      ReviewDossierGenerationRequestedEvent.EVENT_NAME,
+      createKafkaReviewDossierGenerationRequestedForwarder(publisher),
+    );
+
     // Knowledge graph population (SA-9): feed the graph from completed interviews and
     // accepted SOP answers so /find-expert has data to recommend from.
     eventBus.subscribe(
@@ -341,7 +400,7 @@ export class AppFactory {
     ).register(app);
     new AppMentionController(expertRecommendationService).register(app);
 
-    new DirectMessageController(authService, orchestrator).register(app);
+    new DirectMessageController(authService, orchestrator, reviewInterviewService).register(app);
 
     // SOP detection wiring
     const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);

@@ -185,6 +185,79 @@ channels:
       knowledgeChannelActivityRegistered:
         $ref: '#/components/messages/KnowledgeChannelActivityRegistered'
 
+  # --- SA-20 / BE-23: monthly/annual review processes -------------------
+  # Own event types (not reused from offboarding's), since these processes
+  # are triggered by the backend's own scheduler (BE-24), not a Slack user
+  # command, and their interview/dossier flow is dispatched independently.
+
+  slackAgentMonthlyReviewTriggered:
+    address: slack-agent.monthly_review.triggered
+    description: Creates the monthly review process and starts it.
+    messages:
+      monthlyReviewTriggered:
+        $ref: '#/components/messages/MonthlyReviewTriggered'
+
+  slackAgentMonthlyReviewCancellationRequested:
+    address: slack-agent.monthly_review.cancellation_requested
+    description: Cancels the monthly review process.
+    messages:
+      monthlyReviewCancellationRequested:
+        $ref: '#/components/messages/MonthlyReviewCancellationRequested'
+
+  slackAgentMonthlyReviewInterviewCompleted:
+    address: slack-agent.monthly_review.interview_completed
+    description: >
+      Saves the collected interview answers and completes the interview.
+      Unlike offboarding, this does not submit the process anywhere:
+      MonthlyReviewProcess has no PENDING_REVISION state — it stays
+      IN_PROGRESS until `monthly_review.dossier_generation_requested`
+      completes it directly.
+    messages:
+      monthlyReviewInterviewCompleted:
+        $ref: '#/components/messages/MonthlyReviewInterviewCompleted'
+
+  slackAgentMonthlyReviewDossierGenerationRequested:
+    address: slack-agent.monthly_review.dossier_generation_requested
+    description: >
+      Generates and persists the dossier, then completes the monthly review
+      process (IN_PROGRESS -> FINISHED directly, no PENDING_REVISION).
+    messages:
+      monthlyReviewDossierGenerationRequested:
+        $ref: '#/components/messages/MonthlyReviewDossierGenerationRequested'
+
+  slackAgentAnnualReviewTriggered:
+    address: slack-agent.annual_review.triggered
+    description: Creates the annual review process and starts it.
+    messages:
+      annualReviewTriggered:
+        $ref: '#/components/messages/AnnualReviewTriggered'
+
+  slackAgentAnnualReviewCancellationRequested:
+    address: slack-agent.annual_review.cancellation_requested
+    description: Cancels the annual review process.
+    messages:
+      annualReviewCancellationRequested:
+        $ref: '#/components/messages/AnnualReviewCancellationRequested'
+
+  slackAgentAnnualReviewInterviewCompleted:
+    address: slack-agent.annual_review.interview_completed
+    description: >
+      Saves the collected interview answers, completes the interview, and
+      submits the annual review process for review (same state machine as
+      offboarding).
+    messages:
+      annualReviewInterviewCompleted:
+        $ref: '#/components/messages/AnnualReviewInterviewCompleted'
+
+  slackAgentAnnualReviewDossierGenerationRequested:
+    address: slack-agent.annual_review.dossier_generation_requested
+    description: >
+      Generates and persists the dossier, then completes the annual review
+      process (PENDING_REVISION -> FINISHED).
+    messages:
+      annualReviewDossierGenerationRequested:
+        $ref: '#/components/messages/AnnualReviewDossierGenerationRequested'
+
   # ---------------------------------------------------------------------
   # Outbound — published by backend, consumed by slack-agent.
   # Prefix `offboarding` (KAFKA_TOPIC_PREFIX).
@@ -216,6 +289,34 @@ channels:
     messages:
       offboardingCompleted:
         $ref: '#/components/messages/OffboardingCompleted'
+
+  offboardingMonthlyReviewStateChanged:
+    address: offboarding.monthly_review.state_changed
+    description: The monthly review process transitioned to a new state.
+    messages:
+      monthlyReviewStateChanged:
+        $ref: '#/components/messages/MonthlyReviewStateChanged'
+
+  offboardingMonthlyReviewCompleted:
+    address: offboarding.monthly_review.completed
+    description: The monthly review process finished end-to-end.
+    messages:
+      monthlyReviewCompleted:
+        $ref: '#/components/messages/MonthlyReviewCompleted'
+
+  offboardingAnnualReviewStateChanged:
+    address: offboarding.annual_review.state_changed
+    description: The annual review process transitioned to a new state.
+    messages:
+      annualReviewStateChanged:
+        $ref: '#/components/messages/AnnualReviewStateChanged'
+
+  offboardingAnnualReviewCompleted:
+    address: offboarding.annual_review.completed
+    description: The annual review process finished end-to-end.
+    messages:
+      annualReviewCompleted:
+        $ref: '#/components/messages/AnnualReviewCompleted'
 
   offboardingSopCreated:
     address: offboarding.sop.created
@@ -341,6 +442,62 @@ operations:
     messages:
       - $ref: '#/channels/slackAgentKnowledgeChannelActivityRegistered/messages/knowledgeChannelActivityRegistered'
 
+  onMonthlyReviewTriggered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewTriggered'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewTriggered/messages/monthlyReviewTriggered'
+
+  onMonthlyReviewCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewCancellationRequested/messages/monthlyReviewCancellationRequested'
+
+  onMonthlyReviewInterviewCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewInterviewCompleted'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewInterviewCompleted/messages/monthlyReviewInterviewCompleted'
+
+  onMonthlyReviewDossierGenerationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewDossierGenerationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewDossierGenerationRequested/messages/monthlyReviewDossierGenerationRequested'
+
+  onAnnualReviewTriggered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewTriggered'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewTriggered/messages/annualReviewTriggered'
+
+  onAnnualReviewCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewCancellationRequested/messages/annualReviewCancellationRequested'
+
+  onAnnualReviewInterviewCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewInterviewCompleted'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewInterviewCompleted/messages/annualReviewInterviewCompleted'
+
+  onAnnualReviewDossierGenerationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewDossierGenerationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewDossierGenerationRequested/messages/annualReviewDossierGenerationRequested'
+
   sendOffboardingStateChanged:
     action: send
     channel:
@@ -368,6 +525,34 @@ operations:
       $ref: '#/channels/offboardingOffboardingCompleted'
     messages:
       - $ref: '#/channels/offboardingOffboardingCompleted/messages/offboardingCompleted'
+
+  sendMonthlyReviewStateChanged:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingMonthlyReviewStateChanged'
+    messages:
+      - $ref: '#/channels/offboardingMonthlyReviewStateChanged/messages/monthlyReviewStateChanged'
+
+  sendMonthlyReviewCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingMonthlyReviewCompleted'
+    messages:
+      - $ref: '#/channels/offboardingMonthlyReviewCompleted/messages/monthlyReviewCompleted'
+
+  sendAnnualReviewStateChanged:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingAnnualReviewStateChanged'
+    messages:
+      - $ref: '#/channels/offboardingAnnualReviewStateChanged/messages/annualReviewStateChanged'
+
+  sendAnnualReviewCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingAnnualReviewCompleted'
+    messages:
+      - $ref: '#/channels/offboardingAnnualReviewCompleted/messages/annualReviewCompleted'
 
   sendSopCreated:
     action: send
@@ -485,6 +670,62 @@ components:
       payload:
         $ref: '#/components/schemas/KnowledgeChannelActivityRegisteredEnvelope'
 
+    MonthlyReviewTriggered:
+      name: monthly_review.triggered
+      title: Monthly review triggered
+      summary: Requests creation of a new monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewTriggeredEnvelope'
+
+    MonthlyReviewCancellationRequested:
+      name: monthly_review.cancellation_requested
+      title: Monthly review cancellation requested
+      summary: Requests cancellation of a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewCancellationRequestedEnvelope'
+
+    MonthlyReviewInterviewCompleted:
+      name: monthly_review.interview_completed
+      title: Monthly review interview completed
+      summary: Delivers the collected interview turns for a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewInterviewCompletedEnvelope'
+
+    MonthlyReviewDossierGenerationRequested:
+      name: monthly_review.dossier_generation_requested
+      title: Monthly review dossier generation requested
+      summary: Requests dossier generation for a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewDossierGenerationRequestedEnvelope'
+
+    AnnualReviewTriggered:
+      name: annual_review.triggered
+      title: Annual review triggered
+      summary: Requests creation of a new annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewTriggeredEnvelope'
+
+    AnnualReviewCancellationRequested:
+      name: annual_review.cancellation_requested
+      title: Annual review cancellation requested
+      summary: Requests cancellation of an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewCancellationRequestedEnvelope'
+
+    AnnualReviewInterviewCompleted:
+      name: annual_review.interview_completed
+      title: Annual review interview completed
+      summary: Delivers the collected interview turns for an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewInterviewCompletedEnvelope'
+
+    AnnualReviewDossierGenerationRequested:
+      name: annual_review.dossier_generation_requested
+      title: Annual review dossier generation requested
+      summary: Requests dossier generation for an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewDossierGenerationRequestedEnvelope'
+
     OffboardingStateChanged:
       name: offboarding.state_changed
       title: Offboarding state changed
@@ -512,6 +753,34 @@ components:
       summary: The offboarding process finished end-to-end.
       payload:
         $ref: '#/components/schemas/OffboardingCompletedEnvelope'
+
+    MonthlyReviewStateChanged:
+      name: monthly_review.state_changed
+      title: Monthly review state changed
+      summary: The monthly review process transitioned to a new state.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewStateChangedEnvelope'
+
+    MonthlyReviewCompleted:
+      name: monthly_review.completed
+      title: Monthly review completed
+      summary: The monthly review process finished end-to-end.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewCompletedEnvelope'
+
+    AnnualReviewStateChanged:
+      name: annual_review.state_changed
+      title: Annual review state changed
+      summary: The annual review process transitioned to a new state.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewStateChangedEnvelope'
+
+    AnnualReviewCompleted:
+      name: annual_review.completed
+      title: Annual review completed
+      summary: The annual review process finished end-to-end.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewCompletedEnvelope'
 
     SopCreated:
       name: sop.created
@@ -771,6 +1040,188 @@ components:
               const: dossier.generation_requested
             payload:
               $ref: '#/components/schemas/DossierGenerationRequestedPayload'
+          required: [payload]
+
+    # --- SA-20 / BE-23: monthly/annual review inbound payloads ----------
+
+    MonthlyReviewTriggeredPayload:
+      type: object
+      properties:
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        employee_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required: [employee_id, manager_id]
+
+    MonthlyReviewTriggeredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.triggered
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewTriggeredPayload'
+          required: [payload]
+
+    MonthlyReviewCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    MonthlyReviewCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewCancellationRequestedPayload'
+          required: [payload]
+
+    MonthlyReviewInterviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    MonthlyReviewInterviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.interview_completed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewInterviewCompletedPayload'
+          required: [payload]
+
+    MonthlyReviewDossierGenerationRequestedPayload:
+      type: object
+      description: >
+        Only `process_id` is carried — the interview content is read from
+        the database (source of truth), not from the event payload.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    MonthlyReviewDossierGenerationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.dossier_generation_requested
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewDossierGenerationRequestedPayload'
+          required: [payload]
+
+    AnnualReviewTriggeredPayload:
+      type: object
+      properties:
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        employee_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required: [employee_id, manager_id]
+
+    AnnualReviewTriggeredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.triggered
+            payload:
+              $ref: '#/components/schemas/AnnualReviewTriggeredPayload'
+          required: [payload]
+
+    AnnualReviewCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    AnnualReviewCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/AnnualReviewCancellationRequestedPayload'
+          required: [payload]
+
+    AnnualReviewInterviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    AnnualReviewInterviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.interview_completed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewInterviewCompletedPayload'
+          required: [payload]
+
+    AnnualReviewDossierGenerationRequestedPayload:
+      type: object
+      description: >
+        Only `process_id` is carried — the interview content is read from
+        the database (source of truth), not from the event payload.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    AnnualReviewDossierGenerationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.dossier_generation_requested
+            payload:
+              $ref: '#/components/schemas/AnnualReviewDossierGenerationRequestedPayload'
           required: [payload]
 
     SopCreationRequestedPayload:
@@ -1049,6 +1500,118 @@ components:
               const: offboarding.completed
             payload:
               $ref: '#/components/schemas/OffboardingCompletedPayload'
+          required: [payload]
+
+    # --- SA-20 / BE-23: monthly/annual review outbound payloads ----------
+
+    MonthlyReviewStateChangedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        previous_state:
+          type: string
+          enum: [not_started, in_progress, finished, cancelled]
+        new_state:
+          type: string
+          enum: [not_started, in_progress, finished, cancelled]
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+      required: [process_id, previous_state, new_state, employee_id, manager_id]
+
+    MonthlyReviewStateChangedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.state_changed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewStateChangedPayload'
+          required: [payload]
+
+    MonthlyReviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        dossier_id:
+          type: string
+          format: uuid
+      required: [process_id, employee_id, manager_id, dossier_id]
+
+    MonthlyReviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.completed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewCompletedPayload'
+          required: [payload]
+
+    AnnualReviewStateChangedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        previous_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        new_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+      required: [process_id, previous_state, new_state, employee_id, manager_id]
+
+    AnnualReviewStateChangedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.state_changed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewStateChangedPayload'
+          required: [payload]
+
+    AnnualReviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        dossier_id:
+          type: string
+          format: uuid
+      required: [process_id, employee_id, manager_id, dossier_id]
+
+    AnnualReviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.completed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewCompletedPayload'
           required: [payload]
 
     SopCreatedPayload:
