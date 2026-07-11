@@ -3,6 +3,7 @@ export { SlackMessagingAdapter } from './slackMessagingAdapter';
 export { SlackUserInfoProvider } from './slackUserInfoProvider';
 export { HttpOffboardingProcessRepository } from './httpOffboardingProcessRepository';
 export { HttpInterviewRepository } from './httpInterviewRepository';
+export { HttpTaskRepository } from './httpTaskRepository';
 export { GeminiInterviewAgent } from './geminiInterviewAgent';
 export { HttpDossierRepository } from './httpDossierRepository';
 export { HttpSopCandidateRepository } from './httpSopCandidateRepository';

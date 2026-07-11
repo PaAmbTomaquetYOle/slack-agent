@@ -1,4 +1,4 @@
-import type { InterviewTopic, InterviewTurn } from '../../domain';
+import type { InterviewTopic, InterviewTurn, TaskSource } from '../../domain';
 
 export interface InterviewAgentContext {
   employeeName: string;
@@ -9,12 +9,24 @@ export interface InterviewAgentContext {
   incomingMessage: string;
 }
 
+/** Plain-data shape of a Jira/Trello task as extracted from an MCP tool call (SA-18). */
+export interface ExtractedTask {
+  id: string;
+  title: string;
+  source: TaskSource;
+  status: string;
+  url: string | null;
+  description: string | null;
+}
+
 export interface InterviewAgentTurnResult {
   replyText: string;
   topic: InterviewTopic | null;
   sentiment: string | null;
   answerText: string | null;
   isComplete: boolean;
+  /** Tasks fetched via MCP tool calls during this turn, if any (SA-18). */
+  tasks?: ExtractedTask[];
 }
 
 export interface IInterviewAgent {

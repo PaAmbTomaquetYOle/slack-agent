@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IOffboardingProcessRepository, IInterviewRepository, IMessagingPort, IScheduler, ILogger } from '../../ports';
+import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../../ports';
 import type { IInterviewService, IAuthService } from '../../serviceInterfaces';
 import { DomainEventBus } from '../../events';
 import { OffboardingOrchestrator } from '../offboardingOrchestrator';
@@ -9,6 +9,8 @@ import {
   OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  TasksExtractedEvent,
+  Task,
   ProcessId,
   UserId,
   InterviewId,
@@ -60,6 +62,12 @@ function makeInterviewRepositoryMock(): IInterviewRepository {
   };
 }
 
+function makeTaskRepositoryMock(): ITaskRepository {
+  return {
+    findByProcessId: vi.fn().mockResolvedValue([]),
+  };
+}
+
 function makeMessagingMock(): IMessagingPort {
   return {
     sendDirectMessage: vi.fn().mockResolvedValue(undefined),
@@ -99,6 +107,7 @@ describe('OffboardingOrchestrator', () => {
   let eventBus: DomainEventBus;
   let repository: IOffboardingProcessRepository;
   let interviewRepository: IInterviewRepository;
+  let taskRepository: ITaskRepository;
   let interviewService: IInterviewService;
   let messagingPort: IMessagingPort;
   let scheduler: ReturnType<typeof makeFakeScheduler>;
@@ -110,6 +119,7 @@ describe('OffboardingOrchestrator', () => {
     eventBus = new DomainEventBus();
     repository = makeRepositoryMock();
     interviewRepository = makeInterviewRepositoryMock();
+    taskRepository = makeTaskRepositoryMock();
     interviewService = makeInterviewServiceMock();
     messagingPort = makeMessagingMock();
     scheduler = makeFakeScheduler();
@@ -119,6 +129,7 @@ describe('OffboardingOrchestrator', () => {
       eventBus,
       repository,
       interviewRepository,
+      taskRepository,
       interviewService,
       messagingPort,
       scheduler,
@@ -214,6 +225,19 @@ describe('OffboardingOrchestrator', () => {
     expect(scheduler.tasks.has('interview-stall:proc-1:nudge')).toBe(false);
   });
 
+  it('assigns extracted tasks to the tracked process on TasksExtractedEvent', async () => {
+    const process = makeProcess();
+    vi.mocked(repository.findById).mockResolvedValue(process);
+    await eventBus.publish(new OffboardingStartedEvent(new UserId('U-DEPARTING'), new UserId('U-INITIATOR')));
+    await eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
+
+    const tasks = [new Task('PROJ-1', 'Fix bug', 'jira', 'in_progress')];
+    await eventBus.publish(new TasksExtractedEvent(process.id, tasks));
+
+    expect(process.tasks).toHaveLength(1);
+    expect(process.tasks[0]?.id).toBe('PROJ-1');
+  });
+
   describe('recover', () => {
     it('does nothing when there are no in-progress processes', async () => {
       vi.mocked(repository.findAll).mockResolvedValue({ items: [], count: 0 });
@@ -232,6 +256,21 @@ describe('OffboardingOrchestrator', () => {
       await orchestrator.recover();
 
       expect(scheduler.tasks.has('pre-interview:U-DEPARTING:nudge')).toBe(true);
+      vi.spyOn(Date, 'now').mockRestore();
+    });
+
+    it('rehydrates extracted tasks onto the tracked process on recover', async () => {
+      const process = makeProcess();
+      vi.mocked(repository.findAll).mockResolvedValue({ items: [process], count: 1 });
+      vi.mocked(interviewRepository.findByProcessId).mockResolvedValue(null);
+      const tasks = [new Task('PROJ-1', 'Fix bug', 'jira', 'in_progress')];
+      vi.mocked(taskRepository.findByProcessId).mockResolvedValue(tasks);
+      vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-07-01T00:00:00.500Z').getTime());
+
+      await orchestrator.recover();
+
+      expect(process.tasks).toHaveLength(1);
+      expect(process.tasks[0]?.id).toBe('PROJ-1');
       vi.spyOn(Date, 'now').mockRestore();
     });
 

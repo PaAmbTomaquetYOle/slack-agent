@@ -15,7 +15,9 @@ import {
   InterviewCompletedEvent,
   InterviewStartedEvent,
   InterviewTurnRecordedEvent,
+  TasksExtractedEvent,
   AuthenticationRequiredError,
+  Task,
 } from '../../domain';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
@@ -126,6 +128,14 @@ export class InterviewService implements IInterviewService {
     const newTurns = [classifiedIntervieweeTurn, interviewerTurn];
     const updatedSession = this.#interviewSessionStore.appendTurns(process.id, newTurns);
     await this.#messagingPort.sendDirectMessage(userId, result.replyText);
+
+    if (result.tasks && result.tasks.length > 0) {
+      const tasks = result.tasks.map(
+        (t) => new Task(t.id, t.title, t.source, t.status, t.url, t.description),
+      );
+      process.assignTasks(tasks);
+      await this.#eventBus.publish(new TasksExtractedEvent(process.id, tasks));
+    }
 
     if (isComplete) {
       // interview.completed carries every turn, so it already reconciles anything the

@@ -112,6 +112,17 @@ channels:
       interviewTurnRecorded:
         $ref: '#/components/messages/InterviewTurnRecorded'
 
+  slackAgentTasksExtracted:
+    address: slack-agent.tasks.extracted
+    description: >
+      Replaces the full set of Jira/Trello tasks stored for the offboarding
+      process with the given tasks (SA-18). Tasks are extracted once per
+      interview and re-extraction always carries the current full set, so
+      this is a full-set replace rather than an incremental merge.
+    messages:
+      tasksExtracted:
+        $ref: '#/components/messages/TasksExtracted'
+
   slackAgentDossierGenerationRequested:
     address: slack-agent.dossier.generation_requested
     description: >
@@ -274,6 +285,13 @@ operations:
     messages:
       - $ref: '#/channels/slackAgentInterviewTurnRecorded/messages/interviewTurnRecorded'
 
+  onTasksExtracted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentTasksExtracted'
+    messages:
+      - $ref: '#/channels/slackAgentTasksExtracted/messages/tasksExtracted'
+
   onDossierGenerationRequested:
     action: receive
     channel:
@@ -408,6 +426,13 @@ components:
       summary: Delivers newly recorded interview turns to persist incrementally.
       payload:
         $ref: '#/components/schemas/InterviewTurnRecordedEnvelope'
+
+    TasksExtracted:
+      name: tasks.extracted
+      title: Tasks extracted
+      summary: Delivers the full set of Jira/Trello tasks extracted for a process.
+      payload:
+        $ref: '#/components/schemas/TasksExtractedEnvelope'
 
     DossierGenerationRequested:
       name: dossier.generation_requested
@@ -690,6 +715,51 @@ components:
               const: interview.turn_recorded
             payload:
               $ref: '#/components/schemas/InterviewTurnRecordedPayload'
+          required: [payload]
+
+    OffboardingTask:
+      type: object
+      properties:
+        id:
+          type: string
+          description: External Jira issue key or Trello card id.
+        title:
+          type: string
+        source:
+          type: string
+          enum: [jira, trello]
+        status:
+          type: string
+        url:
+          type: string
+        description:
+          type: string
+      required: [id, title, source, status]
+
+    TasksExtractedPayload:
+      type: object
+      description: >
+        Full set of tasks extracted for the process (SA-18) — replaces any
+        prior set stored for it rather than merging incrementally.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/OffboardingTask'
+      required: [process_id, tasks]
+
+    TasksExtractedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: tasks.extracted
+            payload:
+              $ref: '#/components/schemas/TasksExtractedPayload'
           required: [payload]
 
     DossierGenerationRequestedPayload:
