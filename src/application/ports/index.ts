@@ -5,6 +5,7 @@ export type { IInterviewRepository } from './interviewRepository';
 export type { IInterviewSessionStore, InterviewSession } from './interviewSessionStore';
 export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from './interviewAgent';
 export type { IDossierRepository } from './dossierRepository';
+export type { ISopCandidateReadRepository, PendingSopCandidate } from './sopCandidateReadRepository';
 export type { IMessagingPort, EphemeralAction } from './messagingPort';
 export type { IUserInfoProvider } from './userInfoProvider';
 export type { IEventPublisher } from './eventPublisher';

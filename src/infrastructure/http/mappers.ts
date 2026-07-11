@@ -1,5 +1,6 @@
 import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId } from '../../domain';
 import type { Interview, InterviewTurn, Dossier, DossierSection, Contact, PendingTask, KnowledgeArea } from '../../domain';
+import type { PendingSopCandidate } from '../../application/ports';
 
 // ─── Backend response shapes (snake_case) ────────────────────────────────────
 
@@ -57,6 +58,21 @@ export interface BackendDossierResponse {
   sections: BackendDossierSectionResponse[];
 }
 
+export interface BackendSopCandidateResponse {
+  id: string;
+  channel_id: string;
+  author_id: string;
+  message_ts: string;
+  content: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackendSopCandidateListResponse {
+  items: BackendSopCandidateResponse[];
+}
+
 // ─── Response mappers ─────────────────────────────────────────────────────────
 
 export function mapOffboardingResponse(data: BackendOffboardingResponse): OffboardingProcess {
@@ -112,6 +128,15 @@ function mapDossierSectionResponse(data: BackendDossierSectionResponse): Dossier
     contacts,
     tasks,
     areas,
+  };
+}
+
+export function mapSopCandidateResponse(data: BackendSopCandidateResponse): PendingSopCandidate {
+  return {
+    channelId: data.channel_id,
+    authorId: data.author_id,
+    content: data.content,
+    messageTs: data.message_ts,
   };
 }
 

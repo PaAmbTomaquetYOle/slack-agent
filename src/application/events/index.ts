@@ -7,6 +7,8 @@ export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedFor
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
 export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
+export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder';
+export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder';
 export {
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,

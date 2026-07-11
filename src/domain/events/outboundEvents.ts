@@ -14,6 +14,8 @@ export const OUTBOUND_INTERVIEW_COMPLETED = 'interview.completed' as const;
 export const INTERVIEW_TURN_RECORDED = 'interview.turn_recorded' as const;
 export const DOSSIER_GENERATION_REQUESTED = 'dossier.generation_requested' as const;
 export const SOP_CREATION_REQUESTED = 'sop.creation_requested' as const;
+export const SOP_CANDIDATE_OFFERED = 'sop.candidate_offered' as const;
+export const SOP_CANDIDATE_DECIDED = 'sop.candidate_decided' as const;
 export const KNOWLEDGE_GRAPH_INTERACTION_REGISTERED = 'knowledge_graph.interaction_registered' as const;
 export const KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED = 'knowledge_graph.document_registered' as const;
 export const KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED = 'knowledge_graph.channel_activity_registered' as const;
@@ -65,6 +67,19 @@ export interface SopCreationRequestedPayload {
   tags?: string[];
 }
 
+export interface SopCandidateOfferedPayload {
+  channel_id: string;
+  author_id: string;
+  message_ts: string;
+  content: string;
+}
+
+export interface SopCandidateDecidedPayload {
+  channel_id: string;
+  message_ts: string;
+  accepted: boolean;
+}
+
 export interface KnowledgeGraphInteractionRegisteredPayload {
   person_id: string;
   person_name: string;
@@ -99,6 +114,8 @@ export type OutboundEvent =
   | { eventType: typeof INTERVIEW_TURN_RECORDED; payload: InterviewTurnRecordedPayload }
   | { eventType: typeof DOSSIER_GENERATION_REQUESTED; payload: DossierGenerationRequestedPayload }
   | { eventType: typeof SOP_CREATION_REQUESTED; payload: SopCreationRequestedPayload }
+  | { eventType: typeof SOP_CANDIDATE_OFFERED; payload: SopCandidateOfferedPayload }
+  | { eventType: typeof SOP_CANDIDATE_DECIDED; payload: SopCandidateDecidedPayload }
   | {
       eventType: typeof KNOWLEDGE_GRAPH_INTERACTION_REGISTERED;
       payload: KnowledgeGraphInteractionRegisteredPayload;
