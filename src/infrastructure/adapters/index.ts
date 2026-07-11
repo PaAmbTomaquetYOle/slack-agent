@@ -5,6 +5,8 @@ export { HttpOffboardingProcessRepository } from './httpOffboardingProcessReposi
 export { HttpInterviewRepository } from './httpInterviewRepository';
 export { HttpTaskRepository } from './httpTaskRepository';
 export { GeminiInterviewAgent } from './geminiInterviewAgent';
+export { GeminiReviewInterviewAgent } from './geminiReviewInterviewAgent';
+export { InMemoryActiveReviewStore } from './inMemoryActiveReviewStore';
 export { HttpDossierRepository } from './httpDossierRepository';
 export { HttpSopCandidateRepository } from './httpSopCandidateRepository';
 export { NoOpEventPublisher } from './noopEventPublisher';
