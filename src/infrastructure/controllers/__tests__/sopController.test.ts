@@ -11,6 +11,7 @@ function makeSopServiceMock(): ISopService {
     handleReactionAdded: vi.fn().mockResolvedValue(undefined),
     handleSopDecision: vi.fn().mockResolvedValue(undefined),
     deriveSopTitle: vi.fn().mockReturnValue('Derived default title'),
+    rehydrate: vi.fn().mockResolvedValue(undefined),
   };
 }
 
