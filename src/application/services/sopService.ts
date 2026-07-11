@@ -9,6 +9,7 @@ import {
   SopCreationRequestedEvent,
   SopCandidateOfferedEvent,
   SopCandidateDecidedEvent,
+  SopTitle,
 } from '../../domain';
 
 const OFFER_TEXT = 'That looked like a valuable answer! Want to save it as an SOP so it is not lost?';
@@ -100,7 +101,22 @@ export class SopService implements ISopService {
     }
   }
 
-  async handleSopDecision(channelId: string, messageTs: string, accepted: boolean): Promise<void> {
+  /**
+   * Derives a default title for the given candidate, to prefill the "save as SOP" modal.
+   * Returns null if the candidate is no longer tracked (e.g. already decided).
+   */
+  deriveSopTitle(channelId: string, messageTs: string): string | null {
+    const candidate = this.#candidates.get(SopService.#key(channelId, messageTs));
+    if (!candidate) return null;
+    return SopTitle.deriveFrom(candidate.text);
+  }
+
+  async handleSopDecision(
+    channelId: string,
+    messageTs: string,
+    accepted: boolean,
+    title?: string,
+  ): Promise<void> {
     const key = SopService.#key(channelId, messageTs);
     const candidate = this.#candidates.get(key);
     if (!candidate) return;
@@ -115,6 +131,7 @@ export class SopService implements ISopService {
         new UserId(candidate.authorId),
         candidate.text,
         messageTs,
+        title ?? SopTitle.deriveFrom(candidate.text),
       ),
     );
   }

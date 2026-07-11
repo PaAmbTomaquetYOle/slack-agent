@@ -134,6 +134,7 @@ describe('createSopKnowledgeGraphForwarder', () => {
       new UserId('U456'),
       'Run the deploy pipeline twice in staging before prod.',
       '1234.5678',
+      'Deploy pipeline steps',
     );
 
     await forward(event);
@@ -155,7 +156,7 @@ describe('createSopKnowledgeGraphForwarder', () => {
     const userInfoProvider = makeUserInfoProviderMock('Carlos Lopez');
     const forward = createSopKnowledgeGraphForwarder(publisher, userInfoProvider);
     const longText = 'a'.repeat(100);
-    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), longText, '1.1');
+    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), longText, '1.1', 'title');
 
     await forward(event);
 
@@ -181,6 +182,7 @@ describe('createKafkaChannelActivityRegisteredForwarder', () => {
       new UserId('U456'),
       'Run the deploy pipeline twice in staging before prod.',
       '1234.5678',
+      'Deploy pipeline steps',
     );
 
     await forward(event);
@@ -200,7 +202,7 @@ describe('createKafkaChannelActivityRegisteredForwarder', () => {
     const publisher = makePublisherMock();
     const userInfoProvider = makeUserInfoProviderMock(null);
     const forward = createKafkaChannelActivityRegisteredForwarder(publisher, userInfoProvider);
-    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), 'text', '1.1');
+    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), 'text', '1.1', 'title');
 
     await forward(event);
 

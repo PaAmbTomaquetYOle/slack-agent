@@ -534,20 +534,9 @@ components:
         A message that failed deserialization or handling, republished
         verbatim with failure metadata in headers.
       headers:
-        type: object
-        properties:
-          source_topic:
-            type: string
-            description: The original topic the failing message was consumed from.
-          error:
-            type: string
-            description: String representation of the exception that caused the failure.
-        required: [source_topic, error]
+        $ref: '#/components/schemas/DeadLetterHeaders'
       payload:
-        description: >
-          The original, unmodified message bytes. May or may not be a valid
-          DomainEvent envelope — that is exactly what failed.
-        type: object
+        $ref: '#/components/schemas/DeadLetterPayload'
 
   schemas:
     DomainEventEnvelopeBase:
@@ -787,6 +776,8 @@ components:
     SopCreationRequestedPayload:
       type: object
       properties:
+        title:
+          type: string
         content:
           type: string
         author:
@@ -798,7 +789,7 @@ components:
           items:
             type: string
           nullable: true
-      required: [content, author, origin_channel]
+      required: [title, content, author, origin_channel]
 
     SopCreationRequestedEnvelope:
       allOf:
@@ -1118,3 +1109,20 @@ components:
             payload:
               $ref: '#/components/schemas/KnowledgeGraphUpdatedPayload'
           required: [payload]
+
+    DeadLetterHeaders:
+      type: object
+      properties:
+        source_topic:
+          type: string
+          description: The original topic the failing message was consumed from.
+        error:
+          type: string
+          description: String representation of the exception that caused the failure.
+      required: [source_topic, error]
+
+    DeadLetterPayload:
+      description: >
+        The original, unmodified message bytes. May or may not be a valid
+        DomainEvent envelope — that is exactly what failed.
+      type: object
