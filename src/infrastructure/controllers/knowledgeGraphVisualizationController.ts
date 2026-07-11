@@ -21,6 +21,17 @@ interface GraphEdge {
   source: string;
   target: string;
   weight: number;
+  /** ISO timestamps from the underlying expertise relationship (SA-19). Absent for edges
+   * recorded before the backend started tracking them — the frontend timeline treats
+   * those as "always present" rather than filtering them out. */
+  created_at?: string;
+  last_seen?: string;
+}
+
+interface GraphPersonAnalytics {
+  community_id: number;
+  influence: number;
+  broker_score: number;
 }
 
 interface GraphPagination {
@@ -37,6 +48,10 @@ interface GraphData {
     persons: GraphPagination;
     topics: GraphPagination;
   };
+  /** Keyed by `person:<person_id>` node id, mirroring GraphNode.id, so the client can look
+   * up analytics by node without re-deriving the `person:` prefix. Empty object when the
+   * backend's GDS layer is unavailable — the client falls back to client-side estimates. */
+  analytics: Record<string, GraphPersonAnalytics>;
 }
 
 /**
@@ -55,6 +70,11 @@ export class KnowledgeGraphVisualizationController {
     return [
       { path: '/knowledge-graph', method: 'GET', handler: (_req, res) => this.#serveHtml(res) },
       { path: '/api/knowledge-graph/data', method: 'GET', handler: (req, res) => this.#serveData(req, res) },
+      {
+        path: '/api/knowledge-graph/successors',
+        method: 'GET',
+        handler: (req, res) => this.#serveSuccessors(req, res),
+      },
     ];
   }
 
@@ -76,6 +96,26 @@ export class KnowledgeGraphVisualizationController {
     }
   }
 
+  async #serveSuccessors(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    try {
+      const searchParams = new URL(req.url ?? '/', 'http://localhost').searchParams;
+      const personId = searchParams.get('person_id');
+      if (!personId) {
+        res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ error: 'Missing required query parameter: person_id' }));
+        return;
+      }
+      const limit = this.#parsePositiveInt(searchParams.get('limit'), EXPERTS_PER_TOPIC_LIMIT, 1, MAX_PAGE_SIZE);
+      const successors = await this.#knowledgeGraphReadPort.fetchSuccessors(personId, limit);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(successors));
+    } catch (error) {
+      console.error('Failed to fetch knowledge graph successor candidates:', error);
+      res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ error: 'Failed to load successor candidates.' }));
+    }
+  }
+
   #parsePaginationParams(req: IncomingMessage): { page: number; size: number } {
     const searchParams = new URL(req.url ?? '/', 'http://localhost').searchParams;
     const page = this.#parsePositiveInt(searchParams.get('page'), DEFAULT_PAGE, 1, Number.MAX_SAFE_INTEGER);
@@ -91,9 +131,10 @@ export class KnowledgeGraphVisualizationController {
   }
 
   async #buildGraphData(page: number, size: number): Promise<GraphData> {
-    const [personsPage, topicsPage] = await Promise.all([
+    const [personsPage, topicsPage, personAnalytics] = await Promise.all([
       this.#knowledgeGraphReadPort.fetchAllPersons(page, size),
       this.#knowledgeGraphReadPort.fetchAllTopics(page, size),
+      this.#knowledgeGraphReadPort.fetchPersonAnalytics(),
     ]);
 
     const nodes: GraphNode[] = [
@@ -119,12 +160,22 @@ export class KnowledgeGraphVisualizationController {
         source: `person:${expert.person.person_id}`,
         target: `topic:${topic.name}`,
         weight: expert.score,
+        ...(expert.first_seen ? { created_at: expert.first_seen } : {}),
+        ...(expert.last_seen ? { last_seen: expert.last_seen } : {}),
       }));
     });
+
+    const analytics: Record<string, GraphPersonAnalytics> = Object.fromEntries(
+      personAnalytics.map((a) => [
+        `person:${a.person_id}`,
+        { community_id: a.community_id, influence: a.influence, broker_score: a.broker_score },
+      ]),
+    );
 
     return {
       nodes,
       edges,
+      analytics,
       pagination: {
         persons: {
           page: personsPage.page,
@@ -143,4 +194,4 @@ export class KnowledgeGraphVisualizationController {
   }
 }
 
-export type { GraphNode, GraphEdge, GraphData, GraphPagination };
+export type { GraphNode, GraphEdge, GraphData, GraphPagination, GraphPersonAnalytics };

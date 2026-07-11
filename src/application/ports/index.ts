@@ -22,4 +22,6 @@ export type {
   KnowledgeGraphExpert,
   KnowledgeGraphPage,
   KnowledgeGraphPersonProfile,
+  KnowledgeGraphPersonAnalytics,
+  KnowledgeGraphSuccessor,
 } from './knowledgeGraphReadPort';
