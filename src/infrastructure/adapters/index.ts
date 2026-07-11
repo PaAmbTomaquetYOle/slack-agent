@@ -5,6 +5,7 @@ export { HttpOffboardingProcessRepository } from './httpOffboardingProcessReposi
 export { HttpInterviewRepository } from './httpInterviewRepository';
 export { GeminiInterviewAgent } from './geminiInterviewAgent';
 export { HttpDossierRepository } from './httpDossierRepository';
+export { HttpSopCandidateRepository } from './httpSopCandidateRepository';
 export { NoOpEventPublisher } from './noopEventPublisher';
 export { KafkaEventPublisher } from './kafkaEventPublisher';
 export { KafkaDeadLetterQueue } from './kafkaDeadLetterQueue';

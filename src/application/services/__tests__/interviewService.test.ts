@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type {
   IOffboardingProcessRepository,
   IInterviewSessionStore,
+  IInterviewRepository,
   IInterviewAgent,
   IUserInfoProvider,
   IMessagingPort,
@@ -15,6 +16,7 @@ import {
   InterviewId,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  InterviewTurnRecordedEvent,
   INTERVIEW_TOPICS,
 } from '../../../domain';
 import type { InterviewTurn } from '../../../domain';
@@ -32,7 +34,12 @@ function makeInterviewSessionStoreMock(): IInterviewSessionStore {
     start: vi.fn(),
     appendTurns: vi.fn(),
     end: vi.fn(),
+    restore: vi.fn(),
   };
+}
+
+function makeInterviewRepositoryMock(): IInterviewRepository {
+  return { findByProcessId: vi.fn().mockResolvedValue(null) };
 }
 
 function makeInterviewAgentMock(): IInterviewAgent {
@@ -72,6 +79,7 @@ function makeTurn(overrides: Partial<InterviewTurn> = {}): InterviewTurn {
 describe('InterviewService', () => {
   let offboardingProcessRepository: IOffboardingProcessRepository;
   let interviewSessionStore: IInterviewSessionStore;
+  let interviewRepository: IInterviewRepository;
   let interviewAgent: IInterviewAgent;
   let userInfoProvider: IUserInfoProvider;
   let messagingPort: IMessagingPort;
@@ -81,6 +89,7 @@ describe('InterviewService', () => {
   beforeEach(() => {
     offboardingProcessRepository = makeOffboardingRepositoryMock();
     interviewSessionStore = makeInterviewSessionStoreMock();
+    interviewRepository = makeInterviewRepositoryMock();
     interviewAgent = makeInterviewAgentMock();
     userInfoProvider = makeUserInfoProviderMock();
     messagingPort = makeMessagingPortMock();
@@ -88,6 +97,7 @@ describe('InterviewService', () => {
     service = new InterviewService(
       offboardingProcessRepository,
       interviewSessionStore,
+      interviewRepository,
       interviewAgent,
       userInfoProvider,
       messagingPort,
@@ -186,7 +196,7 @@ describe('InterviewService', () => {
       turns: [existingTurn],
       incomingMessage: 'We migrated the CRM last month.',
     });
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewTurnRecordedEvent));
   });
 
   it('completes the interview and publishes InterviewCompletedEvent when all 5 topics end up covered', async () => {
@@ -240,7 +250,7 @@ describe('InterviewService', () => {
     await service.handleIncomingDirectMessage('U-DEPARTING', 'We migrated the CRM.');
 
     expect(interviewSessionStore.end).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewTurnRecordedEvent));
     expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'Great, all done!');
   });
 
@@ -291,7 +301,7 @@ describe('InterviewService', () => {
       expect.stringContaining('problema'),
     );
     expect(interviewSessionStore.end).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
+    expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewTurnRecordedEvent));
     errorSpy.mockRestore();
   });
 
@@ -331,5 +341,38 @@ describe('InterviewService', () => {
     expect(interviewSessionStore.find).toHaveBeenCalledWith(newer.id);
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+
+  it('resumes from the backend read model after a restart instead of starting a duplicate interview', async () => {
+    const process = OffboardingProcess.create(ProcessId.generate(), new UserId('U-DEPARTING'), new UserId('U-INITIATOR'));
+    const persistedTurns = [makeTurn({ order: 0, topic: 'current_projects' })];
+    const persistedInterviewId = new InterviewId('int-persisted');
+    vi.mocked(offboardingProcessRepository.findAll).mockResolvedValue({ items: [process], count: 1 });
+    vi.mocked(interviewSessionStore.find).mockReturnValue(null);
+    vi.mocked(interviewRepository.findByProcessId).mockResolvedValue({
+      id: persistedInterviewId,
+      processId: process.id,
+      state: 'in_progress',
+      scheduledAt: new Date('2026-07-06T09:00:00.000Z'),
+      createdAt: new Date('2026-07-06T09:00:00.000Z'),
+      turns: persistedTurns,
+    });
+    vi.mocked(interviewSessionStore.restore).mockReturnValue(makeSession(process.id, persistedTurns, persistedInterviewId));
+    vi.mocked(interviewAgent.nextTurn).mockResolvedValue({
+      replyText: 'Who are your key external contacts?',
+      topic: 'key_contacts',
+      sentiment: 'neutral',
+      answerText: 'Talked about current projects',
+      isComplete: false,
+    });
+    vi.mocked(interviewSessionStore.appendTurns).mockReturnValue(makeSession(process.id, persistedTurns, persistedInterviewId));
+
+    await service.handleIncomingDirectMessage('U-DEPARTING', 'We migrated the CRM last month.');
+
+    expect(interviewRepository.findByProcessId).toHaveBeenCalledWith(process.id);
+    expect(interviewSessionStore.restore).toHaveBeenCalledWith(process.id, persistedInterviewId, persistedTurns);
+    expect(interviewSessionStore.start).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalledWith(expect.any(InterviewStartedEvent));
+    expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewTurnRecordedEvent));
   });
 });

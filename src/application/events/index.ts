@@ -5,7 +5,10 @@ export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStarte
 export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOffboardingCancellationRequestedForwarder';
 export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
+export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
+export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder';
+export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder';
 export {
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,

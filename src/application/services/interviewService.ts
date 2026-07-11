@@ -1,6 +1,7 @@
 import type {
   IOffboardingProcessRepository,
   IInterviewSessionStore,
+  IInterviewRepository,
   IInterviewAgent,
   InterviewAgentTurnResult,
   IUserInfoProvider,
@@ -9,20 +10,30 @@ import type {
 import type { IDomainEventBus } from '../events';
 import type { IInterviewService } from '../serviceInterfaces';
 import type { InterviewTopic, InterviewTurn, OffboardingProcess } from '../../domain';
-import { INTERVIEW_TOPICS, InterviewCompletedEvent, InterviewStartedEvent, AuthenticationRequiredError } from '../../domain';
+import {
+  INTERVIEW_TOPICS,
+  InterviewCompletedEvent,
+  InterviewStartedEvent,
+  InterviewTurnRecordedEvent,
+  AuthenticationRequiredError,
+} from '../../domain';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 
 /**
- * BE-7: the backend's REST surface is read-only, so this service no longer persists interview
- * turns over HTTP. It keeps the conversation in the in-memory `IInterviewSessionStore` and only
- * signals the backend at the two points it cares about: `interview.started` (via the domain
- * event) and `interview.completed`, which carries every turn (via the domain event, forwarded to
- * Kafka in `appFactory`). A process restart mid-interview loses unsent turns — accepted trade-off.
+ * BE-7: the backend's REST surface is read-only, so this service keeps the live conversation in
+ * the in-memory `IInterviewSessionStore` rather than a write-through repository. Durability
+ * (SA-16) comes from Kafka, not HTTP: every appended turn is also published as
+ * `interview.turn_recorded` so the backend persists it incrementally into its own
+ * `interview_turns` table, and `interview.completed` still carries the full turn list as a
+ * reconciliation backstop. On a restart, `#interviewSessionStore.find` comes back empty, so
+ * this service falls back to `IInterviewRepository.findByProcessId` (the backend read model) to
+ * resume the session instead of silently starting a duplicate interview.
  */
 export class InterviewService implements IInterviewService {
   readonly #offboardingProcessRepository: IOffboardingProcessRepository;
   readonly #interviewSessionStore: IInterviewSessionStore;
+  readonly #interviewRepository: IInterviewRepository;
   readonly #interviewAgent: IInterviewAgent;
   readonly #userInfoProvider: IUserInfoProvider;
   readonly #messagingPort: IMessagingPort;
@@ -31,6 +42,7 @@ export class InterviewService implements IInterviewService {
   constructor(
     offboardingProcessRepository: IOffboardingProcessRepository,
     interviewSessionStore: IInterviewSessionStore,
+    interviewRepository: IInterviewRepository,
     interviewAgent: IInterviewAgent,
     userInfoProvider: IUserInfoProvider,
     messagingPort: IMessagingPort,
@@ -38,6 +50,7 @@ export class InterviewService implements IInterviewService {
   ) {
     this.#offboardingProcessRepository = offboardingProcessRepository;
     this.#interviewSessionStore = interviewSessionStore;
+    this.#interviewRepository = interviewRepository;
     this.#interviewAgent = interviewAgent;
     this.#userInfoProvider = userInfoProvider;
     this.#messagingPort = messagingPort;
@@ -48,11 +61,7 @@ export class InterviewService implements IInterviewService {
     const process = await this.#findActiveProcess(userId);
     if (!process) return;
 
-    let session = this.#interviewSessionStore.find(process.id);
-    if (!session) {
-      session = this.#interviewSessionStore.start(process.id);
-      await this.#eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
-    }
+    const session = await this.#resolveSession(process);
 
     const pendingTopics = this.#pendingTopics(session.turns);
     const employeeName = (await this.#userInfoProvider.getDisplayName(userId)) ?? userId;
@@ -82,10 +91,12 @@ export class InterviewService implements IInterviewService {
         // Persist what the employee said so it isn't lost, then let the orchestrator hand off
         // to the existing Jira/Trello auth flow instead of sending the generic fallback reply.
         this.#interviewSessionStore.appendTurns(process.id, [intervieweeTurn]);
+        await this.#eventBus.publish(new InterviewTurnRecordedEvent(process.id, [intervieweeTurn]));
         throw error;
       }
       console.error('Interview agent failed to produce the next turn:', error);
       this.#interviewSessionStore.appendTurns(process.id, [intervieweeTurn]);
+      await this.#eventBus.publish(new InterviewTurnRecordedEvent(process.id, [intervieweeTurn]));
       await this.#messagingPort.sendDirectMessage(userId, FALLBACK_REPLY);
       return;
     }
@@ -112,18 +123,40 @@ export class InterviewService implements IInterviewService {
     const stillPending = this.#pendingTopics([...session.turns, classifiedIntervieweeTurn]);
     const isComplete = result.isComplete && stillPending.length === 0;
 
-    const updatedSession = this.#interviewSessionStore.appendTurns(process.id, [
-      classifiedIntervieweeTurn,
-      interviewerTurn,
-    ]);
+    const newTurns = [classifiedIntervieweeTurn, interviewerTurn];
+    const updatedSession = this.#interviewSessionStore.appendTurns(process.id, newTurns);
     await this.#messagingPort.sendDirectMessage(userId, result.replyText);
 
     if (isComplete) {
+      // interview.completed carries every turn, so it already reconciles anything the
+      // per-turn event below would have recorded — no need to publish both.
       await this.#eventBus.publish(
         new InterviewCompletedEvent(process.id, updatedSession.id, updatedSession.turns),
       );
       this.#interviewSessionStore.end(process.id);
+    } else {
+      await this.#eventBus.publish(new InterviewTurnRecordedEvent(process.id, newTurns));
     }
+  }
+
+  /**
+   * Returns the in-flight session for the process, starting a fresh one and announcing
+   * `interview.started` if this is the first message, or — after a restart wiped the in-memory
+   * store — resuming from whatever the backend already persisted via `interview.turn_recorded`
+   * events, without re-announcing `interview.started`.
+   */
+  async #resolveSession(process: OffboardingProcess) {
+    const inMemory = this.#interviewSessionStore.find(process.id);
+    if (inMemory) return inMemory;
+
+    const persisted = await this.#interviewRepository.findByProcessId(process.id);
+    if (persisted && persisted.turns.length > 0) {
+      return this.#interviewSessionStore.restore(process.id, persisted.id, persisted.turns);
+    }
+
+    const session = this.#interviewSessionStore.start(process.id);
+    await this.#eventBus.publish(new InterviewStartedEvent(process.id, process.departingUserId));
+    return session;
   }
 
   async #findActiveProcess(userId: string): Promise<OffboardingProcess | null> {

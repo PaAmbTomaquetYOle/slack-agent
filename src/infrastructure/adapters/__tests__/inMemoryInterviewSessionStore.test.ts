@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { InMemoryInterviewSessionStore } from '../inMemoryInterviewSessionStore';
-import { ProcessId } from '../../../domain';
+import { ProcessId, InterviewId } from '../../../domain';
 import type { InterviewTurn } from '../../../domain';
 
 function makeTurn(overrides: Partial<InterviewTurn> = {}): InterviewTurn {
@@ -68,5 +68,26 @@ describe('InMemoryInterviewSessionStore', () => {
     store.end(processId);
 
     expect(store.find(processId)).toBeNull();
+  });
+
+  it('restore() seeds a session from backend-persisted turns, keeping the given interview id', () => {
+    const store = new InMemoryInterviewSessionStore();
+    const processId = new ProcessId('proc-1');
+    const interviewId = new InterviewId('int-persisted');
+    const turns = [makeTurn({ order: 0 }), makeTurn({ order: 1, content: 'second' })];
+
+    const session = store.restore(processId, interviewId, turns);
+
+    expect(session.id).toBe(interviewId);
+    expect(session.turns).toEqual(turns);
+    expect(store.find(processId)).toEqual(session);
+  });
+
+  it('restore() throws when a session is already in flight for the process', () => {
+    const store = new InMemoryInterviewSessionStore();
+    const processId = new ProcessId('proc-1');
+    store.start(processId);
+
+    expect(() => store.restore(processId, new InterviewId('int-1'), [])).toThrow();
   });
 });

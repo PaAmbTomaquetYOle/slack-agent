@@ -8,6 +8,7 @@ import type {
   IInterviewRepository,
   IInterviewAgent,
   IDossierRepository,
+  ISopCandidateReadRepository,
   IMessagingPort,
   IUserInfoProvider,
   IEventPublisher,
@@ -30,6 +31,7 @@ import {
   HttpOffboardingProcessRepository,
   HttpInterviewRepository,
   HttpDossierRepository,
+  HttpSopCandidateRepository,
   HttpKnowledgeGraphAdapter,
   GeminiInterviewAgent,
   NoOpEventPublisher,
@@ -67,7 +69,10 @@ import {
   createKafkaOffboardingCancellationRequestedForwarder,
   createKafkaInterviewStartedForwarder,
   createKafkaInterviewCompletedForwarder,
+  createKafkaInterviewTurnRecordedForwarder,
   createKafkaSopCreationRequestedForwarder,
+  createKafkaSopCandidateOfferedForwarder,
+  createKafkaSopCandidateDecidedForwarder,
   createKafkaDossierGenerationRequestedForwarder,
   createDossierGenerationTriggerHandler,
   createInterviewKnowledgeGraphForwarder,
@@ -86,7 +91,10 @@ import {
   OffboardingCancellationRequestedEvent,
   InterviewStartedEvent,
   InterviewCompletedEvent,
+  InterviewTurnRecordedEvent,
   SopCreationRequestedEvent,
+  SopCandidateOfferedEvent,
+  SopCandidateDecidedEvent,
   DossierGenerationRequestedEvent,
   INBOUND_EVENT_TYPES,
   ExpertResponseDetector,
@@ -188,7 +196,12 @@ export class AppFactory {
     return { publisher, consumer };
   }
 
-  async create(): Promise<{ app: App; eventConsumer: IEventConsumer | null; orchestrator: IOffboardingOrchestrator }> {
+  async create(): Promise<{
+    app: App;
+    eventConsumer: IEventConsumer | null;
+    orchestrator: IOffboardingOrchestrator;
+    sopService: ISopService;
+  }> {
     // MCP wiring (existing)
     const mcpService = this.createMcpService();
 
@@ -231,6 +244,7 @@ export class AppFactory {
     const interviewService: IInterviewService = new InterviewService(
       repository,
       new InMemoryInterviewSessionStore(),
+      interviewRepository,
       interviewAgent,
       userInfoProvider,
       messagingPort,
@@ -267,12 +281,24 @@ export class AppFactory {
     );
     eventBus.subscribe(InterviewStartedEvent.EVENT_NAME, createKafkaInterviewStartedForwarder(publisher));
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createKafkaInterviewCompletedForwarder(publisher));
+    eventBus.subscribe(
+      InterviewTurnRecordedEvent.EVENT_NAME,
+      createKafkaInterviewTurnRecordedForwarder(publisher),
+    );
     eventBus.subscribe(InterviewCompletedEvent.EVENT_NAME, createDossierGenerationTriggerHandler(dossierService));
     eventBus.subscribe(
       DossierGenerationRequestedEvent.EVENT_NAME,
       createKafkaDossierGenerationRequestedForwarder(publisher),
     );
     eventBus.subscribe(SopCreationRequestedEvent.EVENT_NAME, createKafkaSopCreationRequestedForwarder(publisher));
+    eventBus.subscribe(
+      SopCandidateOfferedEvent.EVENT_NAME,
+      createKafkaSopCandidateOfferedForwarder(publisher),
+    );
+    eventBus.subscribe(
+      SopCandidateDecidedEvent.EVENT_NAME,
+      createKafkaSopCandidateDecidedForwarder(publisher),
+    );
 
     // Knowledge graph population (SA-9): feed the graph from completed interviews and
     // accepted SOP answers so /find-expert has data to recommend from.
@@ -309,11 +335,14 @@ export class AppFactory {
 
     // SOP detection wiring
     const monitoredChannelIds = SETTINGS.SOP_MONITORED_CHANNELS.split(',').map((id) => id.trim()).filter(Boolean);
+    const sopCandidateReadRepository: ISopCandidateReadRepository = new HttpSopCandidateRepository(httpClient);
     const sopService: ISopService = new SopService(
       this.createExpertResponseDetector(),
       messagingPort,
       eventBus,
       monitoredChannelIds,
+      undefined,
+      sopCandidateReadRepository,
     );
     new SopController(sopService).register(app);
 
@@ -329,6 +358,6 @@ export class AppFactory {
     );
     new QuestionSuggestionController(questionSuggestionService).register(app);
 
-    return { app, eventConsumer, orchestrator };
+    return { app, eventConsumer, orchestrator, sopService };
   }
 }

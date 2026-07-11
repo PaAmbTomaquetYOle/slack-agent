@@ -22,4 +22,10 @@ export interface IInterviewSessionStore {
   appendTurns(processId: ProcessId, turns: readonly InterviewTurn[]): InterviewSession;
   /** Ends (discards) the in-flight session once the interview is complete. */
   end(processId: ProcessId): void;
+  /**
+   * Seeds an in-flight session from turns already persisted on the backend (SA-16), so a
+   * process restart resumes an interview instead of losing it. Throws if one is already in
+   * flight for the process.
+   */
+  restore(processId: ProcessId, interviewId: InterviewId, turns: readonly InterviewTurn[]): InterviewSession;
 }
