@@ -1,5 +1,5 @@
 import type { DomainEvent } from './domainEvent';
-import type { ChannelId, UserId } from '../valueObjects/index';
+import type { ChannelId, UserId } from '../valueObjects';
 
 export class SopCreationRequestedEvent implements DomainEvent {
   static readonly EVENT_NAME = 'sop.creation_requested' as const;
