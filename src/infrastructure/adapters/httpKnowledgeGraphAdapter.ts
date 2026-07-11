@@ -7,6 +7,8 @@ import type {
   KnowledgeGraphExpert,
   KnowledgeGraphPage,
   KnowledgeGraphPersonProfile,
+  KnowledgeGraphPersonAnalytics,
+  KnowledgeGraphSuccessor,
 } from '../../application/ports';
 import { handleAxiosError } from '../http';
 
@@ -72,6 +74,27 @@ export class HttpKnowledgeGraphAdapter implements IKnowledgeGraphReadPort {
     } catch (error) {
       if (isNotFound(error)) return null;
       return handleAxiosError(error, 'knowledge graph person profile', personId);
+    }
+  }
+
+  async fetchPersonAnalytics(): Promise<KnowledgeGraphPersonAnalytics[]> {
+    try {
+      const response = await this.#http.get<KnowledgeGraphPersonAnalytics[]>('/knowledge-graph/analytics');
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error, 'knowledge graph analytics');
+    }
+  }
+
+  async fetchSuccessors(personId: string, limit: number): Promise<KnowledgeGraphSuccessor[]> {
+    try {
+      const response = await this.#http.get<KnowledgeGraphSuccessor[]>(
+        `/knowledge-graph/persons/${encodeURIComponent(personId)}/successors`,
+        { params: { limit } },
+      );
+      return response.data;
+    } catch (error) {
+      return handleAxiosError(error, 'knowledge graph successors', personId);
     }
   }
 }

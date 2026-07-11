@@ -73,4 +73,24 @@ describe('HttpKnowledgeGraphAdapter', () => {
 
     expect(result).toBeNull();
   });
+
+  it('fetchPersonAnalytics() GETs the analytics endpoint', async () => {
+    const analytics = [{ person_id: 'U1', community_id: 0, influence: 1.5, broker_score: 0.7 }];
+    vi.mocked(http.get).mockResolvedValue(axiosResponse(analytics));
+
+    const result = await adapter.fetchPersonAnalytics();
+
+    expect(http.get).toHaveBeenCalledWith('/knowledge-graph/analytics');
+    expect(result).toEqual(analytics);
+  });
+
+  it('fetchSuccessors() GETs the person successors endpoint with a limit', async () => {
+    const successors = [{ person: { person_id: 'U2', name: 'Bob' }, similarity: 0.8 }];
+    vi.mocked(http.get).mockResolvedValue(axiosResponse(successors));
+
+    const result = await adapter.fetchSuccessors('U1', 5);
+
+    expect(http.get).toHaveBeenCalledWith('/knowledge-graph/persons/U1/successors', { params: { limit: 5 } });
+    expect(result).toEqual(successors);
+  });
 });
