@@ -9,12 +9,14 @@ export class SopCreationRequestedEvent implements DomainEvent {
   readonly authorId: UserId;
   readonly messageText: string;
   readonly messageTs: string;
+  readonly title: string;
 
   constructor(
     channelId: ChannelId,
     authorId: UserId,
     messageText: string,
     messageTs: string,
+    title: string,
     occurredOn: Date = new Date(),
   ) {
     this.occurredOn = occurredOn;
@@ -22,5 +24,6 @@ export class SopCreationRequestedEvent implements DomainEvent {
     this.authorId = authorId;
     this.messageText = messageText;
     this.messageTs = messageTs;
+    this.title = title;
   }
 }

@@ -76,6 +76,7 @@ export interface DossierGenerationRequestedPayload {
 }
 
 export interface SopCreationRequestedPayload {
+  title: string;
   content: string;
   author: string;
   origin_channel: string;
