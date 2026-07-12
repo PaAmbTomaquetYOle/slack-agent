@@ -14,6 +14,8 @@
 
 Repository for the challenge's Slack Agent — part of **BrainTrust**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
 
+The live development stack is composed from the separate `infra/` repository. That stack runs the bot together with the backend, MCP server, Kafka, Neo4j, PostgreSQL, and the Cloudflare tunnel for the public `kire.ovh` names.
+
 ### 📚 Contents
 
 - [Architecture](#architecture)
@@ -76,6 +78,13 @@ npm run test:coverage    # vitest run --coverage
 ```
 
 The bot needs `mcp-server` reachable at `MCP_SERVER_URL` (for the guided interview's tool calls and question suggestions) and `backend` reachable at `BACKEND_API_URL`. Leave `KAFKA_BROKERS` empty to run without Kafka — publishing falls back to a no-op and no consumer starts.
+
+In the shared dev deployment, the public services currently resolve to:
+
+- `https://braintrust-api.kire.ovh`
+- `https://braintrust-mcp.kire.ovh`
+- `https://braintrust-kafka.kire.ovh`
+- `https://braintrust-neo4j.kire.ovh`
 
 ## ⚙️ Configuration
 
