@@ -41,8 +41,16 @@ function startDryRunServer(): void {
   const { app, eventConsumer, orchestrator, sopService } = await new AppFactory().create();
   await app.start(SETTINGS.PORT);
   console.log('The Slack bot is up and listening on port', SETTINGS.PORT);
-  await orchestrator.recover();
-  await sopService.rehydrate();
+  try {
+    await orchestrator.recover();
+  } catch (error) {
+    console.warn('Orchestrator recovery failed; continuing with a live bot process:', error);
+  }
+  try {
+    await sopService.rehydrate();
+  } catch (error) {
+    console.warn('SOP rehydration failed; continuing with a live bot process:', error);
+  }
 
   const shutdown = async (): Promise<void> => {
     if (eventConsumer) {
