@@ -16,7 +16,13 @@
     "url": "git+https://github.com/PaAmbTomaquetYOle/slack-agent.git"
   },
   "license": "MIT",
-  "author": "Oriol Orbea",
+  "author": "Oriol Orbea <oriol.orbea@gmail.com>",
+  "contributors": [
+    "Erik Batiste <erikbatiste10@gmail.com>",
+    "Luis Valdivieso <luisestebanvaldiviesogonzalez@gmail.com>",
+    "Oriol Orbea <oriol.orbea@gmail.com>",
+    "Ernest Rull <ernestrull04@gmail.com>"
+  ],
   "type": "module",
   "main": "index.js",
   "scripts": {

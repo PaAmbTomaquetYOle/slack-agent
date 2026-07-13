@@ -1,10 +1,10 @@
 asyncapi: 3.0.0
 info:
-  title: OffboardMe — Kafka Event Contract
+  title: BrainTrust — Kafka Event Contract
   version: 1.0.0
   description: >
     Machine-readable contract for the Kafka events exchanged between the
-    `backend` (OffboardMe FastAPI service) and `slack-agent`. This is the
+    `backend` (BrainTrust FastAPI service) and `slack-agent`. This is the
     single source of truth for the event contract defined in BE-9 (#16) and
     formalized in BE-11 (#18) — it supersedes the prose table that used to
     live only in `README.md`.

@@ -1,6 +1,6 @@
 <div align="center">
 
-![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
+![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20and%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn&reversal=false)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
@@ -26,17 +26,17 @@ The live development stack is composed from the separate `infra/` repository. Th
 
 ## Architecture
 
-Three services connected end to end: **slack-agent** (TypeScript · Slack Bolt) ↔ **MCP Server** (Python · MCP SDK) ↔ **Backend** (Python · FastAPI) ↔ **Postgres + Neo4j**, plus the external APIs (Jira, Trello, Slack AI, Real-Time Search). Phase badges ①②③ trace the data flow of each delivery phase.
+Three services connected end to end: **slack-agent** (TypeScript · Slack Bolt) ↔ **Kafka** (the only write path, BE-7) ↔ **Backend** (Python · FastAPI) ↔ **Postgres + Neo4j**, with **MCP Server** (Python · FastMCP) as a shared tool/LLM provider (Gemini drives the interview here in slack-agent; Claude/Anthropic writes the dossier in mcp-server's `generate_dossier`), plus the external APIs (Jira, Trello, Slack Real-Time Search). Phase badges ①②③ trace the data flow of each delivery phase.
 
 ![BrainTrust architecture diagram](docs/architecture/architecture.png)
 
-> Source: [`docs/architecture/architecture.d2`](docs/architecture/architecture.d2) · Vector: [`architecture.svg`](docs/architecture/architecture.svg)
+> Full write-up: [`docs/architecture/README.md`](docs/architecture/README.md) · Source: [`docs/architecture/architecture.d2`](docs/architecture/architecture.d2) · Vector: [`architecture.svg`](docs/architecture/architecture.svg)
 
 ### Phases
 
-- **① Phase 1 · Smart Offboarding (MVP):** when a volunteer announces departure, the MCP Server pulls their open tasks from Jira/Trello, the agent runs a guided interview over Slack, and Slack AI summarizes it into a *Handover Dossier* (stored in Postgres).
-- **② Phase 2 · Dynamic SOPs:** the agent monitors channels; when a veteran answers a procedure question it offers to save a Standard Operating Procedure, using the Real-Time Search API to link similar past questions.
-- **③ Phase 3 · Knowledge Graph:** Neo4j maps who interacts with whom and which topics each person dominates, so the agent can recommend experts during a crisis.
+- **① Phase 1 · Smart Offboarding (MVP):** when an employee announces departure, the MCP Server pulls their open tasks from Jira/Trello, the agent runs a guided interview over Slack driven by **Gemini**, and the backend generates a *Handover Dossier* by calling mcp-server's `generate_dossier` tool (**Claude/Anthropic** — the LLM lives in mcp-server, not the backend).
+- **② Phase 2 · Dynamic SOPs:** the agent monitors channels; when a veteran answers a procedure question it offers to save a Standard Operating Procedure, using the Real-Time Search API (via mcp-server) to link similar past questions.
+- **③ Phase 3 · Knowledge Graph:** Neo4j (with the GDS plugin) maps who interacts with whom and which topics each person dominates — live today — so the agent can recommend experts during a crisis.
 
 ### Regenerate the diagram
 
