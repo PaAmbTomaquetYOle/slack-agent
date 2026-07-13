@@ -85,7 +85,7 @@ export class OffboardingOrchestrator implements IOffboardingOrchestrator {
   async handleInterviewMessage(userId: string, text: string, channelId: string): Promise<void> {
     this.#rearmActiveStall(userId);
     try {
-      await this.#interviewService.handleIncomingDirectMessage(userId, text);
+      await this.#interviewService.handleIncomingDirectMessage(userId, text, channelId);
     } catch (error) {
       if (error instanceof AuthenticationRequiredError) {
         this.#logger.info('Interview needs Jira/Trello auth; handing off', { userId, provider: error.provider });

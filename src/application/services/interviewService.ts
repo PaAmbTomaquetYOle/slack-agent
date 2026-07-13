@@ -59,7 +59,7 @@ export class InterviewService implements IInterviewService {
     this.#eventBus = eventBus;
   }
 
-  async handleIncomingDirectMessage(userId: string, text: string): Promise<void> {
+  async handleIncomingDirectMessage(userId: string, text: string, responseChannelId?: string): Promise<void> {
     const process = await this.#findActiveProcess(userId);
     if (!process) return;
 
@@ -99,7 +99,7 @@ export class InterviewService implements IInterviewService {
       console.error('Interview agent failed to produce the next turn:', error);
       this.#interviewSessionStore.appendTurns(process.id, [intervieweeTurn]);
       await this.#eventBus.publish(new InterviewTurnRecordedEvent(process.id, [intervieweeTurn]));
-      await this.#messagingPort.sendDirectMessage(userId, FALLBACK_REPLY);
+      await this.#sendReply(userId, FALLBACK_REPLY, responseChannelId);
       return;
     }
 
@@ -127,7 +127,7 @@ export class InterviewService implements IInterviewService {
 
     const newTurns = [classifiedIntervieweeTurn, interviewerTurn];
     const updatedSession = this.#interviewSessionStore.appendTurns(process.id, newTurns);
-    await this.#messagingPort.sendDirectMessage(userId, result.replyText);
+    await this.#sendReply(userId, result.replyText, responseChannelId);
 
     if (result.tasks && result.tasks.length > 0) {
       const tasks = result.tasks.map(
@@ -181,6 +181,14 @@ export class InterviewService implements IInterviewService {
       `Found ${items.length} active offboarding processes for user '${userId}'; using the most recently created one.`,
     );
     return items.reduce((latest, current) => (current.createdAt > latest.createdAt ? current : latest));
+  }
+
+  async #sendReply(userId: string, text: string, responseChannelId?: string): Promise<void> {
+    if (responseChannelId) {
+      await this.#messagingPort.sendChannelMessage(responseChannelId, text);
+      return;
+    }
+    await this.#messagingPort.sendDirectMessage(userId, text);
   }
 
   #pendingTopics(turns: readonly InterviewTurn[]): InterviewTopic[] {

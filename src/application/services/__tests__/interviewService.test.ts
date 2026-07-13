@@ -51,7 +51,13 @@ function makeUserInfoProviderMock(): IUserInfoProvider {
 }
 
 function makeMessagingPortMock(): IMessagingPort {
-  return { sendDirectMessage: vi.fn().mockResolvedValue(undefined) };
+  return {
+    sendDirectMessage: vi.fn().mockResolvedValue(undefined),
+    sendEphemeralActionPrompt: vi.fn().mockResolvedValue(undefined),
+    sendEphemeralMessage: vi.fn().mockResolvedValue(undefined),
+    sendChannelMessage: vi.fn().mockResolvedValue(undefined),
+    createChannelCanvas: vi.fn().mockResolvedValue(undefined),
+  };
 }
 
 function makeEventBusMock(): IDomainEventBus {
@@ -170,6 +176,26 @@ describe('InterviewService', () => {
     const publishedEvent = vi.mocked(eventBus.publish).mock.calls[0]?.[0] as InterviewStartedEvent;
     expect(publishedEvent.processId).toBe(process.id);
     expect(publishedEvent.employeeId).toBe(process.departingUserId);
+  });
+
+  it('sends the agent reply to the provided response channel when present', async () => {
+    const process = OffboardingProcess.create(ProcessId.generate(), new UserId('U-DEPARTING'), new UserId('U-INITIATOR'));
+    vi.mocked(offboardingProcessRepository.findAll).mockResolvedValue({ items: [process], count: 1 });
+    vi.mocked(interviewSessionStore.find).mockReturnValue(null);
+    vi.mocked(interviewSessionStore.start).mockReturnValue(makeSession(process.id, []));
+    vi.mocked(interviewAgent.nextTurn).mockResolvedValue({
+      replyText: 'What projects are you working on?',
+      topic: 'current_projects',
+      sentiment: 'neutral',
+      answerText: 'Greeted the bot',
+      isComplete: false,
+    });
+    vi.mocked(interviewSessionStore.appendTurns).mockReturnValue(makeSession(process.id));
+
+    await service.handleIncomingDirectMessage('U-DEPARTING', 'Hi there', 'C-DEMO');
+
+    expect(messagingPort.sendChannelMessage).toHaveBeenCalledWith('C-DEMO', 'What projects are you working on?');
+    expect(messagingPort.sendDirectMessage).not.toHaveBeenCalled();
   });
 
   it('continues an existing interview, excluding already-covered topics from pendingTopics', async () => {

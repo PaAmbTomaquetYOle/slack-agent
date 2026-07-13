@@ -1,3 +1,3 @@
 export interface IInterviewService {
-  handleIncomingDirectMessage(userId: string, text: string): Promise<void>;
+  handleIncomingDirectMessage(userId: string, text: string, responseChannelId?: string): Promise<void>;
 }

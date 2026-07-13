@@ -188,7 +188,7 @@ describe('OffboardingOrchestrator', () => {
 
     await orchestrator.handleInterviewMessage('U-DEPARTING', 'still here', 'D1');
 
-    expect(interviewService.handleIncomingDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'still here');
+    expect(interviewService.handleIncomingDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'still here', 'D1');
     expect(scheduler.tasks.has('interview-stall:proc-1:nudge')).toBe(true);
   });
 
