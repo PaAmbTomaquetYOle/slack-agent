@@ -19,7 +19,20 @@ function makeOffboardingServiceMock(): IOffboardingService {
 function makeMcpServiceMock(): IMcpService {
   return {
     discoverTools: vi.fn(),
-    callTool: vi.fn(),
+    callTool: vi.fn().mockResolvedValue({
+      content: [{
+        type: 'text',
+        text: JSON.stringify([
+          {
+            task_id: 'JIRA-1',
+            issue_key: 'JIRA-1',
+            title: 'Hand over release checklist ownership',
+            status: 'In Progress',
+            url: 'https://jira.example.com/browse/JIRA-1',
+          },
+        ]),
+      }],
+    }),
     listPrompts: vi.fn(),
     getPrompt: vi.fn(),
     listResources: vi.fn(),
@@ -141,8 +154,57 @@ describe('AppMentionController', () => {
       say,
     });
 
-    expect(mcpService.extractPendingJiraTasksPrompt).toHaveBeenCalledWith('ernest');
-    expect(say).toHaveBeenCalledWith(expect.objectContaining({ text: 'Jira task summary' }));
+    expect(mcpService.callTool).toHaveBeenCalledWith('get_pending_jira_issues', {
+      user_id: 'U1',
+      assignee: 'ernest',
+    });
+    expect(mcpService.extractPendingJiraTasksPrompt).not.toHaveBeenCalled();
+    expect(say).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Pending Jira issues for *ernest*'),
+    }));
+    expect(say).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.not.stringContaining('task extraction assistant'),
+    }));
+  });
+
+  it('extracts Trello cards from chat using the MCP tool', async () => {
+    const mcpService = makeMcpServiceMock();
+    new AppMentionController(undefined, undefined, mcpService).register(app);
+    const say = makeSayFn();
+
+    await trigger('event', 'app_mention', {
+      event: { user: 'U1', text: '<@BOT> show Trello cards for ernest', channel: 'C1', ts: '1' },
+      say,
+    });
+
+    expect(mcpService.callTool).toHaveBeenCalledWith('get_pending_trello_cards', {
+      user_id: 'U1',
+      assignee: 'ernest',
+    });
+    expect(mcpService.extractPendingTrelloTasksPrompt).not.toHaveBeenCalled();
+    expect(say).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('Pending Trello cards for *ernest*'),
+    }));
+  });
+
+  it('starts provider auth when task extraction reports missing authentication', async () => {
+    const mcpService = makeMcpServiceMock();
+    const authService = makeAuthServiceMock();
+    vi.mocked(mcpService.callTool).mockResolvedValueOnce({
+      isError: true,
+      content: [{ type: 'text', text: 'User not authenticated. Please complete the OAuth flow first.' }],
+    });
+    vi.mocked(authService.isAuthErrorMessage).mockReturnValueOnce(true);
+    new AppMentionController(undefined, undefined, mcpService, authService).register(app);
+    const say = makeSayFn();
+
+    await trigger('event', 'app_mention', {
+      event: { user: 'U1', text: '<@BOT> show Jira tasks for ernest', channel: 'C1', ts: '1' },
+      say,
+    });
+
+    expect(authService.initiateAuth).toHaveBeenCalledWith('jira', 'U1', 'C1');
+    expect(say).not.toHaveBeenCalled();
   });
 
   it('routes "experto en X" (Spanish) to the expert recommendation service', async () => {

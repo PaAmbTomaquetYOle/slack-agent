@@ -5,7 +5,7 @@ import type {
   IMcpService,
   IOffboardingService,
 } from '../../application/serviceInterfaces/index.js';
-import type { AuthProvider, McpPromptResult } from '../../domain/index.js';
+import type { AuthProvider, McpToolResult } from '../../domain/index.js';
 import { BaseController } from './baseController.js';
 
 const EXPERT_QUERY_PATTERNS = [
@@ -249,10 +249,9 @@ export class AppMentionController extends BaseController {
   ): Promise<void> {
     if (!this.#mcpService) return;
     try {
-      const result = provider === 'jira'
-        ? await this.#mcpService.extractPendingJiraTasksPrompt(assignee)
-        : await this.#mcpService.extractPendingTrelloTasksPrompt(assignee);
-      await say({ text: AppMentionController.#renderPrompt(result), thread_ts: threadTs });
+      const toolName = provider === 'jira' ? 'get_pending_jira_issues' : 'get_pending_trello_cards';
+      const result = await this.#mcpService.callTool(toolName, { user_id: userId, assignee });
+      await say({ text: AppMentionController.#renderTasks(provider, assignee, result), thread_ts: threadTs });
     } catch (error) {
       const message = AppMentionController.#errorMessage(error);
       if (this.#authService?.isAuthErrorMessage(message)) {
@@ -263,11 +262,70 @@ export class AppMentionController extends BaseController {
     }
   }
 
-  static #renderPrompt(result: McpPromptResult): string {
-    return result.messages
-      .map((message) => (message.content.type === 'text' ? message.content.text : null))
-      .filter((text): text is string => text !== null)
-      .join('\n\n');
+  static #renderTasks(provider: 'jira' | 'trello', assignee: string, result: McpToolResult): string {
+    if (result.isError) {
+      throw new Error(AppMentionController.#textFromToolResult(result) || `${provider} task tool returned an error`);
+    }
+
+    const tasks = AppMentionController.#tasksFromToolResult(result);
+    const displayProvider = provider === 'jira' ? 'Jira issues' : 'Trello cards';
+    if (tasks.length === 0) {
+      return `No pending ${displayProvider.toLowerCase()} found for *${assignee}*.`;
+    }
+
+    const lines = tasks.map((task, index) => {
+      const id = task.id ? `*${task.id}* - ` : '';
+      const status = task.status ? ` _${task.status}_` : '';
+      const url = task.url ? ` (${task.url})` : '';
+      return `${index + 1}. ${id}${task.title}${status}${url}`;
+    });
+
+    return [`Pending ${displayProvider} for *${assignee}*:`, ...lines].join('\n');
+  }
+
+  static #tasksFromToolResult(result: McpToolResult): Array<{ id: string | null; title: string; status: string | null; url: string | null }> {
+    const text = AppMentionController.#textFromToolResult(result);
+    if (!text) return [];
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return [];
+    }
+
+    if (!Array.isArray(parsed)) return [];
+
+    const tasks: Array<{ id: string | null; title: string; status: string | null; url: string | null }> = [];
+    for (const item of parsed) {
+      if (!AppMentionController.#isRecord(item)) continue;
+      const title = AppMentionController.#stringField(item, 'title') ?? AppMentionController.#stringField(item, 'summary') ?? AppMentionController.#stringField(item, 'name');
+      if (!title) continue;
+      tasks.push({
+        id: AppMentionController.#stringField(item, 'issue_key') ?? AppMentionController.#stringField(item, 'task_id') ?? AppMentionController.#stringField(item, 'id'),
+        title,
+        status: AppMentionController.#stringField(item, 'status'),
+        url: AppMentionController.#stringField(item, 'url') ?? AppMentionController.#stringField(item, 'link'),
+      });
+    }
+    return tasks;
+  }
+
+  static #textFromToolResult(result: McpToolResult): string {
+    return result.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text ?? '')
+      .join(' ')
+      .trim();
+  }
+
+  static #isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  static #stringField(value: Record<string, unknown>, key: string): string | null {
+    const field = value[key];
+    return typeof field === 'string' && field.trim() ? field.trim() : null;
   }
 
   static #errorMessage(error: unknown): string {
