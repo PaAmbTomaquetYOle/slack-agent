@@ -23,7 +23,7 @@ const KAFKA_OUTBOUND_TOPIC_PREFIX = process.env.KAFKA_OUTBOUND_TOPIC_PREFIX ?? '
 const KAFKA_INBOUND_TOPIC_PREFIX = process.env.KAFKA_INBOUND_TOPIC_PREFIX ?? 'offboarding';
 const KAFKA_CONSUMER_GROUP_ID = process.env.KAFKA_CONSUMER_GROUP_ID ?? 'slack-agent-consumer';
 const KAFKA_DLQ_TOPIC = process.env.KAFKA_DLQ_TOPIC ?? 'slack-agent.dlq';
-// BE-7: broker requires SASL_SSL/SCRAM-SHA-512, no more PLAINTEXT.
+// Empty username/password uses the plaintext Compose broker; providing both enables SASL_SSL/SCRAM-SHA-512.
 const KAFKA_SASL_MECHANISM = process.env.KAFKA_SASL_MECHANISM ?? 'scram-sha-512';
 const KAFKA_SASL_USERNAME = process.env.KAFKA_SASL_USERNAME ?? '';
 const KAFKA_SASL_PASSWORD = process.env.KAFKA_SASL_PASSWORD ?? '';

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { App } from '@slack/bolt';
 import { Kafka } from 'kafkajs';
-import type { Producer } from 'kafkajs';
+import type { KafkaConfig, Producer } from 'kafkajs';
 import { GoogleGenAI } from '@google/genai';
 import type {
   IOffboardingProcessRepository,
@@ -177,17 +177,24 @@ export class AppFactory {
       return { publisher: new NoOpEventPublisher(), consumer: null };
     }
 
-    const kafka = new Kafka({
+    const kafkaConfig: KafkaConfig = {
       clientId: SETTINGS.KAFKA_CLIENT_ID,
       brokers: SETTINGS.KAFKA_BROKERS.split(','),
-      // BE-7: broker requires SASL_SSL/SCRAM-SHA-512, PLAINTEXT is no longer accepted.
-      ssl: SETTINGS.KAFKA_SSL_CA ? { ca: [readFileSync(SETTINGS.KAFKA_SSL_CA, 'utf-8')] } : true,
-      sasl: {
+    };
+
+    const hasSaslCredentials = Boolean(SETTINGS.KAFKA_SASL_USERNAME && SETTINGS.KAFKA_SASL_PASSWORD);
+    if (hasSaslCredentials) {
+      kafkaConfig.ssl = SETTINGS.KAFKA_SSL_CA ? { ca: [readFileSync(SETTINGS.KAFKA_SSL_CA, 'utf-8')] } : true;
+      kafkaConfig.sasl = {
         mechanism: SETTINGS.KAFKA_SASL_MECHANISM as 'scram-sha-512',
         username: SETTINGS.KAFKA_SASL_USERNAME,
         password: SETTINGS.KAFKA_SASL_PASSWORD,
-      },
-    });
+      };
+    } else if (SETTINGS.KAFKA_SSL_CA) {
+      kafkaConfig.ssl = { ca: [readFileSync(SETTINGS.KAFKA_SSL_CA, 'utf-8')] };
+    }
+
+    const kafka = new Kafka(kafkaConfig);
 
     let producer: Producer;
     try {

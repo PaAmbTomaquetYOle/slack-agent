@@ -57,7 +57,7 @@ slack-agent and the backend exchange domain events over Kafka following an [Asyn
 - `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`, plus `monthly_review.state_changed`/`monthly_review.completed`/`annual_review.state_changed`/`annual_review.completed` (SA-20).
 - `offboarding.dlq` — dead-letter queue for either direction (malformed envelopes or handler failures).
 
-Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits. The broker requires **SASL_SSL / SCRAM-SHA-512** (BE-7) — see `KAFKA_SASL_*`/`KAFKA_SSL_CA` below.
+Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits. The local Compose broker uses plaintext by default; set `KAFKA_SASL_USERNAME` and `KAFKA_SASL_PASSWORD` to enable **SASL_SSL / SCRAM-SHA-512** for secured brokers.
 
 `InterviewService` keeps each in-flight conversation in an in-memory `IInterviewSessionStore`, but (SA-16) every appended turn is also published as `interview.turn_recorded` so the backend persists it incrementally into its own `interview_turns` table; `interview.completed` still carries every turn as a full-set reconciliation backstop. On restart, `InterviewService` rehydrates the in-memory session from the backend's interview read model (`GET /offboarding/{id}/interview`) instead of losing in-flight turns. Similarly, `SopService` persists each SOP candidate offer/decision to the backend (a new `SopCandidate` aggregate) via `sop.candidate_offered`/`sop.candidate_decided`, and rehydrates candidates still awaiting a decision from `GET /sop-candidates` on startup — so an author's Yes/No click still resolves after a restart.
 
@@ -112,7 +112,7 @@ All settings are documented, with defaults and setup notes, in [`.env.example`](
 | `QUESTION_SUGGESTION_MONITORED_CHANNELS` / `QUESTION_MIN_MESSAGE_LENGTH` / `QUESTION_MAX_SUGGESTIONS` | SA-8 — question detection + how many related SOPs to suggest via `test_search_query`. |
 | `DOSSIER_MANAGERS_CHANNEL_ID` | Channel where the generated handover dossier is posted / Canvas is created. |
 | `BACKEND_CLIENT_ID` / `BACKEND_CLIENT_SECRET` | Client-credentials used by `BackendTokenProvider` to fetch a Bearer token from `POST {BACKEND_API_URL}/auth/token` (BE-7) — slack-agent no longer self-signs its JWT. |
-| `KAFKA_*` | Broker, topic prefixes, consumer group, DLQ topic — see the event contract above. `KAFKA_SASL_MECHANISM`/`KAFKA_SASL_USERNAME`/`KAFKA_SASL_PASSWORD`/`KAFKA_SSL_CA` configure the SASL_SSL connection the broker now requires (BE-7). |
+| `KAFKA_*` | Broker, topic prefixes, consumer group, DLQ topic — see the event contract above. Leave `KAFKA_SASL_USERNAME`/`KAFKA_SASL_PASSWORD` empty for local plaintext Kafka; set both plus optional `KAFKA_SSL_CA` for SASL_SSL brokers. |
 
 ---
 
