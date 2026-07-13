@@ -27,4 +27,31 @@ describe('QuestionDetector', () => {
 
     expect(detector.isQuestion({ text: '   why?   ' })).toBe(false);
   });
+
+  it('flags messages with English interrogative words even without a question mark', () => {
+    const detector = new QuestionDetector(CONFIG);
+
+    expect(detector.isQuestion({ text: 'how do I deploy the staging environment' })).toBe(true);
+    expect(detector.isQuestion({ text: 'I need to know what the procedure is' })).toBe(true);
+  });
+
+  it('flags messages with Spanish interrogative words even without a question mark', () => {
+    const detector = new QuestionDetector(CONFIG);
+
+    expect(detector.isQuestion({ text: 'cómo despliego el entorno de staging' })).toBe(true);
+    expect(detector.isQuestion({ text: 'alguien sabe por qué falla la build' })).toBe(true);
+  });
+
+  it('ignores false positives from URLs with query strings', () => {
+    const detector = new QuestionDetector(CONFIG);
+
+    // This is long enough and contains '?', but it's part of a URL
+    expect(detector.isQuestion({ text: 'Check out this link: https://example.com/page?param=123' })).toBe(false);
+  });
+
+  it('flags actual questions that also contain URLs', () => {
+    const detector = new QuestionDetector(CONFIG);
+
+    expect(detector.isQuestion({ text: 'Why is this failing? https://example.com/page?param=123' })).toBe(true);
+  });
 });
