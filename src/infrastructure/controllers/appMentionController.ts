@@ -102,7 +102,7 @@ export class AppMentionController extends BaseController {
         return;
       }
 
-      const departingUserId = AppMentionController.#extractOffboardingTarget(event.text, userId);
+      const departingUserId = AppMentionController.#extractOffboardingTarget(event.text);
       if (departingUserId && this.#offboardingService) {
         try {
           await this.#offboardingService.startOffboarding(departingUserId, userId);
@@ -185,7 +185,7 @@ export class AppMentionController extends BaseController {
     return null;
   }
 
-  static #extractOffboardingTarget(text: string, initiatorId: string): string | null {
+  static #extractOffboardingTarget(text: string): string | null {
     if (!AppMentionController.#isOffboardingIntent(text)) return null;
 
     const mentionedUserIds = [...text.matchAll(/<@([A-Z0-9]+)(?:\|[^>]+)?>/gi)]
@@ -193,7 +193,7 @@ export class AppMentionController extends BaseController {
       .filter((userId): userId is string => Boolean(userId));
 
     const [, ...candidateUserIds] = mentionedUserIds;
-    return candidateUserIds.find((userId) => userId !== initiatorId) ?? null;
+    return candidateUserIds[0] ?? null;
   }
 
   static #isOffboardingIntent(text: string): boolean {

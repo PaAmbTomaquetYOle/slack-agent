@@ -116,6 +116,28 @@ describe('AppMentionController', () => {
     }));
   });
 
+  it('starts offboarding for the requester when they explicitly mention themselves', async () => {
+    const offboardingService = makeOffboardingServiceMock();
+    new AppMentionController(undefined, offboardingService).register(app);
+    const say = makeSayFn();
+
+    await trigger('event', 'app_mention', {
+      event: {
+        user: 'UKIRE',
+        text: '<@BOT> start offboarding for <@UKIRE>',
+        channel: 'C1',
+        ts: '1',
+      },
+      say,
+    });
+
+    expect(offboardingService.startOffboarding).toHaveBeenCalledWith('UKIRE', 'UKIRE');
+    expect(say).toHaveBeenCalledWith(expect.objectContaining({
+      text: expect.stringContaining('<@UKIRE>'),
+      thread_ts: '1',
+    }));
+  });
+
   it('starts Jira auth from chat', async () => {
     const authService = makeAuthServiceMock();
     new AppMentionController(undefined, undefined, undefined, authService).register(app);
