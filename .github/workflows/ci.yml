@@ -48,11 +48,13 @@ jobs:
       - name: Authenticate and deploy Slack app
         run: |
           slack login --token "$SLACK_SERVICE_TOKEN" --team "$SLACK_TEAM_ID" --skip-update --no-color --force
+          slack app link --team "$SLACK_TEAM_ID" --app "$SLACK_APP_ID" --environment deployed --skip-update --no-color --force
           slack app list --team "$SLACK_TEAM_ID" --skip-update --no-color --force
           slack deploy --hide-triggers --team "$SLACK_TEAM_ID" --skip-update --no-color --force
         env:
           SLACK_SERVICE_TOKEN: ${{ secrets.SLACK_SERVICE_TOKEN }}
           SLACK_TEAM_ID: ${{ vars.SLACK_TEAM_ID }}
+          SLACK_APP_ID: ${{ vars.SLACK_APP_ID }}
 
       - name: Trigger infra redeploy
         uses: actions/github-script@v7
