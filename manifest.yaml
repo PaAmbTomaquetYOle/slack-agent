@@ -1,10 +1,10 @@
 display_information:
-  name: OffBoardMe
+  name: BrainTrust
   description: Asistente de captura y propagación de conocimiento para procesos de offboarding.
   background_color: "#18205c"
 features:
   bot_user:
-    display_name: OffBoardMe
+    display_name: BrainTrust
     always_online: true
 oauth_config:
   scopes:

@@ -17,6 +17,12 @@
   },
   "license": "MIT",
   "author": "Oriol Orbea",
+  "contributors": [
+    "Erik Batiste",
+    "Luis Valdivieso",
+    "Oriol Orbea",
+    "Ernest Rull"
+  ],
   "type": "module",
   "main": "index.js",
   "scripts": {

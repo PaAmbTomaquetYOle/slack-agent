@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Vision: OffboardMe
+## Project Vision: BrainTrust
 
 A Slack agent that fights knowledge loss caused by high employee turnover. When a key person leaves, operational knowledge walks out the door. The agent captures and retrieves it. Planned in three phases:
 
