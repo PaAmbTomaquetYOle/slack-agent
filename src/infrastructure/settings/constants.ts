@@ -10,7 +10,7 @@ const PORT = process.env.PORT ?? 3000;
 const MCP_SERVER_URL = process.env.MCP_SERVER_URL ?? 'http://localhost:8000/mcp';
 const CLIENT_NAME = process.env.CLIENT_NAME ?? 'slack-agent';
 const CLIENT_VERSION = process.env.CLIENT_VERSION ?? '0.1.0';
-const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8001/api/v1';
+const BACKEND_API_URL = process.env.BACKEND_API_URL ?? 'http://localhost:8888/api/v1';
 // BE-7: slack-agent no longer self-signs its JWT; it requests one from the backend's
 // client-credentials token endpoint and caches/refreshes it (see BackendTokenProvider).
 const BACKEND_CLIENT_ID = process.env.BACKEND_CLIENT_ID ?? '';
