@@ -39,14 +39,6 @@ jobs:
 
       - run: npm ci
 
-      - name: Install Slack CLI
-        run: curl -fsSL https://downloads.slack-edge.com/slack-cli/install.sh | bash
-
-      - name: Deploy Slack app manifest
-        env:
-          SLACK_SERVICE_TOKEN: ${{ secrets.SLACK_SERVICE_TOKEN }}
-        run: slack deploy -s --token "$SLACK_SERVICE_TOKEN"
-
       - name: Trigger infra redeploy
         uses: actions/github-script@v7
         with:

@@ -16,7 +16,7 @@ Repository for the challenge's Slack Agent — part of **OffBoardMe**, a system 
 
 The live development stack is composed from the separate `infra/` repository. That stack runs the bot together with the backend, MCP server, Kafka, Neo4j, PostgreSQL, and the Cloudflare tunnel for the public `kire.ovh` names.
 
-Deployment note: pushes to `main` now publish the Slack manifest and trigger an infra redeploy through GitHub Actions.
+Deployment note: pushes to `main` now trigger the infra redeploy through GitHub Actions. Slack app configuration is still managed outside the CI flow.
 
 ### 📚 Contents
 
