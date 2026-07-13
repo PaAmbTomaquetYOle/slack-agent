@@ -1,9 +1,10 @@
-name: CI
+name: CI / Deploy
 
 on:
   push:
     branches: [main, develop]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   test:
@@ -21,3 +22,42 @@ jobs:
       - run: npm run build
 
       - run: npm run test:coverage
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Slack CLI
+        run: curl -fsSL https://downloads.slack-edge.com/slack-cli/install.sh | bash
+
+      - name: Deploy Slack app manifest
+        env:
+          SLACK_SERVICE_TOKEN: ${{ secrets.SLACK_SERVICE_TOKEN }}
+        run: slack deploy -s --token "$SLACK_SERVICE_TOKEN"
+
+      - name: Trigger infra redeploy
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.INFRA_REPO_DISPATCH_TOKEN }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'PaAmbTomaquetYOle',
+              repo: 'infra',
+              event_type: 'slack-agent-updated',
+              client_payload: {
+                source_repository: context.repo.repo,
+                source_sha: context.sha,
+              },
+            });

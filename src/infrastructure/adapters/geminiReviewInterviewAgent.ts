@@ -100,7 +100,7 @@ export class GeminiReviewInterviewAgent implements IReviewInterviewAgent {
         ` pending topics: ${context.pendingTopics.join(', ')}.`,
       'Ask one open-ended question at a time, interpret the response in natural language, and' +
         ' ask contextual follow-ups when the response is incomplete.',
-      'Always write replyText in English, even if the person writes in another language.',
+      'Always write replyText in English only. If the person writes in Spanish or any other language, translate the meaning internally and answer in clear English. Never mirror the person language.',
       'Always respond with a single JSON object matching the provided schema: `replyText` is' +
         ' the message sent to the person; `topic` is the topic covered by the incoming' +
         " response (or null if it doesn't cover any of the pending ones yet); `sentiment` and" +
