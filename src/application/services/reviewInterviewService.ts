@@ -11,7 +11,7 @@ import type { IReviewInterviewService } from '../serviceInterfaces';
 import type { InterviewTopic, InterviewTurn } from '../../domain';
 import { ReviewInterviewCompletedEvent, UserId, reviewTopicsFor } from '../../domain';
 
-const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
+const FALLBACK_REPLY = 'I had trouble processing your response — could you tell me again?';
 
 /**
  * Guided monthly/annual review interview over Slack DM (SA-20). Mirrors InterviewService's
