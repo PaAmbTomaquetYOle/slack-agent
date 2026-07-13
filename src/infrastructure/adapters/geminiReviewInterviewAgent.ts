@@ -22,11 +22,11 @@ const RESPONSE_SCHEMA: Schema = {
 
 const SCOPE_FRAMING: Record<ReviewScope, string> = {
   monthly:
-    'un chequeo mensual liviano de retención de conocimiento — el objetivo es entender en qué' +
-    ' estuvo trabajando recientemente, no una revisión exhaustiva.',
+    'a light monthly knowledge-retention check-in — the goal is to understand what' +
+    " they've been working on recently, not an exhaustive review.",
   annual:
-    'una revisión anual exhaustiva de retención de conocimiento — el objetivo es documentar todo' +
-    ' el conocimiento acumulado por la persona a lo largo del último año.',
+    'a thorough annual knowledge-retention review — the goal is to document all the' +
+    " knowledge the person has accumulated over the past year.",
 };
 
 function isInterviewTopicOrNull(value: unknown): value is InterviewTopic | null {
@@ -93,19 +93,20 @@ export class GeminiReviewInterviewAgent implements IReviewInterviewAgent {
 
   #buildSystemInstruction(context: ReviewInterviewAgentContext): string {
     return [
-      `Sos un entrevistador empático de RRHH conduciendo, vía Slack DM, ${SCOPE_FRAMING[context.reviewScope]}`,
-      `La persona entrevistada es ${context.employeeName}, quien sigue trabajando en la` +
-        ' organización — nunca des a entender que se está yendo.',
-      `Tu objetivo es cubrir de forma conversacional (nunca como un formulario) los siguientes` +
-        ` temas pendientes: ${context.pendingTopics.join(', ')}.`,
-      'Hacé una pregunta abierta a la vez, interpretá la respuesta en lenguaje natural y hacé' +
-        ' follow-ups contextuales cuando la respuesta sea incompleta.',
-      'Respondé siempre con un único objeto JSON que matchee el schema provisto: `replyText` es' +
-        ' el mensaje que se le manda a la persona; `topic` es el tema cubierto por la respuesta' +
-        ' entrante (o null si todavía no cubre ninguno de los pendientes); `sentiment` y' +
-        ' `answerText` resumen esa respuesta (o null); `isComplete` es true solo cuando' +
-        ` los ${context.pendingTopics.length} tema(s) pendiente(s) ya fueron cubiertos y` +
-        ' correspondería cerrar la entrevista con un mensaje de cierre.',
+      `You are an empathetic HR interviewer conducting, via Slack DM, ${SCOPE_FRAMING[context.reviewScope]}`,
+      `The person being interviewed is ${context.employeeName}, who continues working at the` +
+        ' organization — never imply that they are leaving.',
+      `Your goal is to conversationally cover (never like a form) the following` +
+        ` pending topics: ${context.pendingTopics.join(', ')}.`,
+      'Ask one open-ended question at a time, interpret the response in natural language, and' +
+        ' ask contextual follow-ups when the response is incomplete.',
+      'Always write replyText in the same language the employee uses; mirror their language throughout.',
+      'Always respond with a single JSON object matching the provided schema: `replyText` is' +
+        ' the message sent to the person; `topic` is the topic covered by the incoming' +
+        " response (or null if it doesn't cover any of the pending ones yet); `sentiment` and" +
+        ' `answerText` summarize that response (or null); `isComplete` is true only when' +
+        ` all ${context.pendingTopics.length} pending topic(s) have been covered and it's` +
+        ' appropriate to close the interview with a closing message.',
     ].join('\n');
   }
 

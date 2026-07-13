@@ -20,7 +20,7 @@ import {
   Task,
 } from '../../domain/index.js';
 
-const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
+const FALLBACK_REPLY = 'I had trouble processing your response — could you tell me again?';
 
 /**
  * BE-7: the backend's REST surface is read-only, so this service keeps the live conversation in

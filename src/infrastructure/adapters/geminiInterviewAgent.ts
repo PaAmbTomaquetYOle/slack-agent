@@ -176,25 +176,26 @@ export class GeminiInterviewAgent implements IInterviewAgent {
 
   #buildSystemInstruction(context: InterviewAgentContext, isFirstTurn: boolean): string {
     const lines = [
-      `Sos un entrevistador empático de RRHH conduciendo, vía Slack DM, la entrevista de` +
-        ` offboarding de ${context.employeeName}, un empleado que está dejando la organización.`,
-      `Tu objetivo es cubrir de forma conversacional (nunca como un formulario) los siguientes` +
-        ` temas pendientes: ${context.pendingTopics.join(', ')}.`,
-      'Hacé una pregunta abierta a la vez, interpretá la respuesta en lenguaje natural y hacé' +
-        ' follow-ups contextuales cuando la respuesta sea incompleta.',
-      'Respondé siempre con un único objeto JSON que matchee el schema provisto: `replyText` es' +
-        ' el mensaje que se le manda al empleado; `topic` es el tema de INTERVIEW_TOPICS que' +
-        ' cubre la respuesta entrante del empleado (o null si todavía no cubre ninguno); `sentiment`' +
-        ' y `answerText` resumen esa respuesta (o null); `isComplete` es true solo cuando los' +
-        ' 5 temas ya fueron cubiertos y correspondería cerrar la entrevista con un mensaje de cierre.',
+      `You are an empathetic HR interviewer conducting, via Slack DM, the offboarding` +
+        ` interview of ${context.employeeName}, an employee who is leaving the organization.`,
+      `Your goal is to conversationally cover (never like a form) the following` +
+        ` pending topics: ${context.pendingTopics.join(', ')}.`,
+      'Ask one open-ended question at a time, interpret the response in natural language, and' +
+        ' ask contextual follow-ups when the response is incomplete.',
+      'Always write replyText in the same language the employee uses; mirror their language throughout.',
+      'Always respond with a single JSON object matching the provided schema: `replyText` is' +
+        ' the message sent to the employee; `topic` is the topic from INTERVIEW_TOPICS that the' +
+        ' incoming employee response covers (or null if it doesn\'t cover any yet); `sentiment`' +
+        ' and `answerText` summarize that response (or null); `isComplete` is true only when all' +
+        ' 5 topics have been covered and it\'s appropriate to close the interview with a closing message.',
     ];
     if (isFirstTurn) {
       lines.push(
-        'Antes de tu primera pregunta, si tenés disponibles las herramientas' +
-          ' get_pending_jira_issues y/o get_pending_trello_cards, llamalas para ver las tareas' +
-          ` pendientes de ${context.employeeName} y usá esa información para orientar la` +
-          ' conversación sobre proyectos actuales y procesos pendientes. Si la herramienta falla' +
-          ' o no hay tareas, continuá la entrevista con normalidad sin mencionar el error.',
+        'Before your first question, if the get_pending_jira_issues and/or' +
+          ' get_pending_trello_cards tools are available, call them to see' +
+          ` ${context.employeeName}'s pending tasks and use that information to guide the` +
+          ' conversation about current projects and pending processes. If the tool fails' +
+          ' or there are no tasks, continue the interview normally without mentioning the error.',
       );
     }
     return lines.join('\n');

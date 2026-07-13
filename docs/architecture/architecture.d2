@@ -1,5 +1,5 @@
 # OffBoardMe — architecture diagram (D2)
-# Render: d2 architecture.d2 architecture.svg   (see README for PNG)
+# Render: d2 --theme 0 --pad 40 architecture.d2 architecture.svg   (see README for PNG)
 
 direction: right
 
@@ -7,13 +7,14 @@ classes: {
   p1: { style: { stroke: "#2563eb"; font-color: "#1e3a8a"; bold: true; stroke-width: 2 } }
   p2: { style: { stroke: "#16a34a"; font-color: "#14532d"; bold: true; stroke-width: 2 } }
   p3: { style: { stroke: "#7c3aed"; font-color: "#4c1d95"; bold: true; stroke-width: 2 } }
+  kafka: { style: { stroke: "#000000"; font-color: "#1c1917"; bold: true; stroke-width: 2 } }
 }
 
 slack: Slack Workspace {
   icon: https://api.iconify.design/logos/slack-icon.svg
   style.fill: "#fffbeb"
   style.stroke: "#d97706"
-  u1: Departing volunteer
+  u1: Departing employee
   u2: Newcomer · asks in channel
   u3: Team · crisis / lookup
 }
@@ -24,37 +25,50 @@ agent: slack-agent — TypeScript · Slack Bolt {
   style.stroke: "#2563eb"
   ctrl: Controllers · Bolt events/commands
   appl: Application · use cases / ports
-  dom: Domain · entities / rules
+  dom: Domain · offboarding + review state machines
   ctrl -> appl -> dom
 }
 
-mcp: MCP Server — Python · MCP SDK {
+mcp: MCP Server — Python · FastMCP {
   icon: https://api.iconify.design/logos/python.svg
   style.fill: "#f5f3ff"
   style.stroke: "#7c3aed"
-  tools: Tools · fetch open tasks / search
+  tools: Tools · Jira/Trello fetch, Slack search
+  dossier: generate_dossier · Claude (Anthropic)
 }
 
 be: Backend — Python · FastAPI {
   icon: https://api.iconify.design/logos/fastapi.svg
   style.fill: "#f0fdf4"
   style.stroke: "#16a34a"
-  api: REST API
+  api: REST API · read-only + /auth/token
+  disp: InboundEventDispatcher
   sdoss: Service · Handover Dossier
   ssop: Service · SOPs
-  sgraph: Service · Knowledge Graph
-  api -> sdoss
-  api -> ssop
+  sgraph: Service · Knowledge Graph (GDS)
+  sched: APScheduler · monthly/annual reviews
+  disp -> sdoss
+  disp -> ssop
   api -> sgraph
+}
+
+kafka: Kafka — SASL_SSL / SCRAM-SHA-512 {
+  class: kafka
+  icon: https://api.iconify.design/logos/kafka.svg
+  style.fill: "#fef9c3"
+  style.stroke: "#000000"
+  in: "slack-agent.* — triggered, interview.*, tasks.extracted, dossier.generation_requested, sop.*, {monthly,annual}_review.*"
+  out: "offboarding.* — state_changed, dossier.generated, completed, sop.created/updated/deleted, review.*"
+  dlq: offboarding.dlq
 }
 
 data: Persistence {
   style.fill: "#f8fafc"
-  pg: Postgres · Dossiers / SOPs {
+  pg: Postgres · Dossiers / SOPs / Tasks / Interview turns {
     icon: https://api.iconify.design/logos/postgresql.svg
     shape: cylinder
   }
-  neo: Neo4j · Knowledge Graph {
+  neo: Neo4j + GDS · Knowledge Graph {
     icon: https://api.iconify.design/logos/neo4j.svg
     shape: cylinder
   }
@@ -64,30 +78,43 @@ ext: External APIs {
   style.fill: "#fdf4ff"
   jira: Jira { icon: https://api.iconify.design/logos/jira.svg }
   trello: Trello { icon: https://api.iconify.design/logos/trello.svg }
-  slackai: Slack AI · summary/dossier { icon: https://api.iconify.design/logos/slack-icon.svg }
-  rts: Real-Time Search API
+  gemini: Gemini · guided interview { icon: https://api.iconify.design/logos/google-icon.svg }
+  rts: Slack Real-Time Search API
 }
 
 # ---------- Phase 1 · Smart Offboarding (MVP) ----------
 slack.u1 -> agent.ctrl: "① announces departure" { class: p1 }
-agent -> mcp: "① pull tasks" { class: p1 }
+agent -> mcp: "① pull tasks (MCP)" { class: p1 }
 mcp.tools -> ext.jira: "①" { class: p1 }
 mcp.tools -> ext.trello: "①" { class: p1 }
 agent -> slack.u1: "① guided interview" { class: p1 }
-agent -> ext.slackai: "① summarize interview" { class: p1 }
-agent -> be.api: "① save dossier" { class: p1 }
+agent -> ext.gemini: "① drive interview turns" { class: p1 }
+agent -> kafka.in: "① tasks.extracted, interview.*, dossier.generation_requested" { class: p1 }
+kafka.in -> be.disp: "①" { class: p1 }
+be.disp -> mcp.dossier: "① generate_dossier (MCP client)" { class: p1 }
 be.sdoss -> data.pg: "①" { class: p1 }
+kafka.out -> agent: "① offboarding.state_changed, dossier.generated" { class: p1 }
+be -> kafka.out: "① publishes" { class: p1 }
 
 # ---------- Phase 2 · Dynamic SOPs ----------
 slack.u2 -> agent.ctrl: "② question / veteran answer" { class: p2 }
-agent -> be.api: "② save as SOP?" { class: p2 }
-be.ssop -> ext.rts: "② link similar" { class: p2 }
+agent -> kafka.in: "② sop.creation_requested / candidate_offered" { class: p2 }
+kafka.in -> be.disp: "②" { class: p2 }
+be.ssop -> ext.rts: "② link similar (via mcp-server)" { class: p2 }
 be.ssop -> data.pg: "②" { class: p2 }
+mcp -> kafka.in: "② consumes sop.created/updated/deleted → refresh SOP cache" { class: p2 }
 
 # ---------- Phase 3 · Knowledge Graph ----------
 slack.u3 -> agent.ctrl: "③ who is the expert?" { class: p3 }
-agent -> be.api: "③ query experts" { class: p3 }
-be.sgraph -> data.neo: "③ map relationships" { class: p3 }
+agent -> be.api: "③ query experts / analytics (read-only REST + token)" { class: p3 }
+be.sgraph -> data.neo: "③ map relationships, PageRank, betweenness, successors" { class: p3 }
+mcp -> kafka.in: "③ knowledge_graph.interaction_registered" { class: p3 }
+kafka.in -> be.sgraph: "③" { class: p3 }
+
+# ---------- Cross-cutting ----------
+agent -> be.api: "read-only recover/lookup + POST /auth/token" { style.stroke-dash: 4 }
+be.sched -> kafka.out: "scheduled monthly/annual review triggers" { style.stroke-dash: 4 }
+kafka.dlq: "malformed / failed messages (either direction)"
 
 # ---------- Legend ----------
 legend: Project phases {
@@ -96,4 +123,5 @@ legend: Project phases {
   l1: ① Phase 1 · Smart Offboarding (MVP) { class: p1 }
   l2: ② Phase 2 · Dynamic SOPs { class: p2 }
   l3: ③ Phase 3 · Knowledge Graph { class: p3 }
+  l4: "Dashed = read-only / scheduled, not a delivery phase"
 }

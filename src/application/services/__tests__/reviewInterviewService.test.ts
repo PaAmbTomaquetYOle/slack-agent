@@ -229,7 +229,7 @@ describe('ReviewInterviewService', () => {
     ]);
     expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith(
       'U-EMPLOYEE',
-      expect.stringContaining('problema'),
+      expect.stringContaining('trouble'),
     );
     expect(activeReviewStore.end).not.toHaveBeenCalled();
     errorSpy.mockRestore();

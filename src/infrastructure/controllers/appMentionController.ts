@@ -26,7 +26,7 @@ export class AppMentionController extends BaseController {
       }
 
       await say({
-        text: `👋 ¡Hola <@${event.user}>! Soy OffBoardMe, tu asistente de captura de conocimiento. ¿En qué puedo ayudarte?`,
+        text: `👋 Hi <@${event.user}>! I'm BrainTrust, your knowledge-capture assistant. How can I help you?`,
         thread_ts: event.ts,
       });
     });

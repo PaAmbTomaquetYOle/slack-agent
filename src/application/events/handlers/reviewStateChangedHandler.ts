@@ -11,12 +11,11 @@ function isReviewStateChangedPayload(payload: unknown): payload is ReviewStateCh
 
 const INTRO_MESSAGES: Record<ReviewScope, string> = {
   monthly:
-    ':wave: ¡Hola! Es hora de tu chequeo mensual de conocimiento — unas pocas preguntas rápidas' +
-    ' sobre en qué estuviste trabajando últimamente. Cuando quieras, respondé acá para empezar.',
+    ":wave: Hi! It's time for your monthly knowledge check-in — a few quick questions about what" +
+    " you've been working on lately. Whenever you're ready, reply here to get started.",
   annual:
-    ':wave: ¡Hola! Es hora de tu revisión anual de conocimiento — vamos a repasar todo lo que' +
-    ' sabés y en lo que trabajaste este último año, para que quede documentado. Cuando quieras,' +
-    ' respondé acá para empezar.',
+    ":wave: Hi! It's time for your annual knowledge review — we'll go over everything you know and" +
+    ' worked on this past year so it gets documented. Whenever you\'re ready, reply here to get started.',
 };
 
 /**
