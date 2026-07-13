@@ -1,6 +1,6 @@
 <div align="center">
 
-![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
+![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn&reversal=false)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
