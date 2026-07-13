@@ -1,5 +1,6 @@
-import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId } from '../../domain';
-import type { Interview, InterviewTurn, Dossier, DossierSection, Contact, PendingTask, KnowledgeArea } from '../../domain';
+import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, Task } from '../../domain';
+import type { Interview, InterviewTurn, Dossier, DossierSection, Contact, PendingTask, KnowledgeArea, TaskSource } from '../../domain';
+import type { PendingSopCandidate } from '../../application/ports';
 
 // ─── Backend response shapes (snake_case) ────────────────────────────────────
 
@@ -55,6 +56,34 @@ export interface BackendDossierResponse {
   created_at: string;
   summary: string | null;
   sections: BackendDossierSectionResponse[];
+}
+
+export interface BackendSopCandidateResponse {
+  id: string;
+  channel_id: string;
+  author_id: string;
+  message_ts: string;
+  content: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BackendSopCandidateListResponse {
+  items: BackendSopCandidateResponse[];
+}
+
+export interface BackendTaskResponse {
+  id: string;
+  title: string;
+  source: TaskSource;
+  status: string;
+  url: string | null;
+  description: string | null;
+}
+
+export interface BackendTaskListResponse {
+  items: BackendTaskResponse[];
 }
 
 // ─── Response mappers ─────────────────────────────────────────────────────────
@@ -113,6 +142,19 @@ function mapDossierSectionResponse(data: BackendDossierSectionResponse): Dossier
     tasks,
     areas,
   };
+}
+
+export function mapSopCandidateResponse(data: BackendSopCandidateResponse): PendingSopCandidate {
+  return {
+    channelId: data.channel_id,
+    authorId: data.author_id,
+    content: data.content,
+    messageTs: data.message_ts,
+  };
+}
+
+export function mapTaskResponse(data: BackendTaskResponse): Task {
+  return new Task(data.id, data.title, data.source, data.status, data.url, data.description);
 }
 
 export function mapDossierResponse(data: BackendDossierResponse): Dossier {

@@ -1,9 +1,16 @@
-import type { IMessagingPort } from '../ports';
+import type { IMessagingPort, ISopCandidateReadRepository } from '../ports';
 import type { IDomainEventBus } from '../events';
 import type { ISopService } from '../serviceInterfaces';
 import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../serviceInterfaces';
 import type { ExpertResponseDetector } from '../../domain';
-import { ChannelId, UserId, SopCreationRequestedEvent } from '../../domain';
+import {
+  ChannelId,
+  UserId,
+  SopCreationRequestedEvent,
+  SopCandidateOfferedEvent,
+  SopCandidateDecidedEvent,
+  SopTitle,
+} from '../../domain';
 
 const OFFER_TEXT = 'That looked like a valuable answer! Want to save it as an SOP so it is not lost?';
 const DEFAULT_MAX_TRACKED_CANDIDATES = 500;
@@ -22,6 +29,7 @@ export class SopService implements ISopService {
   readonly #eventBus: IDomainEventBus;
   readonly #monitoredChannelIds: Set<string>;
   readonly #maxTrackedCandidates: number;
+  readonly #candidateReadRepository: ISopCandidateReadRepository | null;
   readonly #candidates = new Map<string, SopCandidate>();
 
   constructor(
@@ -30,12 +38,39 @@ export class SopService implements ISopService {
     eventBus: IDomainEventBus,
     monitoredChannelIds: string[],
     maxTrackedCandidates: number = DEFAULT_MAX_TRACKED_CANDIDATES,
+    candidateReadRepository: ISopCandidateReadRepository | null = null,
   ) {
     this.#detector = detector;
     this.#messagingPort = messagingPort;
     this.#eventBus = eventBus;
     this.#monitoredChannelIds = new Set(monitoredChannelIds);
     this.#maxTrackedCandidates = maxTrackedCandidates;
+    this.#candidateReadRepository = candidateReadRepository;
+  }
+
+  /**
+   * Rehydrates candidates still awaiting a decision from the backend (SA-16), so an author's
+   * Yes/No click still resolves after a restart wiped the in-memory cache. Call once on
+   * startup. Failures are logged, not thrown — falling back to the pre-SA-16 behavior of an
+   * empty cache rather than blocking startup.
+   */
+  async rehydrate(): Promise<void> {
+    if (!this.#candidateReadRepository) return;
+    try {
+      const pending = await this.#candidateReadRepository.findPending();
+      for (const candidate of pending) {
+        const key = SopService.#key(candidate.channelId, candidate.messageTs);
+        this.#candidates.set(key, {
+          channelId: candidate.channelId,
+          authorId: candidate.authorId,
+          text: candidate.content,
+          messageTs: candidate.messageTs,
+          offered: true,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to rehydrate pending SOP candidates from the backend:', error);
+    }
   }
 
   isMonitoredChannel(channelId: string): boolean {
@@ -66,12 +101,28 @@ export class SopService implements ISopService {
     }
   }
 
-  async handleSopDecision(channelId: string, messageTs: string, accepted: boolean): Promise<void> {
+  /**
+   * Derives a default title for the given candidate, to prefill the "save as SOP" modal.
+   * Returns null if the candidate is no longer tracked (e.g. already decided).
+   */
+  deriveSopTitle(channelId: string, messageTs: string): string | null {
+    const candidate = this.#candidates.get(SopService.#key(channelId, messageTs));
+    if (!candidate) return null;
+    return SopTitle.deriveFrom(candidate.text);
+  }
+
+  async handleSopDecision(
+    channelId: string,
+    messageTs: string,
+    accepted: boolean,
+    title?: string,
+  ): Promise<void> {
     const key = SopService.#key(channelId, messageTs);
     const candidate = this.#candidates.get(key);
     if (!candidate) return;
 
     this.#candidates.delete(key);
+    await this.#eventBus.publish(new SopCandidateDecidedEvent(new ChannelId(channelId), messageTs, accepted));
     if (!accepted) return;
 
     await this.#eventBus.publish(
@@ -80,6 +131,7 @@ export class SopService implements ISopService {
         new UserId(candidate.authorId),
         candidate.text,
         messageTs,
+        title ?? SopTitle.deriveFrom(candidate.text),
       ),
     );
   }
@@ -98,6 +150,14 @@ export class SopService implements ISopService {
       return;
     }
     candidate.offered = true;
+    await this.#eventBus.publish(
+      new SopCandidateOfferedEvent(
+        new ChannelId(candidate.channelId),
+        new UserId(candidate.authorId),
+        candidate.text,
+        candidate.messageTs,
+      ),
+    );
   }
 
   #trackCandidate(key: string, candidate: SopCandidate): void {

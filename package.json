@@ -25,11 +25,16 @@
     "test:coverage": "vitest run --coverage",
     "dev": "npx nodemon --watch src --exec \"node --loader ts-node/esm\" src/index.ts",
     "build": "tsc",
-    "start": "node --experimental-specifier-resolution=node dist/index.js"
+    "start": "node dist/index.js",
+    "lint": "eslint ."
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "25.9.2",
+    "@typescript-eslint/eslint-plugin": "^8.63.0",
+    "@typescript-eslint/parser": "^8.63.0",
     "@vitest/coverage-v8": "3.2.6",
+    "eslint": "^10.6.0",
     "nodemon": "3.1.14",
     "ts-node": "10.9.2",
     "typescript": "6.0.3",

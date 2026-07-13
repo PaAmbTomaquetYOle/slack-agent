@@ -8,11 +8,11 @@ class MutableInterviewSession implements InterviewSession {
   readonly startedAt: Date;
   turns: readonly InterviewTurn[];
 
-  constructor(processId: ProcessId) {
-    this.id = InterviewId.generate();
+  constructor(processId: ProcessId, id: InterviewId = InterviewId.generate(), turns: readonly InterviewTurn[] = []) {
+    this.id = id;
     this.processId = processId;
     this.startedAt = new Date();
-    this.turns = [];
+    this.turns = turns;
   }
 }
 
@@ -48,5 +48,14 @@ export class InMemoryInterviewSessionStore implements IInterviewSessionStore {
 
   end(processId: ProcessId): void {
     this.#sessions.delete(processId.value);
+  }
+
+  restore(processId: ProcessId, interviewId: InterviewId, turns: readonly InterviewTurn[]): InterviewSession {
+    if (this.#sessions.has(processId.value)) {
+      throw new Error(`Interview session already in flight for process '${processId.value}'`);
+    }
+    const session = new MutableInterviewSession(processId, interviewId, turns);
+    this.#sessions.set(processId.value, session);
+    return session;
   }
 }

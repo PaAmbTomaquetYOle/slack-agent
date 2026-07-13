@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IAuthService, IOffboardingOrchestrator } from '../../../application';
+import type { IAuthService, IOffboardingOrchestrator, IReviewInterviewService } from '../../../application';
 import { DirectMessageController } from '../directMessageController';
 import { makeAppMock } from '../../../testing/slackMocks';
 
@@ -21,25 +21,32 @@ function makeAuthServiceMock(): IAuthService {
   };
 }
 
+function makeReviewInterviewServiceMock(): IReviewInterviewService {
+  return { handleIncomingDirectMessage: vi.fn().mockResolvedValue(undefined) };
+}
+
 describe('DirectMessageController', () => {
   let authService: IAuthService;
   let orchestrator: IOffboardingOrchestrator;
+  let reviewInterviewService: IReviewInterviewService;
   let app: ReturnType<typeof makeAppMock>['app'];
   let trigger: ReturnType<typeof makeAppMock>['trigger'];
 
   beforeEach(() => {
     authService = makeAuthServiceMock();
     orchestrator = makeOrchestratorMock();
+    reviewInterviewService = makeReviewInterviewServiceMock();
     ({ app, trigger } = makeAppMock());
-    new DirectMessageController(authService, orchestrator).register(app);
+    new DirectMessageController(authService, orchestrator, reviewInterviewService).register(app);
   });
 
-  it('forwards a plain DM text message to the orchestrator when no auth is pending', async () => {
+  it('forwards a plain DM text message to the orchestrator and the review interview service when no auth is pending', async () => {
     await trigger('message', '*', {
       message: { type: 'message', subtype: undefined, channel_type: 'im', user: 'U-DEPARTING', text: 'Hi there', channel: 'D1', ts: '1', event_ts: '1' },
     });
 
     expect(orchestrator.handleInterviewMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there', 'D1');
+    expect(reviewInterviewService.handleIncomingDirectMessage).toHaveBeenCalledWith('U-DEPARTING', 'Hi there');
     expect(authService.handleAuthCodeMessage).not.toHaveBeenCalled();
   });
 

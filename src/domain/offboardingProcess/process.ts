@@ -3,6 +3,7 @@ import { OffboardingStartedEvent } from '../events';
 import { NotStartedState, InProgressState, PendingRevisionState, FinishedState, CancelledState } from './state';
 import type { OffboardingProcessState } from './state';
 import type { ProcessId, UserId, ChannelId, InterviewId, DossierId } from '../valueObjects';
+import { Task } from './task';
 
 export class OffboardingProcess {
   readonly #id: ProcessId;
@@ -13,7 +14,7 @@ export class OffboardingProcess {
   #channelId: ChannelId | null; // populated by later state transitions (SA-3)
   #handoverDossier: string | null; // populated when dossier is generated (SA-4)
   #assignedReviewer: UserId | null; // assigned during review phase (SA-3)
-  readonly #tasks: never[]; // placeholder — replace with Task value object in SA-3
+  #tasks: Task[]; // pending Jira/Trello tasks extracted via MCP during the interview (SA-18)
   readonly #domainEvents: DomainEvent[];
   #interviewId: InterviewId | null;
   #dossierId: DossierId | null;
@@ -60,6 +61,7 @@ export class OffboardingProcess {
     state: string;
     interviewId: InterviewId | null;
     dossierId: DossierId | null;
+    tasks?: Task[];
   }): OffboardingProcess {
     const process = new OffboardingProcess(
       params.id,
@@ -70,6 +72,7 @@ export class OffboardingProcess {
     process.#state = OffboardingProcess.#stateFromName(params.state);
     process.#interviewId = params.interviewId;
     process.#dossierId = params.dossierId;
+    process.#tasks = params.tasks ?? [];
     return process;
   }
 
@@ -91,6 +94,7 @@ export class OffboardingProcess {
   get stateName(): string { return this.#state.stateName; }
   get interviewId(): InterviewId | null { return this.#interviewId; }
   get dossierId(): DossierId | null { return this.#dossierId; }
+  get tasks(): Task[] { return [...this.#tasks]; }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this.#domainEvents];
@@ -112,5 +116,12 @@ export class OffboardingProcess {
 
   cancel(): void {
     this.#state = this.#state.cancel();
+  }
+
+  // In-memory-only bookkeeping (SA-18): tasks are extracted via MCP during the interview and
+  // published to the backend over Kafka, which remains the durable store. This just keeps the
+  // locally tracked process consistent with the backend, mirroring submitForReview/complete/cancel.
+  assignTasks(tasks: Task[]): void {
+    this.#tasks = [...tasks];
   }
 }

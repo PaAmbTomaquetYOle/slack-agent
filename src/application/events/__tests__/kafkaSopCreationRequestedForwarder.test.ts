@@ -16,6 +16,7 @@ describe('createKafkaSopCreationRequestedForwarder', () => {
       new UserId('U456'),
       'Run the deploy pipeline twice in staging before prod.',
       '1234.5678',
+      'Deploy pipeline steps',
     );
 
     await forward(event);
@@ -23,6 +24,7 @@ describe('createKafkaSopCreationRequestedForwarder', () => {
     expect(publisher.publish).toHaveBeenCalledWith({
       eventType: SOP_CREATION_REQUESTED,
       payload: {
+        title: 'Deploy pipeline steps',
         content: 'Run the deploy pipeline twice in staging before prod.',
         author: 'U456',
         origin_channel: 'C123',

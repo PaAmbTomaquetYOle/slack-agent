@@ -1,4 +1,4 @@
-import type { Producer } from 'kafkajs';
+import type { Producer, TopicMessages } from 'kafkajs';
 import type { IEventPublisher } from '../../application/ports';
 import type { KafkaEventEnvelope, OutboundEvent } from '../../domain';
 
@@ -11,7 +11,7 @@ export class KafkaEventPublisher implements IEventPublisher {
     this.#topicPrefix = topicPrefix;
   }
 
-  async publish(event: OutboundEvent): Promise<void> {
+  #toTopicMessage(event: OutboundEvent): { topic: string; key: string; value: string } {
     const envelope: KafkaEventEnvelope = {
       event_id: crypto.randomUUID(),
       event_type: event.eventType,
@@ -21,10 +21,15 @@ export class KafkaEventPublisher implements IEventPublisher {
     const topic = `${this.#topicPrefix}.${event.eventType}`;
     const processId = envelope.payload['process_id'];
     const key = typeof processId === 'string' && processId ? processId : envelope.event_id;
+    return { topic, key, value: JSON.stringify(envelope) };
+  }
+
+  async publish(event: OutboundEvent): Promise<void> {
+    const { topic, key, value } = this.#toTopicMessage(event);
     try {
       await this.#producer.send({
         topic,
-        messages: [{ key, value: JSON.stringify(envelope) }],
+        messages: [{ key, value }],
       });
     } catch (error) {
       // Publishing must never block the Slack conversational flow.
@@ -33,8 +38,25 @@ export class KafkaEventPublisher implements IEventPublisher {
   }
 
   async publishMany(events: OutboundEvent[]): Promise<void> {
+    if (events.length === 0) {
+      return;
+    }
+    const messagesByTopic = new Map<string, TopicMessages['messages']>();
     for (const event of events) {
-      await this.publish(event);
+      const { topic, key, value } = this.#toTopicMessage(event);
+      const messages = messagesByTopic.get(topic) ?? [];
+      messages.push({ key, value });
+      messagesByTopic.set(topic, messages);
+    }
+    const topicMessages: TopicMessages[] = Array.from(messagesByTopic, ([topic, messages]) => ({
+      topic,
+      messages,
+    }));
+    try {
+      await this.#producer.sendBatch({ topicMessages });
+    } catch (error) {
+      // Publishing must never block the Slack conversational flow.
+      console.warn('Failed to publish batch of events to Kafka:', error);
     }
   }
 }

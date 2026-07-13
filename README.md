@@ -20,6 +20,7 @@ The live development stack is composed from the separate `infra/` repository. Th
 
 - [Architecture](#architecture)
 - [Kafka event contract (AsyncAPI)](#kafka-event-contract-asyncapi)
+- [🗓 Periodic review interviews](#-periodic-review-interviews)
 - [🚀 Local development](#-local-development)
 - [⚙️ Configuration](#️-configuration)
 
@@ -50,13 +51,15 @@ d2 --theme 0 --pad 40 --scale 2 docs/architecture/architecture.d2 docs/architect
 
 slack-agent and the backend exchange domain events over Kafka following an [AsyncAPI 3.0.0](https://www.asyncapi.com/) contract (BE-9/BE-11, BE-7). **BE-7 made the backend's REST surface read-only** — every write (offboarding state, interview turns, dossier creation, cancellation) now goes out as a Kafka command/event; slack-agent's HTTP adapters (`http*Repository.ts`) keep only their read methods, used for `OffboardingOrchestrator.recover()` and active-process lookups. Topics:
 
-- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `offboarding.cancellation_requested` (BE-7, replaces the old `PATCH .../cancel`), `interview.started`, `interview.completed`, `dossier.generation_requested`, `sop.creation_requested`.
-- `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`.
+- `slack-agent.*` — **produced by slack-agent**, consumed by the backend: `offboarding.triggered`, `offboarding.cancellation_requested` (BE-7, replaces the old `PATCH .../cancel`), `interview.started`, `interview.turn_recorded` (SA-16, per-turn), `interview.completed`, `tasks.extracted` (SA-18), `dossier.generation_requested`, `sop.creation_requested`, `sop.candidate_offered` (SA-16), `sop.candidate_decided` (SA-16), plus SA-20's `monthly_review.*`/`annual_review.*` equivalents (`triggered`, `cancellation_requested`, `interview_completed`, `dossier_generation_requested`) — see below.
+- `offboarding.*` — **produced by the backend**, consumed by slack-agent: `offboarding.state_changed`, `interview.completed`, `dossier.generated`, `offboarding.completed`, `sop.created`, plus `monthly_review.state_changed`/`monthly_review.completed`/`annual_review.state_changed`/`annual_review.completed` (SA-20).
 - `offboarding.dlq` — dead-letter queue for either direction (malformed envelopes or handler failures).
 
 Every message uses the same JSON envelope: `{ event_id, event_type, occurred_at, payload }` (snake_case, see `src/domain/events/kafkaEventEnvelope.ts`). The Kafka record key is `payload.process_id` when present, otherwise `event_id`. Delivery is at-least-once with manual offset commits. The broker requires **SASL_SSL / SCRAM-SHA-512** (BE-7) — see `KAFKA_SASL_*`/`KAFKA_SSL_CA` below.
 
-Because the interview REST endpoints are gone, `InterviewService` keeps each in-flight conversation in an in-memory `IInterviewSessionStore` and only crosses over to Kafka at `interview.started` (empty marker) and `interview.completed` (carries every turn). A process restart mid-interview loses unsent turns.
+`InterviewService` keeps each in-flight conversation in an in-memory `IInterviewSessionStore`, but (SA-16) every appended turn is also published as `interview.turn_recorded` so the backend persists it incrementally into its own `interview_turns` table; `interview.completed` still carries every turn as a full-set reconciliation backstop. On restart, `InterviewService` rehydrates the in-memory session from the backend's interview read model (`GET /offboarding/{id}/interview`) instead of losing in-flight turns. Similarly, `SopService` persists each SOP candidate offer/decision to the backend (a new `SopCandidate` aggregate) via `sop.candidate_offered`/`sop.candidate_decided`, and rehydrates candidates still awaiting a decision from `GET /sop-candidates` on startup — so an author's Yes/No click still resolves after a restart.
+
+`OffboardingProcess` models the departing employee's pending Jira/Trello tasks as a real `Task` value object (SA-18, replacing an earlier `never[]` placeholder). `GeminiInterviewAgent` parses the structured JSON `get_pending_jira_issues`/`get_pending_trello_cards` MCP tool results into `Task[]`; `InterviewService` publishes them as `tasks.extracted`, and the backend persists them into its own `offboarding_tasks` table, exposed read-only at `GET /offboarding/{id}/tasks`. `OffboardingOrchestrator` rehydrates them onto its tracked process both live (subscribing to `TasksExtractedEvent`) and on restart (via `recover()`/`#rehydrate`, mirroring the interview rehydration above).
 
 Note the backend mints `process_id` when it consumes `offboarding.triggered` and owns dossier generation (reads the interview transcript from its DB) — slack-agent's outbound payloads for those two events carry no process_id/content, only what the backend needs to act.
 
@@ -64,6 +67,15 @@ Note the backend mints `process_id` when it consumes `offboarding.triggered` and
 - The canonical spec lives at `backend/docs/asyncapi/asyncapi.yml`. A copy is vendored here at [`docs/asyncapi/asyncapi.yml`](docs/asyncapi/asyncapi.yml) for reference — it is not regenerated automatically.
 - slack-agent does **not** consume the Modelina-generated TypeScript classes in `backend/docs/asyncapi/generated/ts/` (they're camelCase classes with `export default`, which don't match the snake_case wire format). Instead, payload shapes are hand-written as snake_case interfaces in `src/domain/events/outboundEvents.ts` (published) and `inboundEvents.ts` (consumed).
 - When the backend changes the contract: re-copy `asyncapi.yml` into `docs/asyncapi/`, diff it against `outboundEvents.ts`/`inboundEvents.ts`, and update the payload interfaces + the forwarders/handlers in `src/application/events/` to match.
+
+## 🗓 Periodic review interviews
+
+SA-20: alongside offboarding (triggered by a user in Slack), the backend automatically starts `MonthlyReviewProcess`/`AnnualReviewProcess` instances on a schedule (BE-24) — a lightweight monthly check-in on recent work, and an exhaustive annual knowledge-retention review. slack-agent runs the guided interview for these exactly like it does for offboarding, but through a **parallel, simpler stack** (`ReviewInterviewService`/`GeminiReviewInterviewAgent`), not a generalization of `OffboardingOrchestrator`/`InterviewService`:
+
+- **No HTTP read model.** Unlike offboarding, the backend exposes no REST endpoint for review processes (BE-23 kept them Kafka-only) — there is nothing to poll to answer "does this employee have an active review?" `IActiveReviewStore` (in-memory, `InMemoryActiveReviewStore`) tracks it instead, populated when `{monthly,annual}_review.state_changed` reaches `in_progress`. **Known limitation:** this does not survive a restart — a future issue could add a backend read endpoint to support rehydration, mirroring `OffboardingOrchestrator.recover()`.
+- **No nudge/abandon.** These processes aren't time-critical departures; `DirectMessageController` just forwards every DM to both `OffboardingOrchestrator.handleInterviewMessage` and `ReviewInterviewService.handleIncomingDirectMessage` — each is a safe no-op when it has nothing tracked for the sender.
+- **No Jira/Trello task extraction.** `GeminiReviewInterviewAgent` calls no MCP tools; it reuses `INTERVIEW_TOPICS`' vocabulary but scopes which ones apply per review type (`reviewTopicsFor`): monthly asks about `current_projects` only, annual asks about all five — see `src/domain/interview/reviewInterviewTopics.ts`.
+- **Own wire events**, not shared with offboarding's (BE-23): `{monthly,annual}_review.triggered`/`cancellation_requested`/`interview_completed`/`dossier_generation_requested` inbound (`slack-agent.*`), `{monthly,annual}_review.state_changed`/`completed` outbound (`offboarding.*`). `ReviewInterviewCompletedEvent`/`ReviewDossierGenerationRequestedEvent` are single local event classes carrying a `reviewScope: 'monthly' | 'annual'` field — their Kafka forwarders pick the wire event type from it, so one subscription covers both scopes.
 
 ## 🚀 Local development
 

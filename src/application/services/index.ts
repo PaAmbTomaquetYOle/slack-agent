@@ -1,6 +1,7 @@
 export { McpService } from './mcpService';
 export { OffboardingService } from './offboardingService';
 export { InterviewService } from './interviewService';
+export { ReviewInterviewService } from './reviewInterviewService';
 export { SopService } from './sopService';
 export { DossierService } from './dossierService';
 export { QuestionSuggestionService } from './questionSuggestionService';

@@ -1,10 +1,10 @@
 import { Type } from '@google/genai';
 import type { GoogleGenAI, Content, Schema, FunctionDeclaration, Part, FunctionCall } from '@google/genai';
-import type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from '../../application/ports';
+import type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult, ExtractedTask } from '../../application/ports';
 import type { IMcpService } from '../../application/serviceInterfaces';
 import type { IAuthService } from '../../application/serviceInterfaces';
 import { INTERVIEW_TOPICS, AuthenticationRequiredError } from '../../domain';
-import type { InterviewTopic, AuthProvider, McpToolResult } from '../../domain';
+import type { InterviewTopic, AuthProvider, McpToolResult, TaskSource } from '../../domain';
 
 const RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,
@@ -68,6 +68,7 @@ export class GeminiInterviewAgent implements IInterviewAgent {
     const isFirstTurn = context.turns.length === 0;
     const toolDeclarations = isFirstTurn ? await this.#getToolDeclarations() : [];
     let contents = this.#buildContents(context);
+    const extractedTasks: ExtractedTask[] = [];
 
     for (let iteration = 0; iteration < MAX_TOOL_ITERATIONS && toolDeclarations.length > 0; iteration++) {
       const response = await this.#client.models.generateContent({
@@ -84,7 +85,7 @@ export class GeminiInterviewAgent implements IInterviewAgent {
       contents = [
         ...contents,
         { role: 'model', parts: calls.map((call): Part => ({ functionCall: call })) },
-        { role: 'user', parts: await this.#executeToolCalls(calls, context) },
+        { role: 'user', parts: await this.#executeToolCalls(calls, context, extractedTasks) },
       ];
     }
 
@@ -102,14 +103,19 @@ export class GeminiInterviewAgent implements IInterviewAgent {
     if (!text) {
       throw new Error('Gemini response contained no text');
     }
-    return this.#parseResult(text);
+    const result = this.#parseResult(text);
+    return extractedTasks.length > 0 ? { ...result, tasks: extractedTasks } : result;
   }
 
-  async #executeToolCalls(calls: FunctionCall[], context: InterviewAgentContext): Promise<Part[]> {
+  async #executeToolCalls(
+    calls: FunctionCall[],
+    context: InterviewAgentContext,
+    extractedTasks: ExtractedTask[],
+  ): Promise<Part[]> {
     const parts: Part[] = [];
     for (const call of calls) {
       if (!call.name) continue;
-      const response = await this.#callMcpTool(call.name, call.args ?? {}, context);
+      const response = await this.#callMcpTool(call.name, call.args ?? {}, context, extractedTasks);
       parts.push({ functionResponse: { name: call.name, response } });
     }
     return parts;
@@ -119,6 +125,7 @@ export class GeminiInterviewAgent implements IInterviewAgent {
     name: string,
     args: Record<string, unknown>,
     context: InterviewAgentContext,
+    extractedTasks: ExtractedTask[],
   ): Promise<Record<string, unknown>> {
     const toolArgs = { ...args, user_id: context.slackUserId, assignee: args['assignee'] ?? context.employeeName };
     let result: McpToolResult;
@@ -134,6 +141,9 @@ export class GeminiInterviewAgent implements IInterviewAgent {
         if (provider) throw new AuthenticationRequiredError(provider);
       }
       return { error: text || `${name} returned an error` };
+    }
+    if (name in TOOL_PROVIDERS) {
+      extractedTasks.push(...GeminiInterviewAgent.#tasksFromResultText(text, TOOL_PROVIDERS[name] as TaskSource));
     }
     return { output: text };
   }
@@ -205,5 +215,41 @@ export class GeminiInterviewAgent implements IInterviewAgent {
 
   static #textFromResult(result: McpToolResult): string {
     return result.content.filter((block) => block.type === 'text').map((block) => block.text ?? '').join(' ');
+  }
+
+  // The mcp-server task tools return a JSON array of CollaborationTask-derived objects
+  // (task_id, title, status, description, url, ...) serialized into the tool result's text
+  // block. Malformed/unexpected shapes are skipped rather than failing the interview turn.
+  static #tasksFromResultText(text: string, source: TaskSource): ExtractedTask[] {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(parsed)) return [];
+    const tasks: ExtractedTask[] = [];
+    for (const item of parsed as unknown[]) {
+      if (!GeminiInterviewAgent.#isRawCollaborationTask(item)) continue;
+      tasks.push({
+        id: item['task_id'],
+        title: item['title'],
+        source,
+        status: item['status'],
+        url: typeof item['url'] === 'string' ? item['url'] : null,
+        description: typeof item['description'] === 'string' ? item['description'] : null,
+      });
+    }
+    return tasks;
+  }
+
+  static #isRawCollaborationTask(value: unknown): value is Record<string, unknown> & {
+    task_id: string;
+    title: string;
+    status: string;
+  } {
+    if (typeof value !== 'object' || value === null) return false;
+    const v = value as Record<string, unknown>;
+    return typeof v['task_id'] === 'string' && typeof v['title'] === 'string' && typeof v['status'] === 'string';
   }
 }

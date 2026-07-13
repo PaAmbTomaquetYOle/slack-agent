@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createInterviewKnowledgeGraphForwarder, createSopKnowledgeGraphForwarder } from '../kafkaKnowledgeGraphForwarders';
+import {
+  createInterviewKnowledgeGraphForwarder,
+  createSopKnowledgeGraphForwarder,
+  createKafkaChannelActivityRegisteredForwarder,
+} from '../kafkaKnowledgeGraphForwarders';
 import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../../ports';
 import {
   InterviewCompletedEvent,
@@ -11,6 +15,7 @@ import {
   OffboardingProcess,
   KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
   KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
+  KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
 } from '../../../domain';
 import type { InterviewTurn } from '../../../domain';
 
@@ -129,6 +134,7 @@ describe('createSopKnowledgeGraphForwarder', () => {
       new UserId('U456'),
       'Run the deploy pipeline twice in staging before prod.',
       '1234.5678',
+      'Deploy pipeline steps',
     );
 
     await forward(event);
@@ -150,7 +156,7 @@ describe('createSopKnowledgeGraphForwarder', () => {
     const userInfoProvider = makeUserInfoProviderMock('Carlos Lopez');
     const forward = createSopKnowledgeGraphForwarder(publisher, userInfoProvider);
     const longText = 'a'.repeat(100);
-    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), longText, '1.1');
+    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), longText, '1.1', 'title');
 
     await forward(event);
 
@@ -162,6 +168,50 @@ describe('createSopKnowledgeGraphForwarder', () => {
 
   it('throws on an unexpected event type', async () => {
     const forward = createSopKnowledgeGraphForwarder(makePublisherMock(), makeUserInfoProviderMock('Ana'));
+    await expect(forward({ eventName: 'other.event', occurredOn: new Date() })).rejects.toThrow();
+  });
+});
+
+describe('createKafkaChannelActivityRegisteredForwarder', () => {
+  it('publishes a channel_activity_registered event for the author and channel', async () => {
+    const publisher = makePublisherMock();
+    const userInfoProvider = makeUserInfoProviderMock('Carlos Lopez');
+    const forward = createKafkaChannelActivityRegisteredForwarder(publisher, userInfoProvider);
+    const event = new SopCreationRequestedEvent(
+      new ChannelId('C123'),
+      new UserId('U456'),
+      'Run the deploy pipeline twice in staging before prod.',
+      '1234.5678',
+      'Deploy pipeline steps',
+    );
+
+    await forward(event);
+
+    expect(publisher.publish).toHaveBeenCalledWith({
+      eventType: KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
+      payload: {
+        person_id: 'U456',
+        person_name: 'Carlos Lopez',
+        channel_id: 'C123',
+        channel_name: 'C123',
+      },
+    });
+  });
+
+  it('falls back to the user id when the display name cannot be resolved', async () => {
+    const publisher = makePublisherMock();
+    const userInfoProvider = makeUserInfoProviderMock(null);
+    const forward = createKafkaChannelActivityRegisteredForwarder(publisher, userInfoProvider);
+    const event = new SopCreationRequestedEvent(new ChannelId('C1'), new UserId('U1'), 'text', '1.1', 'title');
+
+    await forward(event);
+
+    const call = vi.mocked(publisher.publish).mock.calls[0]?.[0];
+    expect((call as { payload: { person_name: string } }).payload.person_name).toBe('U1');
+  });
+
+  it('throws on an unexpected event type', async () => {
+    const forward = createKafkaChannelActivityRegisteredForwarder(makePublisherMock(), makeUserInfoProviderMock('Ana'));
     await expect(forward({ eventName: 'other.event', occurredOn: new Date() })).rejects.toThrow();
   });
 });

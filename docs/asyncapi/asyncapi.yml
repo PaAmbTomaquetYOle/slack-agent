@@ -41,9 +41,10 @@ info:
     - `slack-agent.*` — inbound, published by slack-agent, consumed by backend.
     - `offboarding.*` — outbound, published by backend, consumed by slack-agent.
 
-    Note: slack-agent does not yet produce the inbound events — it currently
-    talks to the backend over REST. This contract defines the target shape so
-    both sides can converge on it.
+    Writes (create, cancel, lifecycle transitions, dossier generation, SOP
+    creation) are Kafka-only. The REST API is read-only (GET/list/search plus
+    POST /auth/token) — slack-agent and mcp-server must produce/consume these
+    events rather than call REST write endpoints.
   license:
     name: UNLICENSED
 
@@ -72,6 +73,13 @@ channels:
       offboardingTriggered:
         $ref: '#/components/messages/OffboardingTriggered'
 
+  slackAgentOffboardingCancellationRequested:
+    address: slack-agent.offboarding.cancellation_requested
+    description: Cancels the offboarding process.
+    messages:
+      offboardingCancellationRequested:
+        $ref: '#/components/messages/OffboardingCancellationRequested'
+
   slackAgentInterviewStarted:
     address: slack-agent.interview.started
     description: >
@@ -92,6 +100,29 @@ channels:
       interviewCompletedInbound:
         $ref: '#/components/messages/InterviewCompletedInbound'
 
+  slackAgentInterviewTurnRecorded:
+    address: slack-agent.interview.turn_recorded
+    description: >
+      Appends newly recorded turns to the process's interview incrementally
+      (SA-16), instead of only receiving the full turn list at
+      `interview.completed`. Kafka delivery across topics is not ordered, so
+      the handler creates/starts the interview defensively and dedups by
+      turn order to stay idempotent under at-least-once redelivery.
+    messages:
+      interviewTurnRecorded:
+        $ref: '#/components/messages/InterviewTurnRecorded'
+
+  slackAgentTasksExtracted:
+    address: slack-agent.tasks.extracted
+    description: >
+      Replaces the full set of Jira/Trello tasks stored for the offboarding
+      process with the given tasks (SA-18). Tasks are extracted once per
+      interview and re-extraction always carries the current full set, so
+      this is a full-set replace rather than an incremental merge.
+    messages:
+      tasksExtracted:
+        $ref: '#/components/messages/TasksExtracted'
+
   slackAgentDossierGenerationRequested:
     address: slack-agent.dossier.generation_requested
     description: >
@@ -108,6 +139,124 @@ channels:
     messages:
       sopCreationRequested:
         $ref: '#/components/messages/SopCreationRequested'
+
+  slackAgentSopCandidateOffered:
+    address: slack-agent.sop.candidate_offered
+    description: >
+      Persists that a candidate message was offered to its author as a
+      possible SOP (SA-16), so a slack-agent restart before the author
+      responds doesn't lose the candidate.
+    messages:
+      sopCandidateOffered:
+        $ref: '#/components/messages/SopCandidateOffered'
+
+  slackAgentSopCandidateDecided:
+    address: slack-agent.sop.candidate_decided
+    description: >
+      Records the author's accept/reject decision for a previously offered
+      SOP candidate (SA-16). The SOP itself is still only created, on
+      acceptance, via `sop.creation_requested`.
+    messages:
+      sopCandidateDecided:
+        $ref: '#/components/messages/SopCandidateDecided'
+
+  slackAgentKnowledgeInteractionRegistered:
+    address: slack-agent.knowledge_graph.interaction_registered
+    description: >
+      Records that a person interacted with a topic (knows about it, or
+      answered about it in an interview) in the Neo4j knowledge graph.
+    messages:
+      knowledgeInteractionRegistered:
+        $ref: '#/components/messages/KnowledgeInteractionRegistered'
+
+  slackAgentKnowledgeDocumentRegistered:
+    address: slack-agent.knowledge_graph.document_registered
+    description: >
+      Records a document, its author, and the topics it references in the
+      knowledge graph.
+    messages:
+      knowledgeDocumentRegistered:
+        $ref: '#/components/messages/KnowledgeDocumentRegistered'
+
+  slackAgentKnowledgeChannelActivityRegistered:
+    address: slack-agent.knowledge_graph.channel_activity_registered
+    description: Records that a person is active in a Slack channel.
+    messages:
+      knowledgeChannelActivityRegistered:
+        $ref: '#/components/messages/KnowledgeChannelActivityRegistered'
+
+  # --- SA-20 / BE-23: monthly/annual review processes -------------------
+  # Own event types (not reused from offboarding's), since these processes
+  # are triggered by the backend's own scheduler (BE-24), not a Slack user
+  # command, and their interview/dossier flow is dispatched independently.
+
+  slackAgentMonthlyReviewTriggered:
+    address: slack-agent.monthly_review.triggered
+    description: Creates the monthly review process and starts it.
+    messages:
+      monthlyReviewTriggered:
+        $ref: '#/components/messages/MonthlyReviewTriggered'
+
+  slackAgentMonthlyReviewCancellationRequested:
+    address: slack-agent.monthly_review.cancellation_requested
+    description: Cancels the monthly review process.
+    messages:
+      monthlyReviewCancellationRequested:
+        $ref: '#/components/messages/MonthlyReviewCancellationRequested'
+
+  slackAgentMonthlyReviewInterviewCompleted:
+    address: slack-agent.monthly_review.interview_completed
+    description: >
+      Saves the collected interview answers and completes the interview.
+      Unlike offboarding, this does not submit the process anywhere:
+      MonthlyReviewProcess has no PENDING_REVISION state — it stays
+      IN_PROGRESS until `monthly_review.dossier_generation_requested`
+      completes it directly.
+    messages:
+      monthlyReviewInterviewCompleted:
+        $ref: '#/components/messages/MonthlyReviewInterviewCompleted'
+
+  slackAgentMonthlyReviewDossierGenerationRequested:
+    address: slack-agent.monthly_review.dossier_generation_requested
+    description: >
+      Generates and persists the dossier, then completes the monthly review
+      process (IN_PROGRESS -> FINISHED directly, no PENDING_REVISION).
+    messages:
+      monthlyReviewDossierGenerationRequested:
+        $ref: '#/components/messages/MonthlyReviewDossierGenerationRequested'
+
+  slackAgentAnnualReviewTriggered:
+    address: slack-agent.annual_review.triggered
+    description: Creates the annual review process and starts it.
+    messages:
+      annualReviewTriggered:
+        $ref: '#/components/messages/AnnualReviewTriggered'
+
+  slackAgentAnnualReviewCancellationRequested:
+    address: slack-agent.annual_review.cancellation_requested
+    description: Cancels the annual review process.
+    messages:
+      annualReviewCancellationRequested:
+        $ref: '#/components/messages/AnnualReviewCancellationRequested'
+
+  slackAgentAnnualReviewInterviewCompleted:
+    address: slack-agent.annual_review.interview_completed
+    description: >
+      Saves the collected interview answers, completes the interview, and
+      submits the annual review process for review (same state machine as
+      offboarding).
+    messages:
+      annualReviewInterviewCompleted:
+        $ref: '#/components/messages/AnnualReviewInterviewCompleted'
+
+  slackAgentAnnualReviewDossierGenerationRequested:
+    address: slack-agent.annual_review.dossier_generation_requested
+    description: >
+      Generates and persists the dossier, then completes the annual review
+      process (PENDING_REVISION -> FINISHED).
+    messages:
+      annualReviewDossierGenerationRequested:
+        $ref: '#/components/messages/AnnualReviewDossierGenerationRequested'
 
   # ---------------------------------------------------------------------
   # Outbound — published by backend, consumed by slack-agent.
@@ -141,12 +290,50 @@ channels:
       offboardingCompleted:
         $ref: '#/components/messages/OffboardingCompleted'
 
+  offboardingMonthlyReviewStateChanged:
+    address: offboarding.monthly_review.state_changed
+    description: The monthly review process transitioned to a new state.
+    messages:
+      monthlyReviewStateChanged:
+        $ref: '#/components/messages/MonthlyReviewStateChanged'
+
+  offboardingMonthlyReviewCompleted:
+    address: offboarding.monthly_review.completed
+    description: The monthly review process finished end-to-end.
+    messages:
+      monthlyReviewCompleted:
+        $ref: '#/components/messages/MonthlyReviewCompleted'
+
+  offboardingAnnualReviewStateChanged:
+    address: offboarding.annual_review.state_changed
+    description: The annual review process transitioned to a new state.
+    messages:
+      annualReviewStateChanged:
+        $ref: '#/components/messages/AnnualReviewStateChanged'
+
+  offboardingAnnualReviewCompleted:
+    address: offboarding.annual_review.completed
+    description: The annual review process finished end-to-end.
+    messages:
+      annualReviewCompleted:
+        $ref: '#/components/messages/AnnualReviewCompleted'
+
   offboardingSopCreated:
     address: offboarding.sop.created
     description: A SOP (Standard Operating Procedure) document was created.
     messages:
       sopCreated:
         $ref: '#/components/messages/SopCreated'
+
+  offboardingKnowledgeGraphUpdated:
+    address: offboarding.knowledge_graph.updated
+    description: >
+      Notifies that a node or relationship was written to the knowledge
+      graph. A lightweight, best-effort notification — published defensively
+      and never blocks the write it follows.
+    messages:
+      knowledgeGraphUpdated:
+        $ref: '#/components/messages/KnowledgeGraphUpdated'
 
   # ---------------------------------------------------------------------
   # Dead-letter queue — single fixed topic for both directions.
@@ -171,6 +358,13 @@ operations:
     messages:
       - $ref: '#/channels/slackAgentOffboardingTriggered/messages/offboardingTriggered'
 
+  onOffboardingCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentOffboardingCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentOffboardingCancellationRequested/messages/offboardingCancellationRequested'
+
   onInterviewStarted:
     action: receive
     channel:
@@ -185,6 +379,20 @@ operations:
     messages:
       - $ref: '#/channels/slackAgentInterviewCompleted/messages/interviewCompletedInbound'
 
+  onInterviewTurnRecorded:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentInterviewTurnRecorded'
+    messages:
+      - $ref: '#/channels/slackAgentInterviewTurnRecorded/messages/interviewTurnRecorded'
+
+  onTasksExtracted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentTasksExtracted'
+    messages:
+      - $ref: '#/channels/slackAgentTasksExtracted/messages/tasksExtracted'
+
   onDossierGenerationRequested:
     action: receive
     channel:
@@ -198,6 +406,97 @@ operations:
       $ref: '#/channels/slackAgentSopCreationRequested'
     messages:
       - $ref: '#/channels/slackAgentSopCreationRequested/messages/sopCreationRequested'
+
+  onSopCandidateOffered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentSopCandidateOffered'
+    messages:
+      - $ref: '#/channels/slackAgentSopCandidateOffered/messages/sopCandidateOffered'
+
+  onSopCandidateDecided:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentSopCandidateDecided'
+    messages:
+      - $ref: '#/channels/slackAgentSopCandidateDecided/messages/sopCandidateDecided'
+
+  onKnowledgeInteractionRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeInteractionRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeInteractionRegistered/messages/knowledgeInteractionRegistered'
+
+  onKnowledgeDocumentRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeDocumentRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeDocumentRegistered/messages/knowledgeDocumentRegistered'
+
+  onKnowledgeChannelActivityRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentKnowledgeChannelActivityRegistered'
+    messages:
+      - $ref: '#/channels/slackAgentKnowledgeChannelActivityRegistered/messages/knowledgeChannelActivityRegistered'
+
+  onMonthlyReviewTriggered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewTriggered'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewTriggered/messages/monthlyReviewTriggered'
+
+  onMonthlyReviewCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewCancellationRequested/messages/monthlyReviewCancellationRequested'
+
+  onMonthlyReviewInterviewCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewInterviewCompleted'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewInterviewCompleted/messages/monthlyReviewInterviewCompleted'
+
+  onMonthlyReviewDossierGenerationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentMonthlyReviewDossierGenerationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentMonthlyReviewDossierGenerationRequested/messages/monthlyReviewDossierGenerationRequested'
+
+  onAnnualReviewTriggered:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewTriggered'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewTriggered/messages/annualReviewTriggered'
+
+  onAnnualReviewCancellationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewCancellationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewCancellationRequested/messages/annualReviewCancellationRequested'
+
+  onAnnualReviewInterviewCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewInterviewCompleted'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewInterviewCompleted/messages/annualReviewInterviewCompleted'
+
+  onAnnualReviewDossierGenerationRequested:
+    action: receive
+    channel:
+      $ref: '#/channels/slackAgentAnnualReviewDossierGenerationRequested'
+    messages:
+      - $ref: '#/channels/slackAgentAnnualReviewDossierGenerationRequested/messages/annualReviewDossierGenerationRequested'
 
   sendOffboardingStateChanged:
     action: send
@@ -227,12 +526,47 @@ operations:
     messages:
       - $ref: '#/channels/offboardingOffboardingCompleted/messages/offboardingCompleted'
 
+  sendMonthlyReviewStateChanged:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingMonthlyReviewStateChanged'
+    messages:
+      - $ref: '#/channels/offboardingMonthlyReviewStateChanged/messages/monthlyReviewStateChanged'
+
+  sendMonthlyReviewCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingMonthlyReviewCompleted'
+    messages:
+      - $ref: '#/channels/offboardingMonthlyReviewCompleted/messages/monthlyReviewCompleted'
+
+  sendAnnualReviewStateChanged:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingAnnualReviewStateChanged'
+    messages:
+      - $ref: '#/channels/offboardingAnnualReviewStateChanged/messages/annualReviewStateChanged'
+
+  sendAnnualReviewCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingAnnualReviewCompleted'
+    messages:
+      - $ref: '#/channels/offboardingAnnualReviewCompleted/messages/annualReviewCompleted'
+
   sendSopCreated:
     action: send
     channel:
       $ref: '#/channels/offboardingSopCreated'
     messages:
       - $ref: '#/channels/offboardingSopCreated/messages/sopCreated'
+
+  sendKnowledgeGraphUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/offboardingKnowledgeGraphUpdated'
+    messages:
+      - $ref: '#/channels/offboardingKnowledgeGraphUpdated/messages/knowledgeGraphUpdated'
 
   sendDeadLetter:
     action: send
@@ -250,6 +584,13 @@ components:
       payload:
         $ref: '#/components/schemas/OffboardingTriggeredEnvelope'
 
+    OffboardingCancellationRequested:
+      name: offboarding.cancellation_requested
+      title: Offboarding cancellation requested
+      summary: Requests cancellation of an offboarding process.
+      payload:
+        $ref: '#/components/schemas/OffboardingCancellationRequestedEnvelope'
+
     InterviewStartedInbound:
       name: interview.started
       title: Interview started (inbound)
@@ -264,6 +605,20 @@ components:
       payload:
         $ref: '#/components/schemas/InterviewCompletedInboundEnvelope'
 
+    InterviewTurnRecorded:
+      name: interview.turn_recorded
+      title: Interview turn(s) recorded
+      summary: Delivers newly recorded interview turns to persist incrementally.
+      payload:
+        $ref: '#/components/schemas/InterviewTurnRecordedEnvelope'
+
+    TasksExtracted:
+      name: tasks.extracted
+      title: Tasks extracted
+      summary: Delivers the full set of Jira/Trello tasks extracted for a process.
+      payload:
+        $ref: '#/components/schemas/TasksExtractedEnvelope'
+
     DossierGenerationRequested:
       name: dossier.generation_requested
       title: Dossier generation requested
@@ -277,6 +632,99 @@ components:
       summary: Requests creation of a SOP from a Slack-originated request.
       payload:
         $ref: '#/components/schemas/SopCreationRequestedEnvelope'
+
+    SopCandidateOffered:
+      name: sop.candidate_offered
+      title: SOP candidate offered
+      summary: A candidate message was offered to its author as a possible SOP.
+      payload:
+        $ref: '#/components/schemas/SopCandidateOfferedEnvelope'
+
+    SopCandidateDecided:
+      name: sop.candidate_decided
+      title: SOP candidate decided
+      summary: The author accepted or rejected a previously offered SOP candidate.
+      payload:
+        $ref: '#/components/schemas/SopCandidateDecidedEnvelope'
+
+    KnowledgeInteractionRegistered:
+      name: knowledge_graph.interaction_registered
+      title: Knowledge graph interaction registered
+      summary: Records that a person interacted with a topic in the knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeInteractionRegisteredEnvelope'
+
+    KnowledgeDocumentRegistered:
+      name: knowledge_graph.document_registered
+      title: Knowledge graph document registered
+      summary: >
+        Records a document, its author, and the topics it references in the
+        knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeDocumentRegisteredEnvelope'
+
+    KnowledgeChannelActivityRegistered:
+      name: knowledge_graph.channel_activity_registered
+      title: Knowledge graph channel activity registered
+      summary: Records that a person is active in a Slack channel.
+      payload:
+        $ref: '#/components/schemas/KnowledgeChannelActivityRegisteredEnvelope'
+
+    MonthlyReviewTriggered:
+      name: monthly_review.triggered
+      title: Monthly review triggered
+      summary: Requests creation of a new monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewTriggeredEnvelope'
+
+    MonthlyReviewCancellationRequested:
+      name: monthly_review.cancellation_requested
+      title: Monthly review cancellation requested
+      summary: Requests cancellation of a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewCancellationRequestedEnvelope'
+
+    MonthlyReviewInterviewCompleted:
+      name: monthly_review.interview_completed
+      title: Monthly review interview completed
+      summary: Delivers the collected interview turns for a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewInterviewCompletedEnvelope'
+
+    MonthlyReviewDossierGenerationRequested:
+      name: monthly_review.dossier_generation_requested
+      title: Monthly review dossier generation requested
+      summary: Requests dossier generation for a monthly review process.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewDossierGenerationRequestedEnvelope'
+
+    AnnualReviewTriggered:
+      name: annual_review.triggered
+      title: Annual review triggered
+      summary: Requests creation of a new annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewTriggeredEnvelope'
+
+    AnnualReviewCancellationRequested:
+      name: annual_review.cancellation_requested
+      title: Annual review cancellation requested
+      summary: Requests cancellation of an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewCancellationRequestedEnvelope'
+
+    AnnualReviewInterviewCompleted:
+      name: annual_review.interview_completed
+      title: Annual review interview completed
+      summary: Delivers the collected interview turns for an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewInterviewCompletedEnvelope'
+
+    AnnualReviewDossierGenerationRequested:
+      name: annual_review.dossier_generation_requested
+      title: Annual review dossier generation requested
+      summary: Requests dossier generation for an annual review process.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewDossierGenerationRequestedEnvelope'
 
     OffboardingStateChanged:
       name: offboarding.state_changed
@@ -306,12 +754,47 @@ components:
       payload:
         $ref: '#/components/schemas/OffboardingCompletedEnvelope'
 
+    MonthlyReviewStateChanged:
+      name: monthly_review.state_changed
+      title: Monthly review state changed
+      summary: The monthly review process transitioned to a new state.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewStateChangedEnvelope'
+
+    MonthlyReviewCompleted:
+      name: monthly_review.completed
+      title: Monthly review completed
+      summary: The monthly review process finished end-to-end.
+      payload:
+        $ref: '#/components/schemas/MonthlyReviewCompletedEnvelope'
+
+    AnnualReviewStateChanged:
+      name: annual_review.state_changed
+      title: Annual review state changed
+      summary: The annual review process transitioned to a new state.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewStateChangedEnvelope'
+
+    AnnualReviewCompleted:
+      name: annual_review.completed
+      title: Annual review completed
+      summary: The annual review process finished end-to-end.
+      payload:
+        $ref: '#/components/schemas/AnnualReviewCompletedEnvelope'
+
     SopCreated:
       name: sop.created
       title: SOP created
       summary: A SOP document was created.
       payload:
         $ref: '#/components/schemas/SopCreatedEnvelope'
+
+    KnowledgeGraphUpdated:
+      name: knowledge_graph.updated
+      title: Knowledge graph updated
+      summary: A node or relationship was written to the knowledge graph.
+      payload:
+        $ref: '#/components/schemas/KnowledgeGraphUpdatedEnvelope'
 
     DeadLetter:
       name: dead_letter
@@ -320,20 +803,9 @@ components:
         A message that failed deserialization or handling, republished
         verbatim with failure metadata in headers.
       headers:
-        type: object
-        properties:
-          source_topic:
-            type: string
-            description: The original topic the failing message was consumed from.
-          error:
-            type: string
-            description: String representation of the exception that caused the failure.
-        required: [source_topic, error]
+        $ref: '#/components/schemas/DeadLetterHeaders'
       payload:
-        description: >
-          The original, unmodified message bytes. May or may not be a valid
-          DomainEvent envelope — that is exactly what failed.
-        type: object
+        $ref: '#/components/schemas/DeadLetterPayload'
 
   schemas:
     DomainEventEnvelopeBase:
@@ -412,6 +884,25 @@ components:
               $ref: '#/components/schemas/OffboardingTriggeredPayload'
           required: [payload]
 
+    OffboardingCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    OffboardingCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: offboarding.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/OffboardingCancellationRequestedPayload'
+          required: [payload]
+
     InterviewStartedInboundPayload:
       type: object
       description: >
@@ -458,6 +949,77 @@ components:
               $ref: '#/components/schemas/InterviewCompletedInboundPayload'
           required: [payload]
 
+    InterviewTurnRecordedPayload:
+      type: object
+      description: >
+        Same shape as InterviewCompletedInboundPayload — turns are appended
+        to the process's interview rather than replacing the full set.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    InterviewTurnRecordedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: interview.turn_recorded
+            payload:
+              $ref: '#/components/schemas/InterviewTurnRecordedPayload'
+          required: [payload]
+
+    OffboardingTask:
+      type: object
+      properties:
+        id:
+          type: string
+          description: External Jira issue key or Trello card id.
+        title:
+          type: string
+        source:
+          type: string
+          enum: [jira, trello]
+        status:
+          type: string
+        url:
+          type: string
+        description:
+          type: string
+      required: [id, title, source, status]
+
+    TasksExtractedPayload:
+      type: object
+      description: >
+        Full set of tasks extracted for the process (SA-18) — replaces any
+        prior set stored for it rather than merging incrementally.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/OffboardingTask'
+      required: [process_id, tasks]
+
+    TasksExtractedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: tasks.extracted
+            payload:
+              $ref: '#/components/schemas/TasksExtractedPayload'
+          required: [payload]
+
     DossierGenerationRequestedPayload:
       type: object
       description: >
@@ -480,9 +1042,193 @@ components:
               $ref: '#/components/schemas/DossierGenerationRequestedPayload'
           required: [payload]
 
+    # --- SA-20 / BE-23: monthly/annual review inbound payloads ----------
+
+    MonthlyReviewTriggeredPayload:
+      type: object
+      properties:
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        employee_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required: [employee_id, manager_id]
+
+    MonthlyReviewTriggeredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.triggered
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewTriggeredPayload'
+          required: [payload]
+
+    MonthlyReviewCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    MonthlyReviewCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewCancellationRequestedPayload'
+          required: [payload]
+
+    MonthlyReviewInterviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    MonthlyReviewInterviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.interview_completed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewInterviewCompletedPayload'
+          required: [payload]
+
+    MonthlyReviewDossierGenerationRequestedPayload:
+      type: object
+      description: >
+        Only `process_id` is carried — the interview content is read from
+        the database (source of truth), not from the event payload.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    MonthlyReviewDossierGenerationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.dossier_generation_requested
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewDossierGenerationRequestedPayload'
+          required: [payload]
+
+    AnnualReviewTriggeredPayload:
+      type: object
+      properties:
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        employee_name:
+          type: string
+          nullable: true
+        manager_name:
+          type: string
+          nullable: true
+      required: [employee_id, manager_id]
+
+    AnnualReviewTriggeredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.triggered
+            payload:
+              $ref: '#/components/schemas/AnnualReviewTriggeredPayload'
+          required: [payload]
+
+    AnnualReviewCancellationRequestedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    AnnualReviewCancellationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.cancellation_requested
+            payload:
+              $ref: '#/components/schemas/AnnualReviewCancellationRequestedPayload'
+          required: [payload]
+
+    AnnualReviewInterviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        turns:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewTurn'
+      required: [process_id]
+
+    AnnualReviewInterviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.interview_completed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewInterviewCompletedPayload'
+          required: [payload]
+
+    AnnualReviewDossierGenerationRequestedPayload:
+      type: object
+      description: >
+        Only `process_id` is carried — the interview content is read from
+        the database (source of truth), not from the event payload.
+      properties:
+        process_id:
+          type: string
+          format: uuid
+      required: [process_id]
+
+    AnnualReviewDossierGenerationRequestedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.dossier_generation_requested
+            payload:
+              $ref: '#/components/schemas/AnnualReviewDossierGenerationRequestedPayload'
+          required: [payload]
+
     SopCreationRequestedPayload:
       type: object
       properties:
+        title:
+          type: string
         content:
           type: string
         author:
@@ -494,7 +1240,7 @@ components:
           items:
             type: string
           nullable: true
-      required: [content, author, origin_channel]
+      required: [title, content, author, origin_channel]
 
     SopCreationRequestedEnvelope:
       allOf:
@@ -505,6 +1251,148 @@ components:
               const: sop.creation_requested
             payload:
               $ref: '#/components/schemas/SopCreationRequestedPayload'
+          required: [payload]
+
+    SopCandidateOfferedPayload:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        author_id:
+          type: string
+        message_ts:
+          type: string
+          description: Slack message timestamp identifying the candidate, unique within its channel.
+        content:
+          type: string
+      required: [channel_id, author_id, message_ts, content]
+
+    SopCandidateOfferedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.candidate_offered
+            payload:
+              $ref: '#/components/schemas/SopCandidateOfferedPayload'
+          required: [payload]
+
+    SopCandidateDecidedPayload:
+      type: object
+      properties:
+        channel_id:
+          type: string
+        message_ts:
+          type: string
+        accepted:
+          type: boolean
+      required: [channel_id, message_ts, accepted]
+
+    SopCandidateDecidedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: sop.candidate_decided
+            payload:
+              $ref: '#/components/schemas/SopCandidateDecidedPayload'
+          required: [payload]
+
+    KnowledgeInteractionRegisteredPayload:
+      type: object
+      properties:
+        person_id:
+          type: string
+          description: External Slack user ID of the person.
+        person_name:
+          type: string
+        topic_name:
+          type: string
+        interaction_type:
+          type: string
+          enum: [knows, answered]
+          description: >
+            "knows" creates/strengthens a KNOWS_ABOUT relationship; "answered"
+            creates an ANSWERED_ABOUT relationship (from an interview answer).
+        department:
+          type: string
+          nullable: true
+        topic_description:
+          type: string
+          nullable: true
+      required: [person_id, person_name, topic_name, interaction_type]
+
+    KnowledgeInteractionRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.interaction_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeInteractionRegisteredPayload'
+          required: [payload]
+
+    KnowledgeDocumentRegisteredPayload:
+      type: object
+      properties:
+        document_id:
+          type: string
+        title:
+          type: string
+        author_id:
+          type: string
+          description: External Slack user ID of the document's author.
+        author_name:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+          description: Topic names this document references.
+        url:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+      required: [document_id, title, author_id, author_name, topics]
+
+    KnowledgeDocumentRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.document_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeDocumentRegisteredPayload'
+          required: [payload]
+
+    KnowledgeChannelActivityRegisteredPayload:
+      type: object
+      properties:
+        person_id:
+          type: string
+        person_name:
+          type: string
+        channel_id:
+          type: string
+        channel_name:
+          type: string
+      required: [person_id, person_name, channel_id, channel_name]
+
+    KnowledgeChannelActivityRegisteredEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.channel_activity_registered
+            payload:
+              $ref: '#/components/schemas/KnowledgeChannelActivityRegisteredPayload'
           required: [payload]
 
     # --- Outbound payloads --------------------------------------------
@@ -614,6 +1502,118 @@ components:
               $ref: '#/components/schemas/OffboardingCompletedPayload'
           required: [payload]
 
+    # --- SA-20 / BE-23: monthly/annual review outbound payloads ----------
+
+    MonthlyReviewStateChangedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        previous_state:
+          type: string
+          enum: [not_started, in_progress, finished, cancelled]
+        new_state:
+          type: string
+          enum: [not_started, in_progress, finished, cancelled]
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+      required: [process_id, previous_state, new_state, employee_id, manager_id]
+
+    MonthlyReviewStateChangedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.state_changed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewStateChangedPayload'
+          required: [payload]
+
+    MonthlyReviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        dossier_id:
+          type: string
+          format: uuid
+      required: [process_id, employee_id, manager_id, dossier_id]
+
+    MonthlyReviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: monthly_review.completed
+            payload:
+              $ref: '#/components/schemas/MonthlyReviewCompletedPayload'
+          required: [payload]
+
+    AnnualReviewStateChangedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        previous_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        new_state:
+          type: string
+          enum: [not_started, in_progress, pending_revision, finished, cancelled]
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+      required: [process_id, previous_state, new_state, employee_id, manager_id]
+
+    AnnualReviewStateChangedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.state_changed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewStateChangedPayload'
+          required: [payload]
+
+    AnnualReviewCompletedPayload:
+      type: object
+      properties:
+        process_id:
+          type: string
+          format: uuid
+        employee_id:
+          type: string
+        manager_id:
+          type: string
+        dossier_id:
+          type: string
+          format: uuid
+      required: [process_id, employee_id, manager_id, dossier_id]
+
+    AnnualReviewCompletedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: annual_review.completed
+            payload:
+              $ref: '#/components/schemas/AnnualReviewCompletedPayload'
+          required: [payload]
+
     SopCreatedPayload:
       type: object
       description: >
@@ -648,3 +1648,44 @@ components:
             payload:
               $ref: '#/components/schemas/SopCreatedPayload'
           required: [payload]
+
+    KnowledgeGraphUpdatedPayload:
+      type: object
+      properties:
+        entity_type:
+          type: string
+          enum: [person, document]
+        entity_id:
+          type: string
+        action:
+          type: string
+          enum: [interaction, created, activity]
+      required: [entity_type, entity_id, action]
+
+    KnowledgeGraphUpdatedEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/DomainEventEnvelopeBase'
+        - type: object
+          properties:
+            event_type:
+              const: knowledge_graph.updated
+            payload:
+              $ref: '#/components/schemas/KnowledgeGraphUpdatedPayload'
+          required: [payload]
+
+    DeadLetterHeaders:
+      type: object
+      properties:
+        source_topic:
+          type: string
+          description: The original topic the failing message was consumed from.
+        error:
+          type: string
+          description: String representation of the exception that caused the failure.
+      required: [source_topic, error]
+
+    DeadLetterPayload:
+      description: >
+        The original, unmodified message bytes. May or may not be a valid
+        DomainEvent envelope — that is exactly what failed.
+      type: object

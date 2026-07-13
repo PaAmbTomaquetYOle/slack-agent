@@ -209,6 +209,32 @@ describe('GeminiInterviewAgent', () => {
       await expect(agent.nextTurn(makeFirstTurnContext())).rejects.toBeInstanceOf(AuthenticationRequiredError);
     });
 
+    it('extracts structured tasks from a well-formed CollaborationTask JSON tool result (SA-18)', async () => {
+      vi.mocked(mcpService.discoverTools).mockResolvedValue([jiraTool]);
+      const toolResult: McpToolResult = {
+        content: [{
+          type: 'text',
+          text: JSON.stringify([
+            { task_id: 'PROJ-1', title: 'Fix the thing', status: 'in_progress', url: 'https://jira/PROJ-1', description: 'desc', collaboration_tool: 'JIRA' },
+          ]),
+        }],
+        isError: false,
+      };
+      vi.mocked(mcpService.callTool).mockResolvedValue(toolResult);
+      vi.mocked(client.models.generateContent)
+        .mockResolvedValueOnce(
+          makeResponse(undefined, [{ name: 'get_pending_jira_issues', args: { assignee: 'Alice' } }]),
+        )
+        .mockResolvedValueOnce(makeResponse(undefined))
+        .mockResolvedValueOnce(makeResponse(JSON.stringify(VALID_RESULT)));
+
+      const result = await agent.nextTurn(makeFirstTurnContext());
+
+      expect(result.tasks).toEqual([
+        { id: 'PROJ-1', title: 'Fix the thing', source: 'jira', status: 'in_progress', url: 'https://jira/PROJ-1', description: 'desc' },
+      ]);
+    });
+
     it('degrades gracefully (no tools offered) when MCP tool discovery fails', async () => {
       vi.mocked(mcpService.discoverTools).mockRejectedValue(new Error('mcp-server unreachable'));
       vi.mocked(client.models.generateContent).mockResolvedValue(makeResponse(JSON.stringify(VALID_RESULT)));

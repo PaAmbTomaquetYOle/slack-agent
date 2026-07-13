@@ -5,10 +5,21 @@ export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStarte
 export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOffboardingCancellationRequestedForwarder';
 export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
 export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
+export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder';
+export { createKafkaTasksExtractedForwarder } from './kafkaTasksExtractedForwarder';
 export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
-export { createInterviewKnowledgeGraphForwarder, createSopKnowledgeGraphForwarder } from './kafkaKnowledgeGraphForwarders';
+export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder';
+export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder';
+export {
+  createInterviewKnowledgeGraphForwarder,
+  createSopKnowledgeGraphForwarder,
+  createKafkaChannelActivityRegisteredForwarder,
+} from './kafkaKnowledgeGraphForwarders';
 export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder';
 export { createDossierGenerationTriggerHandler } from './dossierGenerationTriggerHandler';
+export { createKafkaReviewInterviewCompletedForwarder } from './kafkaReviewInterviewCompletedForwarder';
+export { createKafkaReviewDossierGenerationRequestedForwarder } from './kafkaReviewDossierGenerationRequestedForwarder';
+export { createReviewDossierGenerationTriggerHandler } from './reviewDossierGenerationTriggerHandler';
 export type { IInboundEventHandler } from './inboundEventHandler';
 export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher';
 export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler';
@@ -16,3 +27,4 @@ export { OffboardingCompletedHandler } from './handlers/offboardingCompletedHand
 export { InterviewCompletedHandler } from './handlers/interviewCompletedHandler';
 export { DossierGeneratedHandler } from './handlers/dossierGeneratedHandler';
 export { SopCreatedHandler } from './handlers/sopCreatedHandler';
+export { ReviewStateChangedHandler } from './handlers/reviewStateChangedHandler';

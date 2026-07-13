@@ -2,9 +2,13 @@ export type { IMcpClient } from './mcpClient';
 export type { IOffboardingRepository } from './offboardingRepository';
 export type { IOffboardingProcessRepository } from './offboardingRepository';
 export type { IInterviewRepository } from './interviewRepository';
+export type { ITaskRepository } from './taskRepository';
 export type { IInterviewSessionStore, InterviewSession } from './interviewSessionStore';
-export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult } from './interviewAgent';
+export type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult, ExtractedTask } from './interviewAgent';
+export type { IReviewInterviewAgent, ReviewInterviewAgentContext } from './reviewInterviewAgent';
+export type { IActiveReviewStore } from './activeReviewStore';
 export type { IDossierRepository } from './dossierRepository';
+export type { ISopCandidateReadRepository, PendingSopCandidate } from './sopCandidateReadRepository';
 export type { IMessagingPort, EphemeralAction } from './messagingPort';
 export type { IUserInfoProvider } from './userInfoProvider';
 export type { IEventPublisher } from './eventPublisher';
@@ -20,4 +24,6 @@ export type {
   KnowledgeGraphExpert,
   KnowledgeGraphPage,
   KnowledgeGraphPersonProfile,
+  KnowledgeGraphPersonAnalytics,
+  KnowledgeGraphSuccessor,
 } from './knowledgeGraphReadPort';

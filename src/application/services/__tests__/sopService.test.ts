@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SopService } from '../sopService';
 import type { IMessagingPort } from '../../ports';
 import type { IDomainEventBus } from '../../events';
-import { ExpertResponseDetector, SopCreationRequestedEvent } from '../../../domain';
+import { ExpertResponseDetector, SopCreationRequestedEvent, SopCandidateDecidedEvent } from '../../../domain';
 
 const DETECTOR_CONFIG = { minLength: 20, keywords: ['deploy'], minReactions: 3 };
 const HIGH_VALUE_TEXT = 'To deploy the service, run the pipeline script in staging first.';
@@ -78,20 +78,30 @@ describe('SopService', () => {
       await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, 'shared-ts');
       await service.handleChannelMessage('C-other-monitored', 'U2', HIGH_VALUE_TEXT, 'shared-ts');
 
+      vi.mocked(eventBus.publish).mockClear();
       await service.handleSopDecision('C-monitored', 'shared-ts', true);
 
       expect(eventBus.publish).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U1' }) }),
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          authorId: expect.objectContaining({ value: 'U1' }),
+        }),
       );
       expect(eventBus.publish).not.toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U2' }) }),
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          authorId: expect.objectContaining({ value: 'U2' }),
+        }),
       );
 
       vi.mocked(eventBus.publish).mockClear();
       await service.handleSopDecision('C-other-monitored', 'shared-ts', true);
 
       expect(eventBus.publish).toHaveBeenCalledWith(
-        expect.objectContaining({ authorId: expect.objectContaining({ value: 'U2' }) }),
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          authorId: expect.objectContaining({ value: 'U2' }),
+        }),
       );
     });
   });
@@ -151,16 +161,40 @@ describe('SopService', () => {
           authorId: expect.objectContaining({ value: 'U1' }),
           messageText: HIGH_VALUE_TEXT,
           messageTs: '333.1',
+          title: HIGH_VALUE_TEXT,
         }),
       );
     });
 
-    it('does not publish anything when declined', async () => {
+    it('uses the author-supplied title when given', async () => {
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '333.5');
+
+      await service.handleSopDecision('C-monitored', '333.5', true, 'Custom title');
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          title: 'Custom title',
+        }),
+      );
+    });
+
+    it('publishes SopCandidateDecidedEvent but not SopCreationRequestedEvent when declined', async () => {
       await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '333.2');
+      vi.mocked(eventBus.publish).mockClear();
 
       await service.handleSopDecision('C-monitored', '333.2', false);
 
-      expect(eventBus.publish).not.toHaveBeenCalled();
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: SopCandidateDecidedEvent.EVENT_NAME,
+          messageTs: '333.2',
+          accepted: false,
+        }),
+      );
+      expect(eventBus.publish).not.toHaveBeenCalledWith(
+        expect.objectContaining({ eventName: SopCreationRequestedEvent.EVENT_NAME }),
+      );
     });
 
     it('does nothing for an unknown candidate', async () => {
@@ -191,10 +225,73 @@ describe('SopService', () => {
     });
   });
 
+  describe('deriveSopTitle', () => {
+    it('derives a default title from the tracked candidate text', async () => {
+      await service.handleChannelMessage('C-monitored', 'U1', HIGH_VALUE_TEXT, '444.1');
+
+      expect(service.deriveSopTitle('C-monitored', '444.1')).toBe(HIGH_VALUE_TEXT);
+    });
+
+    it('returns null for an untracked candidate', () => {
+      expect(service.deriveSopTitle('C-monitored', 'unknown-ts')).toBeNull();
+    });
+  });
+
   describe('isMonitoredChannel', () => {
     it('returns true only for configured channels', () => {
       expect(service.isMonitoredChannel('C-monitored')).toBe(true);
       expect(service.isMonitoredChannel('C-other')).toBe(false);
+    });
+  });
+
+  describe('rehydrate', () => {
+    it('seeds the cache from the backend so a decision after a restart still resolves', async () => {
+      const candidateReadRepository = {
+        findPending: vi.fn().mockResolvedValue([
+          { channelId: 'C-monitored', authorId: 'U1', content: 'Rotate secrets every 90 days', messageTs: 'persisted-ts' },
+        ]),
+      };
+      service = new SopService(
+        new ExpertResponseDetector(DETECTOR_CONFIG),
+        messaging,
+        eventBus,
+        ['C-monitored'],
+        undefined,
+        candidateReadRepository,
+      );
+
+      await service.rehydrate();
+      await service.handleSopDecision('C-monitored', 'persisted-ts', true);
+
+      expect(eventBus.publish).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: SopCreationRequestedEvent.EVENT_NAME,
+          messageTs: 'persisted-ts',
+        }),
+      );
+    });
+
+    it('is a no-op when no read repository was configured', async () => {
+      await expect(service.rehydrate()).resolves.not.toThrow();
+    });
+
+    it('logs and swallows errors instead of blocking startup', async () => {
+      const candidateReadRepository = {
+        findPending: vi.fn().mockRejectedValue(new Error('backend unavailable')),
+      };
+      service = new SopService(
+        new ExpertResponseDetector(DETECTOR_CONFIG),
+        messaging,
+        eventBus,
+        ['C-monitored'],
+        undefined,
+        candidateReadRepository,
+      );
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      await expect(service.rehydrate()).resolves.not.toThrow();
+
+      errorSpy.mockRestore();
     });
   });
 });
