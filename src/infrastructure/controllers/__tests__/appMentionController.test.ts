@@ -24,7 +24,7 @@ describe('AppMentionController', () => {
       say,
     });
 
-    expect(say).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('Hola') }));
+    expect(say).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('Hi') }));
   });
 
   it('routes "who knows about X" to the expert recommendation service', async () => {
