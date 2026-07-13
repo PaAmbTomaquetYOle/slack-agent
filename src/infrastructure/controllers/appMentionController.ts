@@ -3,6 +3,7 @@ import type {
   IAuthService,
   IExpertRecommendationService,
   IMcpService,
+  IOffboardingOrchestrator,
   IOffboardingService,
 } from '../../application/serviceInterfaces/index.js';
 import type { AuthProvider, McpToolResult } from '../../domain/index.js';
@@ -75,6 +76,7 @@ export class AppMentionController extends BaseController {
   readonly #mcpService: IMcpService | undefined;
   readonly #authService: IAuthService | undefined;
   readonly #knowledgeGraphUrl: string | undefined;
+  readonly #orchestrator: IOffboardingOrchestrator | undefined;
 
   constructor(
     expertRecommendationService?: IExpertRecommendationService,
@@ -82,6 +84,7 @@ export class AppMentionController extends BaseController {
     mcpService?: IMcpService,
     authService?: IAuthService,
     knowledgeGraphUrl?: string,
+    orchestrator?: IOffboardingOrchestrator,
   ) {
     super();
     this.#expertRecommendationService = expertRecommendationService;
@@ -89,6 +92,7 @@ export class AppMentionController extends BaseController {
     this.#mcpService = mcpService;
     this.#authService = authService;
     this.#knowledgeGraphUrl = knowledgeGraphUrl;
+    this.#orchestrator = orchestrator;
   }
 
   register(app: App): void {
@@ -169,10 +173,16 @@ export class AppMentionController extends BaseController {
         return;
       }
 
-      await say({
-        text: AppMentionController.#helpText(),
-        thread_ts: event.ts,
-      });
+      if (this.#orchestrator) {
+        await this.#orchestrator.handleInterviewMessage(
+          userId,
+          AppMentionController.#withoutAppMention(event.text),
+          event.channel,
+        );
+        return;
+      }
+
+      await say({ text: AppMentionController.#helpText(), thread_ts: event.ts });
     });
   }
 

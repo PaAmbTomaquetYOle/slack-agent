@@ -422,6 +422,7 @@ export class AppFactory {
       mcpService,
       authService,
       `${SETTINGS.KNOWLEDGE_GRAPH_BASE_URL}/knowledge-graph`,
+      orchestrator,
     ).register(app);
 
     new DirectMessageController(authService, orchestrator, reviewInterviewService).register(app);

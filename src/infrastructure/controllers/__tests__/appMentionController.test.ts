@@ -3,6 +3,7 @@ import type {
   IAuthService,
   IExpertRecommendationService,
   IMcpService,
+  IOffboardingOrchestrator,
   IOffboardingService,
 } from '../../../application/serviceInterfaces/index.js';
 import { AppMentionController } from '../appMentionController.js';
@@ -14,6 +15,15 @@ function makeExpertRecommendationServiceMock(): IExpertRecommendationService {
 
 function makeOffboardingServiceMock(): IOffboardingService {
   return { startOffboarding: vi.fn().mockResolvedValue(undefined) };
+}
+
+function makeOffboardingOrchestratorMock(): IOffboardingOrchestrator {
+  return {
+    recover: vi.fn(),
+    handleInterviewMessage: vi.fn().mockResolvedValue(undefined),
+    onDossierGenerated: vi.fn(),
+    onOffboardingCompleted: vi.fn(),
+  };
 }
 
 function makeMcpServiceMock(): IMcpService {
@@ -254,5 +264,23 @@ describe('AppMentionController', () => {
 
     expect(service.findExperts).not.toHaveBeenCalled();
     expect(say).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('who knows about') }));
+  });
+
+  it('routes unmatched app mentions to the offboarding orchestrator as channel interview replies', async () => {
+    const orchestrator = makeOffboardingOrchestratorMock();
+    new AppMentionController(undefined, undefined, undefined, undefined, undefined, orchestrator).register(app);
+    const say = makeSayFn();
+
+    await trigger('event', 'app_mention', {
+      event: { user: 'UKIRE', text: '<@BOT> I own the billing runbook and release checklist.', channel: 'C1', ts: '1' },
+      say,
+    });
+
+    expect(orchestrator.handleInterviewMessage).toHaveBeenCalledWith(
+      'UKIRE',
+      'I own the billing runbook and release checklist.',
+      'C1',
+    );
+    expect(say).not.toHaveBeenCalled();
   });
 });
