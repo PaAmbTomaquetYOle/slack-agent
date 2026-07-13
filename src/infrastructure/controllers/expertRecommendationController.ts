@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import type { IExpertRecommendationService } from '../../application/serviceInterfaces';
-import { BaseController } from './baseController';
+import type { IExpertRecommendationService } from '../../application/serviceInterfaces/index.js';
+import { BaseController } from './baseController.js';
 
 const USAGE_HINT = 'Usage: `/find-expert <topic>`, e.g. `/find-expert kubernetes`.';
 

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { HttpOffboardingProcessRepository } from '../httpOffboardingProcessRepository';
-import { ProcessId } from '../../../domain';
-import { BackendConnectionError, BackendError } from '../../http';
-import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../../http';
+import { HttpOffboardingProcessRepository } from '../httpOffboardingProcessRepository.js';
+import { ProcessId } from '../../../domain/index.js';
+import { BackendConnectionError, BackendError } from '../../http/index.js';
+import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../../http/index.js';
 
 function makeAxiosMock() {
   return {

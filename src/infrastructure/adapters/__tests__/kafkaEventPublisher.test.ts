@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Producer } from 'kafkajs';
-import { KafkaEventPublisher } from '../kafkaEventPublisher';
-import { OFFBOARDING_TRIGGERED, DOSSIER_GENERATION_REQUESTED } from '../../../domain';
-import type { OutboundEvent } from '../../../domain';
+import { KafkaEventPublisher } from '../kafkaEventPublisher.js';
+import { OFFBOARDING_TRIGGERED, DOSSIER_GENERATION_REQUESTED } from '../../../domain/index.js';
+import type { OutboundEvent } from '../../../domain/index.js';
 
 function makeProducerMock() {
   return {

@@ -1,7 +1,7 @@
-import { TopicQuery, InvalidValueObjectError } from '../../domain';
-import type { McpToolResult } from '../../domain';
-import type { IMessagingPort } from '../ports';
-import type { IMcpService, IExpertRecommendationService } from '../serviceInterfaces';
+import { TopicQuery, InvalidValueObjectError } from '../../domain/index.js';
+import type { McpToolResult } from '../../domain/index.js';
+import type { IMessagingPort } from '../ports/index.js';
+import type { IMcpService, IExpertRecommendationService } from '../serviceInterfaces/index.js';
 
 const DEFAULT_MAX_EXPERTS = 3;
 const NO_TOPIC_MESSAGE = 'Please provide a topic, e.g. `/find-expert kubernetes`.';

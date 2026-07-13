@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IQuestionSuggestionService } from '../../../application/serviceInterfaces';
-import { QuestionSuggestionController } from '../questionSuggestionController';
-import { makeAppMock } from '../../../testing/slackMocks';
+import type { IQuestionSuggestionService } from '../../../application/serviceInterfaces/index.js';
+import { QuestionSuggestionController } from '../questionSuggestionController.js';
+import { makeAppMock } from '../../../testing/slackMocks.js';
 
 function makeQuestionSuggestionServiceMock(): IQuestionSuggestionService {
   return { handleChannelMessage: vi.fn().mockResolvedValue(undefined) };

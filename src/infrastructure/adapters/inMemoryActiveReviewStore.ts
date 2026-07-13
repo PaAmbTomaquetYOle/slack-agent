@@ -1,5 +1,5 @@
-import type { ProcessId, UserId, ActiveReview, ReviewScope } from '../../domain';
-import type { IActiveReviewStore } from '../../application/ports';
+import type { ProcessId, UserId, ActiveReview, ReviewScope } from '../../domain/index.js';
+import type { IActiveReviewStore } from '../../application/ports/index.js';
 
 /**
  * Holds each in-flight review process's employee mapping in memory (SA-20) — see

@@ -6,10 +6,10 @@ import type {
   InterviewAgentTurnResult,
   IUserInfoProvider,
   IMessagingPort,
-} from '../ports';
-import type { IDomainEventBus } from '../events';
-import type { IInterviewService } from '../serviceInterfaces';
-import type { InterviewTopic, InterviewTurn, OffboardingProcess } from '../../domain';
+} from '../ports/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import type { IInterviewService } from '../serviceInterfaces/index.js';
+import type { InterviewTopic, InterviewTurn, OffboardingProcess } from '../../domain/index.js';
 import {
   INTERVIEW_TOPICS,
   InterviewCompletedEvent,
@@ -18,7 +18,7 @@ import {
   TasksExtractedEvent,
   AuthenticationRequiredError,
   Task,
-} from '../../domain';
+} from '../../domain/index.js';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 

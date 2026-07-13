@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Producer } from 'kafkajs';
-import { KafkaDeadLetterQueue } from '../kafkaDeadLetterQueue';
+import { KafkaDeadLetterQueue } from '../kafkaDeadLetterQueue.js';
 
 function makeProducerMock() {
   return { send: vi.fn().mockResolvedValue(undefined) } as unknown as Producer;

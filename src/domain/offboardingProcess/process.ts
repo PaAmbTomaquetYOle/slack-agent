@@ -1,9 +1,9 @@
-import type { DomainEvent } from '../events';
-import { OffboardingStartedEvent } from '../events';
-import { NotStartedState, InProgressState, PendingRevisionState, FinishedState, CancelledState } from './state';
-import type { OffboardingProcessState } from './state';
-import type { ProcessId, UserId, ChannelId, InterviewId, DossierId } from '../valueObjects';
-import { Task } from './task';
+import type { DomainEvent } from '../events/index.js';
+import { OffboardingStartedEvent } from '../events/index.js';
+import { NotStartedState, InProgressState, PendingRevisionState, FinishedState, CancelledState } from './state/index.js';
+import type { OffboardingProcessState } from './state/index.js';
+import type { ProcessId, UserId, ChannelId, InterviewId, DossierId } from '../valueObjects/index.js';
+import { Task } from './task.js';
 
 export class OffboardingProcess {
   readonly #id: ProcessId;

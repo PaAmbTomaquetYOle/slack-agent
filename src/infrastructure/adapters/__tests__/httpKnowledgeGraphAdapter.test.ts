@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { HttpKnowledgeGraphAdapter } from '../httpKnowledgeGraphAdapter';
+import { HttpKnowledgeGraphAdapter } from '../httpKnowledgeGraphAdapter.js';
 
 function makeAxiosMock() {
   return {

@@ -1,4 +1,4 @@
-import type { Task, ProcessId } from '../../domain';
+import type { Task, ProcessId } from '../../domain/index.js';
 
 /**
  * SA-18: tasks are extracted via MCP during the interview and persisted to the backend over

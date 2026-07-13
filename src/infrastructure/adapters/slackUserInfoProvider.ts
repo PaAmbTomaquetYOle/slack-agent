@@ -1,5 +1,5 @@
 import type { WebClient } from '@slack/web-api';
-import type { IUserInfoProvider } from '../../application/ports';
+import type { IUserInfoProvider } from '../../application/ports/index.js';
 
 export class SlackUserInfoProvider implements IUserInfoProvider {
   readonly #client: WebClient;

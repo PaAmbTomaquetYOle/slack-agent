@@ -1,5 +1,5 @@
 import type { Producer } from 'kafkajs';
-import type { IDeadLetterQueue } from '../../application/ports';
+import type { IDeadLetterQueue } from '../../application/ports/index.js';
 
 export class KafkaDeadLetterQueue implements IDeadLetterQueue {
   readonly #producer: Producer;

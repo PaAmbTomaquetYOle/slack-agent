@@ -27,7 +27,7 @@ import type {
   IReviewInterviewAgent,
   IActiveReviewStore,
   IReviewInterviewService,
-} from '../application';
+} from '../application/index.js';
 import {
   McpClient,
   SlackMessagingAdapter,
@@ -48,7 +48,7 @@ import {
   ConsoleLogger,
   InMemoryScheduler,
   InMemoryInterviewSessionStore,
-} from './adapters';
+} from './adapters/index.js';
 import {
   McpPromptController,
   OffboardingController,
@@ -59,8 +59,8 @@ import {
   QuestionSuggestionController,
   ExpertRecommendationController,
   KnowledgeGraphVisualizationController,
-} from './controllers';
-import { APP_OPTIONS, SETTINGS } from './settings';
+} from './controllers/index.js';
+import { APP_OPTIONS, SETTINGS } from './settings/index.js';
 import {
   McpService,
   OffboardingService,
@@ -98,7 +98,7 @@ import {
   DossierGeneratedHandler,
   SopCreatedHandler,
   ReviewStateChangedHandler,
-} from '../application';
+} from '../application/index.js';
 import {
   OffboardingStartedEvent,
   OffboardingCancellationRequestedEvent,
@@ -117,8 +117,8 @@ import {
   INBOUND_EVENT_TYPES,
   ExpertResponseDetector,
   QuestionDetector,
-} from '../domain';
-import { createBackendHttpClient } from './http';
+} from '../domain/index.js';
+import { createBackendHttpClient } from './http/index.js';
 
 interface EventInfrastructure {
   publisher: IEventPublisher;
@@ -241,10 +241,21 @@ export class AppFactory {
     const httpClient = createBackendHttpClient();
     const knowledgeGraphReadPort: IKnowledgeGraphReadPort = new HttpKnowledgeGraphAdapter(httpClient);
     const knowledgeGraphVisualizationController = new KnowledgeGraphVisualizationController(knowledgeGraphReadPort);
+    const healthRoute = {
+      path: '/health',
+      method: 'GET' as const,
+      handler: (_req: unknown, res: {
+        writeHead: (statusCode: number, headers: Record<string, string>) => void;
+        end: (payload: string) => void;
+      }): void => {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify({ status: 'ok' }));
+      },
+    };
 
     const app = new App({
       ...APP_OPTIONS,
-      customRoutes: knowledgeGraphVisualizationController.customRoutes,
+      customRoutes: [healthRoute, ...knowledgeGraphVisualizationController.customRoutes],
     });
 
     // Offboarding wiring

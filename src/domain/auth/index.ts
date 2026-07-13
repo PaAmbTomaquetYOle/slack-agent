@@ -1,1 +1,1 @@
-export type { AuthProvider } from './authProvider';
+export type { AuthProvider } from './authProvider.js';

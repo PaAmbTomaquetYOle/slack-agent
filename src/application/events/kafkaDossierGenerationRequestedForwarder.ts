@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { DossierGenerationRequestedEvent } from '../../domain';
-import { DOSSIER_GENERATION_REQUESTED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { DossierGenerationRequestedEvent } from '../../domain/index.js';
+import { DOSSIER_GENERATION_REQUESTED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isDossierGenerationRequestedEvent(event: DomainEvent): event is DossierGenerationRequestedEvent {
   return event.eventName === 'dossier.generation_requested';

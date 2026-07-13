@@ -1,10 +1,10 @@
-import type { DomainEvent, InterviewCompletedEvent, SopCreationRequestedEvent } from '../../domain';
+import type { DomainEvent, InterviewCompletedEvent, SopCreationRequestedEvent } from '../../domain/index.js';
 import {
   KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
   KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
   KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
-} from '../../domain';
-import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../ports';
+} from '../../domain/index.js';
+import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../ports/index.js';
 
 const INTERVIEW_INTERACTION_TYPE = 'interview_topic';
 const SOP_DOCUMENT_TITLE_MAX_LENGTH = 80;

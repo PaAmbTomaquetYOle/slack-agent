@@ -1,30 +1,30 @@
-export type { IDomainEventBus } from './domainEventBusInterface';
-export { DomainEventBus } from './domainEventBus';
-export { createOffboardingStartedHandler } from './offboardingStartedHandler';
-export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStartedForwarder';
-export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOffboardingCancellationRequestedForwarder';
-export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder';
-export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder';
-export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder';
-export { createKafkaTasksExtractedForwarder } from './kafkaTasksExtractedForwarder';
-export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder';
-export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder';
-export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder';
+export type { IDomainEventBus } from './domainEventBusInterface.js';
+export { DomainEventBus } from './domainEventBus.js';
+export { createOffboardingStartedHandler } from './offboardingStartedHandler.js';
+export { createKafkaOffboardingStartedForwarder } from './kafkaOffboardingStartedForwarder.js';
+export { createKafkaOffboardingCancellationRequestedForwarder } from './kafkaOffboardingCancellationRequestedForwarder.js';
+export { createKafkaInterviewStartedForwarder } from './kafkaInterviewStartedForwarder.js';
+export { createKafkaInterviewCompletedForwarder } from './kafkaInterviewCompletedForwarder.js';
+export { createKafkaInterviewTurnRecordedForwarder } from './kafkaInterviewTurnRecordedForwarder.js';
+export { createKafkaTasksExtractedForwarder } from './kafkaTasksExtractedForwarder.js';
+export { createKafkaSopCreationRequestedForwarder } from './kafkaSopCreationRequestedForwarder.js';
+export { createKafkaSopCandidateOfferedForwarder } from './kafkaSopCandidateOfferedForwarder.js';
+export { createKafkaSopCandidateDecidedForwarder } from './kafkaSopCandidateDecidedForwarder.js';
 export {
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,
   createKafkaChannelActivityRegisteredForwarder,
-} from './kafkaKnowledgeGraphForwarders';
-export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder';
-export { createDossierGenerationTriggerHandler } from './dossierGenerationTriggerHandler';
-export { createKafkaReviewInterviewCompletedForwarder } from './kafkaReviewInterviewCompletedForwarder';
-export { createKafkaReviewDossierGenerationRequestedForwarder } from './kafkaReviewDossierGenerationRequestedForwarder';
-export { createReviewDossierGenerationTriggerHandler } from './reviewDossierGenerationTriggerHandler';
-export type { IInboundEventHandler } from './inboundEventHandler';
-export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher';
-export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler';
-export { OffboardingCompletedHandler } from './handlers/offboardingCompletedHandler';
-export { InterviewCompletedHandler } from './handlers/interviewCompletedHandler';
-export { DossierGeneratedHandler } from './handlers/dossierGeneratedHandler';
-export { SopCreatedHandler } from './handlers/sopCreatedHandler';
-export { ReviewStateChangedHandler } from './handlers/reviewStateChangedHandler';
+} from './kafkaKnowledgeGraphForwarders.js';
+export { createKafkaDossierGenerationRequestedForwarder } from './kafkaDossierGenerationRequestedForwarder.js';
+export { createDossierGenerationTriggerHandler } from './dossierGenerationTriggerHandler.js';
+export { createKafkaReviewInterviewCompletedForwarder } from './kafkaReviewInterviewCompletedForwarder.js';
+export { createKafkaReviewDossierGenerationRequestedForwarder } from './kafkaReviewDossierGenerationRequestedForwarder.js';
+export { createReviewDossierGenerationTriggerHandler } from './reviewDossierGenerationTriggerHandler.js';
+export type { IInboundEventHandler } from './inboundEventHandler.js';
+export { InboundEventDispatcher, UnknownEventTypeError } from './inboundEventDispatcher.js';
+export { OffboardingStateChangedHandler } from './handlers/offboardingStateChangedHandler.js';
+export { OffboardingCompletedHandler } from './handlers/offboardingCompletedHandler.js';
+export { InterviewCompletedHandler } from './handlers/interviewCompletedHandler.js';
+export { DossierGeneratedHandler } from './handlers/dossierGeneratedHandler.js';
+export { SopCreatedHandler } from './handlers/sopCreatedHandler.js';
+export { ReviewStateChangedHandler } from './handlers/reviewStateChangedHandler.js';

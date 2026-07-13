@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../../application';
-import { BaseController } from './baseController';
+import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../../application/index.js';
+import { BaseController } from './baseController.js';
 
 export class AuthActionController extends BaseController {
   register(app: App): void {

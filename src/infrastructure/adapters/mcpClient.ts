@@ -1,7 +1,7 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
-import type { IMcpClient } from '../../application/ports';
-import { SETTINGS } from '../settings';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { IMcpClient } from '../../application/ports/index.js';
+import { SETTINGS } from '../settings/index.js';
 import type {
   McpTool,
   McpToolResult,
@@ -10,7 +10,7 @@ import type {
   McpResource,
   McpResourceContent,
   McpResourceTemplate,
-} from '../../domain';
+} from '../../domain/index.js';
 
 export class McpClient implements IMcpClient {
   readonly #url: URL;

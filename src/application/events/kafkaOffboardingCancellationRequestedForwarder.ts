@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { OffboardingCancellationRequestedEvent } from '../../domain';
-import { OFFBOARDING_CANCELLATION_REQUESTED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { OffboardingCancellationRequestedEvent } from '../../domain/index.js';
+import { OFFBOARDING_CANCELLATION_REQUESTED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isOffboardingCancellationRequestedEvent(
   event: DomainEvent,

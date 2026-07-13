@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ExpertResponseDetector } from '../expertResponseDetector';
+import { ExpertResponseDetector } from '../expertResponseDetector.js';
 
 const CONFIG = {
   minLength: 50,

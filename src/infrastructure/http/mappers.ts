@@ -1,6 +1,6 @@
-import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, Task } from '../../domain';
-import type { Interview, InterviewTurn, Dossier, DossierSection, Contact, PendingTask, KnowledgeArea, TaskSource } from '../../domain';
-import type { PendingSopCandidate } from '../../application/ports';
+import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, Task } from '../../domain/index.js';
+import type { Interview, InterviewTurn, Dossier, DossierSection, Contact, PendingTask, KnowledgeArea, TaskSource } from '../../domain/index.js';
+import type { PendingSopCandidate } from '../../application/ports/index.js';
 
 // ─── Backend response shapes (snake_case) ────────────────────────────────────
 

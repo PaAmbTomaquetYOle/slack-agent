@@ -1,8 +1,8 @@
-import type { KafkaEventEnvelope, OffboardingCompletedPayload } from '../../../domain';
-import type { IMessagingPort } from '../../ports';
-import type { IOffboardingOrchestrator } from '../../serviceInterfaces';
-import type { IInboundEventHandler } from '../inboundEventHandler';
-import { OFFBOARDING_COMPLETED } from '../../../domain';
+import type { KafkaEventEnvelope, OffboardingCompletedPayload } from '../../../domain/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import type { IOffboardingOrchestrator } from '../../serviceInterfaces/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
+import { OFFBOARDING_COMPLETED } from '../../../domain/index.js';
 
 function isOffboardingCompletedPayload(payload: unknown): payload is OffboardingCompletedPayload {
   const p = payload as Partial<OffboardingCompletedPayload> | null;

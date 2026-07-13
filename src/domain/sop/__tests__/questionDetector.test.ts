@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { QuestionDetector } from '../questionDetector';
+import { QuestionDetector } from '../questionDetector.js';
 
 const CONFIG = { minLength: 15 };
 

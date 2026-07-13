@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import type { IOffboardingService } from '../../application/serviceInterfaces';
-import { BaseController } from './baseController';
+import type { IOffboardingService } from '../../application/serviceInterfaces/index.js';
+import { BaseController } from './baseController.js';
 
 const MODAL_CALLBACK_ID = 'offboarding_modal';
 const USER_PICKER_ACTION_ID = 'departing_user_select';

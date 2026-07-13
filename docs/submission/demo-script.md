@@ -1,4 +1,4 @@
-# BrainTrust — demo video script (SUB-2)
+# OffBoardMe — demo video script (SUB-2)
 
 > Timed shot list + narration for the < 3 minute Devpost demo video (SUB-2, #16).
 > Everything here is prepared so recording is just: open the Slack sandbox
@@ -21,7 +21,7 @@
 
 | Time | Screen | Narration |
 |---|---|---|
-| 0:00–0:15 | Title card / architecture diagram (`docs/architecture/architecture.png`) | "This is BrainTrust — an agent that fights knowledge loss from volunteer turnover in NGOs, by capturing what people know before they leave, not after." |
+| 0:00–0:15 | Title card / architecture diagram (`docs/architecture/architecture.png`) | "This is OffBoardMe — an agent that fights knowledge loss from volunteer turnover in NGOs, by capturing what people know before they leave, not after." |
 | 0:15–0:35 | Manager's Slack window, run `/offboarding` | "When a volunteer announces they're leaving, a manager triggers offboarding right from Slack with a single command." |
 | 0:35–0:45 | Cut to departing employee's DM — bot's opening message arrives | "The agent immediately opens a guided handover interview over DM with the departing person." |
 | 0:45–1:20 | Scroll through 2-3 interview turns — bot asking about current projects / key contacts, employee replying naturally | "This isn't a form — it's a real conversation. Slack AI asks open, empathetic questions and follows up on incomplete answers, one topic at a time." |

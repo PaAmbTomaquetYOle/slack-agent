@@ -1,7 +1,7 @@
-import type { KafkaEventEnvelope, ReviewScope, ReviewStateChangedPayload } from '../../../domain';
-import { ProcessId, UserId } from '../../../domain';
-import type { IActiveReviewStore, IMessagingPort } from '../../ports';
-import type { IInboundEventHandler } from '../inboundEventHandler';
+import type { KafkaEventEnvelope, ReviewScope, ReviewStateChangedPayload } from '../../../domain/index.js';
+import { ProcessId, UserId } from '../../../domain/index.js';
+import type { IActiveReviewStore, IMessagingPort } from '../../ports/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
 
 function isReviewStateChangedPayload(payload: unknown): payload is ReviewStateChangedPayload {
   const p = payload as Partial<ReviewStateChangedPayload> | null;

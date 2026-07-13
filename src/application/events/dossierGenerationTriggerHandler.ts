@@ -1,6 +1,6 @@
-import type { DomainEvent } from '../../domain';
-import type { InterviewCompletedEvent } from '../../domain';
-import type { IDossierService } from '../serviceInterfaces';
+import type { DomainEvent } from '../../domain/index.js';
+import type { InterviewCompletedEvent } from '../../domain/index.js';
+import type { IDossierService } from '../serviceInterfaces/index.js';
 
 function isInterviewCompletedEvent(event: DomainEvent): event is InterviewCompletedEvent {
   return event.eventName === 'interview.completed';

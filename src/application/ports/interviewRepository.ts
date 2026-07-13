@@ -1,5 +1,5 @@
-import type { Interview } from '../../domain';
-import type { ProcessId } from '../../domain';
+import type { Interview } from '../../domain/index.js';
+import type { ProcessId } from '../../domain/index.js';
 
 /**
  * BE-7: the backend's REST surface is read-only — interview writes now flow over Kafka

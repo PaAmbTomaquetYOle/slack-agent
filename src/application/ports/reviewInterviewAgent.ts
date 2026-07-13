@@ -1,5 +1,5 @@
-import type { InterviewTopic, InterviewTurn, ReviewScope } from '../../domain';
-import type { InterviewAgentTurnResult } from './interviewAgent';
+import type { InterviewTopic, InterviewTurn, ReviewScope } from '../../domain/index.js';
+import type { InterviewAgentTurnResult } from './interviewAgent.js';
 
 export interface ReviewInterviewAgentContext {
   employeeName: string;

@@ -1,6 +1,6 @@
 import type { Producer, TopicMessages } from 'kafkajs';
-import type { IEventPublisher } from '../../application/ports';
-import type { KafkaEventEnvelope, OutboundEvent } from '../../domain';
+import type { IEventPublisher } from '../../application/ports/index.js';
+import type { KafkaEventEnvelope, OutboundEvent } from '../../domain/index.js';
 
 export class KafkaEventPublisher implements IEventPublisher {
   readonly #producer: Producer;

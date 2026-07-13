@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IAuthService, IOffboardingOrchestrator, IReviewInterviewService } from '../../../application';
-import { DirectMessageController } from '../directMessageController';
-import { makeAppMock } from '../../../testing/slackMocks';
+import type { IAuthService, IOffboardingOrchestrator, IReviewInterviewService } from '../../../application/index.js';
+import { DirectMessageController } from '../directMessageController.js';
+import { makeAppMock } from '../../../testing/slackMocks.js';
 
 function makeOrchestratorMock(): IOffboardingOrchestrator {
   return {

@@ -3,8 +3,8 @@ import {
   createInterviewKnowledgeGraphForwarder,
   createSopKnowledgeGraphForwarder,
   createKafkaChannelActivityRegisteredForwarder,
-} from '../kafkaKnowledgeGraphForwarders';
-import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../../ports';
+} from '../kafkaKnowledgeGraphForwarders.js';
+import type { IEventPublisher, IOffboardingProcessRepository, IUserInfoProvider } from '../../ports/index.js';
 import {
   InterviewCompletedEvent,
   SopCreationRequestedEvent,
@@ -16,8 +16,8 @@ import {
   KNOWLEDGE_GRAPH_INTERACTION_REGISTERED,
   KNOWLEDGE_GRAPH_DOCUMENT_REGISTERED,
   KNOWLEDGE_GRAPH_CHANNEL_ACTIVITY_REGISTERED,
-} from '../../../domain';
-import type { InterviewTurn } from '../../../domain';
+} from '../../../domain/index.js';
+import type { InterviewTurn } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

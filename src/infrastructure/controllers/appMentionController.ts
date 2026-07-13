@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import type { IExpertRecommendationService } from '../../application/serviceInterfaces';
-import { BaseController } from './baseController';
+import type { IExpertRecommendationService } from '../../application/serviceInterfaces/index.js';
+import { BaseController } from './baseController.js';
 
 const EXPERT_QUERY_PATTERNS = [
   /who\s+knows?\s+about\s+(.+?)[?.]?\s*$/i,

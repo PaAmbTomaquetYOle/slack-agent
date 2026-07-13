@@ -1,6 +1,6 @@
 <div align="center">
 
-![BrainTrust · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=BrainTrust%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
+![OffBoardMe · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=OffBoardMe%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
@@ -12,7 +12,7 @@
 
 </div>
 
-Repository for the challenge's Slack Agent — part of **BrainTrust**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
+Repository for the challenge's Slack Agent — part of **OffBoardMe**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
 
 The live development stack is composed from the separate `infra/` repository. That stack runs the bot together with the backend, MCP server, Kafka, Neo4j, PostgreSQL, and the Cloudflare tunnel for the public `kire.ovh` names.
 
@@ -28,7 +28,7 @@ The live development stack is composed from the separate `infra/` repository. Th
 
 Three services connected end to end: **slack-agent** (TypeScript · Slack Bolt) ↔ **MCP Server** (Python · MCP SDK) ↔ **Backend** (Python · FastAPI) ↔ **Postgres + Neo4j**, plus the external APIs (Jira, Trello, Slack AI, Real-Time Search). Phase badges ①②③ trace the data flow of each delivery phase.
 
-![BrainTrust architecture diagram](docs/architecture/architecture.png)
+![OffBoardMe architecture diagram](docs/architecture/architecture.png)
 
 > Source: [`docs/architecture/architecture.d2`](docs/architecture/architecture.d2) · Vector: [`architecture.svg`](docs/architecture/architecture.svg)
 
@@ -116,7 +116,7 @@ All settings are documented, with defaults and setup notes, in [`.env.example`](
 
 <div align="center">
 
-Part of **BrainTrust** — fighting knowledge loss from volunteer turnover in NGOs.
+Part of **OffBoardMe** — fighting knowledge loss from volunteer turnover in NGOs.
 
 [mcp-server](https://github.com/PaAmbTomaquetYOle/mcp-server) &nbsp;·&nbsp; [backend](https://github.com/PaAmbTomaquetYOle/backend) &nbsp;·&nbsp; MIT © [Pa Amb Tomàquet Y Olé](LICENSE)
 

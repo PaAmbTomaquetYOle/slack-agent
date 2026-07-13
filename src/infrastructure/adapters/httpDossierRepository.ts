@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { IDossierRepository } from '../../application/ports';
-import type { Dossier, ProcessId } from '../../domain';
-import { handleAxiosError, mapDossierResponse } from '../http';
-import type { BackendDossierResponse } from '../http';
+import type { IDossierRepository } from '../../application/ports/index.js';
+import type { Dossier, ProcessId } from '../../domain/index.js';
+import { handleAxiosError, mapDossierResponse } from '../http/index.js';
+import type { BackendDossierResponse } from '../http/index.js';
 
 /**
  * BE-7: the backend's dossier REST endpoint is read-only now — creation flows over Kafka via

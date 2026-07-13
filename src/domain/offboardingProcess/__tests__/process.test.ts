@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { OffboardingProcess } from '../process';
-import { Task } from '../task';
-import { ProcessId, UserId, InterviewId, DossierId } from '../../valueObjects';
+import { OffboardingProcess } from '../process.js';
+import { Task } from '../task.js';
+import { ProcessId, UserId, InterviewId, DossierId } from '../../valueObjects/index.js';
 
 function makeProcess(): OffboardingProcess {
   return OffboardingProcess.create(new ProcessId('proc-1'), new UserId('U-DEP'), new UserId('U-INIT'));

@@ -1,7 +1,7 @@
 import type { App, SlackCommandMiddlewareArgs } from '@slack/bolt';
-import type { IAuthService, IMcpService } from '../../application';
-import type { McpPromptResult } from '../../domain';
-import { BaseController } from './baseController';
+import type { IAuthService, IMcpService } from '../../application/index.js';
+import type { McpPromptResult } from '../../domain/index.js';
+import { BaseController } from './baseController.js';
 
 export class McpPromptController extends BaseController {
   readonly #mcpService: IMcpService;

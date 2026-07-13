@@ -1,7 +1,7 @@
-import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain';
-import type { InterviewCompletedEvent } from '../../domain';
-import { OUTBOUND_INTERVIEW_COMPLETED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain/index.js';
+import type { InterviewCompletedEvent } from '../../domain/index.js';
+import { OUTBOUND_INTERVIEW_COMPLETED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isInterviewCompletedEvent(event: DomainEvent): event is InterviewCompletedEvent {
   return event.eventName === 'interview.completed';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaOffboardingCancellationRequestedForwarder } from '../kafkaOffboardingCancellationRequestedForwarder';
-import type { IEventPublisher } from '../../ports';
-import { OffboardingCancellationRequestedEvent, ProcessId, OFFBOARDING_CANCELLATION_REQUESTED } from '../../../domain';
+import { createKafkaOffboardingCancellationRequestedForwarder } from '../kafkaOffboardingCancellationRequestedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
+import { OffboardingCancellationRequestedEvent, ProcessId, OFFBOARDING_CANCELLATION_REQUESTED } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

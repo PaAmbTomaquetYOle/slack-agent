@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IExpertRecommendationService } from '../../../application/serviceInterfaces';
-import { AppMentionController } from '../appMentionController';
-import { makeAppMock, makeSayFn } from '../../../testing/slackMocks';
+import type { IExpertRecommendationService } from '../../../application/serviceInterfaces/index.js';
+import { AppMentionController } from '../appMentionController.js';
+import { makeAppMock, makeSayFn } from '../../../testing/slackMocks.js';
 
 function makeExpertRecommendationServiceMock(): IExpertRecommendationService {
   return { findExperts: vi.fn().mockResolvedValue(undefined) };

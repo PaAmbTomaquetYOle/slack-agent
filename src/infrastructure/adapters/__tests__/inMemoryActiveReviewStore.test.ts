@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { InMemoryActiveReviewStore } from '../inMemoryActiveReviewStore';
-import { ProcessId, UserId } from '../../../domain';
+import { InMemoryActiveReviewStore } from '../inMemoryActiveReviewStore.js';
+import { ProcessId, UserId } from '../../../domain/index.js';
 
 describe('InMemoryActiveReviewStore', () => {
   it('has no active review for an employee until start() is called', () => {

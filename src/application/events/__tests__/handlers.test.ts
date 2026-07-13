@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OffboardingStateChangedHandler } from '../handlers/offboardingStateChangedHandler';
-import { OffboardingCompletedHandler } from '../handlers/offboardingCompletedHandler';
-import { InterviewCompletedHandler } from '../handlers/interviewCompletedHandler';
-import { DossierGeneratedHandler } from '../handlers/dossierGeneratedHandler';
-import { SopCreatedHandler } from '../handlers/sopCreatedHandler';
-import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
-import type { IDossierService, IOffboardingOrchestrator } from '../../serviceInterfaces';
-import { OffboardingProcess, ProcessId, UserId } from '../../../domain';
-import type { KafkaEventEnvelope } from '../../../domain';
+import { OffboardingStateChangedHandler } from '../handlers/offboardingStateChangedHandler.js';
+import { OffboardingCompletedHandler } from '../handlers/offboardingCompletedHandler.js';
+import { InterviewCompletedHandler } from '../handlers/interviewCompletedHandler.js';
+import { DossierGeneratedHandler } from '../handlers/dossierGeneratedHandler.js';
+import { SopCreatedHandler } from '../handlers/sopCreatedHandler.js';
+import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports/index.js';
+import type { IDossierService, IOffboardingOrchestrator } from '../../serviceInterfaces/index.js';
+import { OffboardingProcess, ProcessId, UserId } from '../../../domain/index.js';
+import type { KafkaEventEnvelope } from '../../../domain/index.js';
 
 function envelope(eventType: string, payload: Record<string, unknown>): KafkaEventEnvelope {
   return { event_id: 'evt-1', event_type: eventType, occurred_at: '2024-01-01T00:00:00.000Z', payload };

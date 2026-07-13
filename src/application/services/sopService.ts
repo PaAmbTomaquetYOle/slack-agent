@@ -1,8 +1,8 @@
-import type { IMessagingPort, ISopCandidateReadRepository } from '../ports';
-import type { IDomainEventBus } from '../events';
-import type { ISopService } from '../serviceInterfaces';
-import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../serviceInterfaces';
-import type { ExpertResponseDetector } from '../../domain';
+import type { IMessagingPort, ISopCandidateReadRepository } from '../ports/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import type { ISopService } from '../serviceInterfaces/index.js';
+import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../serviceInterfaces/index.js';
+import type { ExpertResponseDetector } from '../../domain/index.js';
 import {
   ChannelId,
   UserId,
@@ -10,7 +10,7 @@ import {
   SopCandidateOfferedEvent,
   SopCandidateDecidedEvent,
   SopTitle,
-} from '../../domain';
+} from '../../domain/index.js';
 
 const OFFER_TEXT = 'That looked like a valuable answer! Want to save it as an SOP so it is not lost?';
 const DEFAULT_MAX_TRACKED_CANDIDATES = 500;

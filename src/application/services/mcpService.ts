@@ -6,9 +6,9 @@ import type {
   McpResource,
   McpResourceContent,
   McpResourceTemplate,
-} from "../../domain";
-import { IMcpClient } from "../ports";
-import { IMcpService } from "../serviceInterfaces";
+} from "../../domain/index.js";
+import { IMcpClient } from "../ports/index.js";
+import { IMcpService } from "../serviceInterfaces/index.js";
 
 export class McpService implements IMcpService {
   readonly #mcpClient: IMcpClient;

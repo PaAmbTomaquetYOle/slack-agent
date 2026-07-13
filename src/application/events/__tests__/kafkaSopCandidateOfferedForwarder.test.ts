@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaSopCandidateOfferedForwarder } from '../kafkaSopCandidateOfferedForwarder';
-import type { IEventPublisher } from '../../ports';
-import { SopCandidateOfferedEvent, ChannelId, UserId, SOP_CANDIDATE_OFFERED } from '../../../domain';
+import { createKafkaSopCandidateOfferedForwarder } from '../kafkaSopCandidateOfferedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
+import { SopCandidateOfferedEvent, ChannelId, UserId, SOP_CANDIDATE_OFFERED } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

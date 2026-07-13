@@ -1,5 +1,5 @@
-import type { ProcessId, UserId } from '../../domain';
-import type { ActiveReview, ReviewScope } from '../../domain';
+import type { ProcessId, UserId } from '../../domain/index.js';
+import type { ActiveReview, ReviewScope } from '../../domain/index.js';
 
 /**
  * Tracks which employees currently have a review process being interviewed over Slack DM

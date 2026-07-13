@@ -1,4 +1,4 @@
-import type { IScheduler } from '../../application/ports';
+import type { IScheduler } from '../../application/ports/index.js';
 
 export class InMemoryScheduler implements IScheduler {
   readonly #timers = new Map<string, NodeJS.Timeout>();

@@ -6,7 +6,7 @@ import type {
   McpResource,
   McpResourceContent,
   McpResourceTemplate,
-} from "../../domain";
+} from "../../domain/index.js";
 
 export interface IMcpClient {
   connect(): Promise<void>;

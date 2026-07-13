@@ -1,6 +1,6 @@
-import { DomainError } from '../../domain';
-import type { KafkaEventEnvelope } from '../../domain';
-import type { IInboundEventHandler } from './inboundEventHandler';
+import { DomainError } from '../../domain/index.js';
+import type { KafkaEventEnvelope } from '../../domain/index.js';
+import type { IInboundEventHandler } from './inboundEventHandler.js';
 
 export class UnknownEventTypeError extends DomainError {
   constructor(eventType: string) {

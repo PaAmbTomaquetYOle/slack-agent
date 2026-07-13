@@ -1,7 +1,7 @@
-import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain';
-import type { ReviewInterviewCompletedEvent } from '../../domain';
-import { MONTHLY_REVIEW_INTERVIEW_COMPLETED, ANNUAL_REVIEW_INTERVIEW_COMPLETED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain/index.js';
+import type { ReviewInterviewCompletedEvent } from '../../domain/index.js';
+import { MONTHLY_REVIEW_INTERVIEW_COMPLETED, ANNUAL_REVIEW_INTERVIEW_COMPLETED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isReviewInterviewCompletedEvent(event: DomainEvent): event is ReviewInterviewCompletedEvent {
   return event.eventName === 'review_interview.completed';

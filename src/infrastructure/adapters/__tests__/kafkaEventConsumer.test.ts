@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Consumer, EachMessagePayload } from 'kafkajs';
-import { KafkaEventConsumer } from '../kafkaEventConsumer';
-import { InboundEventDispatcher } from '../../../application/events';
-import type { IDeadLetterQueue } from '../../../application/ports';
-import type { IInboundEventHandler } from '../../../application/events';
+import { KafkaEventConsumer } from '../kafkaEventConsumer.js';
+import { InboundEventDispatcher } from '../../../application/events/index.js';
+import type { IDeadLetterQueue } from '../../../application/ports/index.js';
+import type { IInboundEventHandler } from '../../../application/events/index.js';
 
 function makeConsumerMock() {
   let eachMessage: (payload: EachMessagePayload) => Promise<void> = async () => {};

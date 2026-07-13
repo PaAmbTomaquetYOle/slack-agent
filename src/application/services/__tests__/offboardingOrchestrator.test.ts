@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../../ports';
-import type { IInterviewService, IAuthService } from '../../serviceInterfaces';
-import { DomainEventBus } from '../../events';
-import { OffboardingOrchestrator } from '../offboardingOrchestrator';
+import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../../ports/index.js';
+import type { IInterviewService, IAuthService } from '../../serviceInterfaces/index.js';
+import { DomainEventBus } from '../../events/index.js';
+import { OffboardingOrchestrator } from '../offboardingOrchestrator.js';
 import {
   OffboardingProcess,
   OffboardingStartedEvent,
@@ -15,8 +15,8 @@ import {
   UserId,
   InterviewId,
   AuthenticationRequiredError,
-} from '../../../domain';
-import type { Interview } from '../../../domain';
+} from '../../../domain/index.js';
+import type { Interview } from '../../../domain/index.js';
 
 const NUDGE_TIMEOUT_MS = 1000;
 const ABANDON_TIMEOUT_MS = 5000;

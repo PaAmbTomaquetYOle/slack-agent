@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { IInterviewRepository } from '../../application/ports';
-import type { Interview, ProcessId } from '../../domain';
-import { handleAxiosError, mapInterviewResponse } from '../http';
-import type { BackendInterviewResponse } from '../http';
+import type { IInterviewRepository } from '../../application/ports/index.js';
+import type { Interview, ProcessId } from '../../domain/index.js';
+import { handleAxiosError, mapInterviewResponse } from '../http/index.js';
+import type { BackendInterviewResponse } from '../http/index.js';
 
 /**
  * BE-7: the backend's interview REST endpoints are read-only now — turn-by-turn state lives in

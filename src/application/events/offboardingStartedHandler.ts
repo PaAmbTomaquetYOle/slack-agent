@@ -1,6 +1,6 @@
-import type { DomainEvent } from '../../domain';
-import type { IMessagingPort } from '../ports';
-import type { OffboardingStartedEvent } from '../../domain';
+import type { DomainEvent } from '../../domain/index.js';
+import type { IMessagingPort } from '../ports/index.js';
+import type { OffboardingStartedEvent } from '../../domain/index.js';
 
 function isOffboardingStartedEvent(event: DomainEvent): event is OffboardingStartedEvent {
   return event.eventName === 'offboarding.started';

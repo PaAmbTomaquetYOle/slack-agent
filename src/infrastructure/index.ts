@@ -1,2 +1,2 @@
-export * from './settings';
-export { AppFactory } from './appFactory';
+export * from './settings/index.js';
+export { AppFactory } from './appFactory.js';

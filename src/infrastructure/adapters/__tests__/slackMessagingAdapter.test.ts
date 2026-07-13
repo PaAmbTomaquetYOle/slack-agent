@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SlackMessagingAdapter } from '../slackMessagingAdapter';
-import { makeWebClientMock, type WebClientMock } from '../../../testing/slackMocks';
+import { SlackMessagingAdapter } from '../slackMessagingAdapter.js';
+import { makeWebClientMock, type WebClientMock } from '../../../testing/slackMocks.js';
 
 describe('SlackMessagingAdapter', () => {
   let client: WebClientMock;

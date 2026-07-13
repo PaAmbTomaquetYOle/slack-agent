@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ReviewStateChangedHandler } from '../handlers/reviewStateChangedHandler';
-import type { IActiveReviewStore, IMessagingPort } from '../../ports';
-import { MONTHLY_REVIEW_STATE_CHANGED, ANNUAL_REVIEW_STATE_CHANGED } from '../../../domain';
-import type { KafkaEventEnvelope } from '../../../domain';
+import { ReviewStateChangedHandler } from '../handlers/reviewStateChangedHandler.js';
+import type { IActiveReviewStore, IMessagingPort } from '../../ports/index.js';
+import { MONTHLY_REVIEW_STATE_CHANGED, ANNUAL_REVIEW_STATE_CHANGED } from '../../../domain/index.js';
+import type { KafkaEventEnvelope } from '../../../domain/index.js';
 
 function envelope(eventType: string, payload: Record<string, unknown>): KafkaEventEnvelope {
   return { event_id: 'evt-1', event_type: eventType, occurred_at: '2024-01-01T00:00:00.000Z', payload };

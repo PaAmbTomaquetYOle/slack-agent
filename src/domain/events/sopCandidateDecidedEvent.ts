@@ -1,5 +1,5 @@
-import type { DomainEvent } from './domainEvent';
-import type { ChannelId } from '../valueObjects/index';
+import type { DomainEvent } from './domainEvent.js';
+import type { ChannelId } from '../valueObjects/index.js';
 
 /**
  * Raised when a SOP candidate's author clicks Yes/No on the save prompt, so the backend can

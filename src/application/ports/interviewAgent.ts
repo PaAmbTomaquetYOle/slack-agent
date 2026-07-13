@@ -1,4 +1,4 @@
-import type { InterviewTopic, InterviewTurn, TaskSource } from '../../domain';
+import type { InterviewTopic, InterviewTurn, TaskSource } from '../../domain/index.js';
 
 export interface InterviewAgentContext {
   employeeName: string;

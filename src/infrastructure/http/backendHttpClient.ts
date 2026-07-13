@@ -1,7 +1,7 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import { SETTINGS } from '../settings';
-import { BackendTokenProvider } from './backendTokenProvider';
+import { SETTINGS } from '../settings/index.js';
+import { BackendTokenProvider } from './backendTokenProvider.js';
 
 export function createBackendHttpClient(): AxiosInstance {
   const instance = axios.create({

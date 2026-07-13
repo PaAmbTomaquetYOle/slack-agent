@@ -1,4 +1,4 @@
-import { OffboardingProcessState } from './state';
+import { OffboardingProcessState } from './state.js';
 
 export class CancelledState extends OffboardingProcessState {
   get stateName(): string { return 'cancelled'; }

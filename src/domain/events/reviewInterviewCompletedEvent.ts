@@ -1,7 +1,7 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId, InterviewId } from '../valueObjects/index';
-import type { InterviewTurn } from '../interview';
-import type { ReviewScope } from '../reviewProcess';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId, InterviewId } from '../valueObjects/index.js';
+import type { InterviewTurn } from '../interview/index.js';
+import type { ReviewScope } from '../reviewProcess/index.js';
 
 /**
  * A single local event for both monthly and annual review interviews (SA-20) — reviewScope is

@@ -1,5 +1,5 @@
-import type { DomainEvent } from './domainEvent';
-import type { UserId } from '../valueObjects/index';
+import type { DomainEvent } from './domainEvent.js';
+import type { UserId } from '../valueObjects/index.js';
 
 export class OffboardingStartedEvent implements DomainEvent {
   static readonly EVENT_NAME = 'offboarding.started' as const;

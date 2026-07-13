@@ -9,8 +9,8 @@ import type {
   KnowledgeGraphPersonProfile,
   KnowledgeGraphPersonAnalytics,
   KnowledgeGraphSuccessor,
-} from '../../application/ports';
-import { handleAxiosError } from '../http';
+} from '../../application/ports/index.js';
+import { handleAxiosError } from '../http/index.js';
 
 interface BackendPage<T> {
   items: T[];

@@ -1,6 +1,6 @@
-import type { McpToolResult, QuestionDetector } from '../../domain';
-import type { IMessagingPort } from '../ports';
-import type { IMcpService, IQuestionSuggestionService } from '../serviceInterfaces';
+import type { McpToolResult, QuestionDetector } from '../../domain/index.js';
+import type { IMessagingPort } from '../ports/index.js';
+import type { IMcpService, IQuestionSuggestionService } from '../serviceInterfaces/index.js';
 
 const SUGGESTION_HEADER = 'Found some related content that might help:';
 const DEFAULT_MAX_SUGGESTIONS = 3;

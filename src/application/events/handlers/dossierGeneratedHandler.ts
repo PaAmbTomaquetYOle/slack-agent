@@ -1,8 +1,8 @@
-import type { KafkaEventEnvelope, DossierGeneratedPayload } from '../../../domain';
-import { ProcessId, DOSSIER_GENERATED } from '../../../domain';
-import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
-import type { IDossierService, IOffboardingOrchestrator } from '../../serviceInterfaces';
-import type { IInboundEventHandler } from '../inboundEventHandler';
+import type { KafkaEventEnvelope, DossierGeneratedPayload } from '../../../domain/index.js';
+import { ProcessId, DOSSIER_GENERATED } from '../../../domain/index.js';
+import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports/index.js';
+import type { IDossierService, IOffboardingOrchestrator } from '../../serviceInterfaces/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
 
 function isDossierGeneratedPayload(payload: unknown): payload is DossierGeneratedPayload {
   const p = payload as Partial<DossierGeneratedPayload> | null;

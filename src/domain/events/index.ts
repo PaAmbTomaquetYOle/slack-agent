@@ -1,17 +1,17 @@
-export type { DomainEvent } from './domainEvent';
-export { OffboardingStartedEvent } from './offboardingStartedEvent';
-export { OffboardingCancellationRequestedEvent } from './offboardingCancellationRequestedEvent';
-export { InterviewStartedEvent } from './interviewStartedEvent';
-export { InterviewCompletedEvent } from './interviewCompletedEvent';
-export { InterviewTurnRecordedEvent } from './interviewTurnRecordedEvent';
-export { TasksExtractedEvent } from './tasksExtractedEvent';
-export { SopCreationRequestedEvent } from './sopCreationRequestedEvent';
-export { SopCandidateOfferedEvent } from './sopCandidateOfferedEvent';
-export { SopCandidateDecidedEvent } from './sopCandidateDecidedEvent';
-export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEvent';
-export { ReviewInterviewCompletedEvent } from './reviewInterviewCompletedEvent';
-export { ReviewDossierGenerationRequestedEvent } from './reviewDossierGenerationRequestedEvent';
-export type { KafkaEventEnvelope } from './kafkaEventEnvelope';
+export type { DomainEvent } from './domainEvent.js';
+export { OffboardingStartedEvent } from './offboardingStartedEvent.js';
+export { OffboardingCancellationRequestedEvent } from './offboardingCancellationRequestedEvent.js';
+export { InterviewStartedEvent } from './interviewStartedEvent.js';
+export { InterviewCompletedEvent } from './interviewCompletedEvent.js';
+export { InterviewTurnRecordedEvent } from './interviewTurnRecordedEvent.js';
+export { TasksExtractedEvent } from './tasksExtractedEvent.js';
+export { SopCreationRequestedEvent } from './sopCreationRequestedEvent.js';
+export { SopCandidateOfferedEvent } from './sopCandidateOfferedEvent.js';
+export { SopCandidateDecidedEvent } from './sopCandidateDecidedEvent.js';
+export { DossierGenerationRequestedEvent } from './dossierGenerationRequestedEvent.js';
+export { ReviewInterviewCompletedEvent } from './reviewInterviewCompletedEvent.js';
+export { ReviewDossierGenerationRequestedEvent } from './reviewDossierGenerationRequestedEvent.js';
+export type { KafkaEventEnvelope } from './kafkaEventEnvelope.js';
 export type {
   OffboardingTriggeredPayload,
   OffboardingCancellationRequestedPayload,
@@ -31,7 +31,7 @@ export type {
   ReviewInterviewCompletedPayload,
   ReviewDossierGenerationRequestedPayload,
   OutboundEvent,
-} from './outboundEvents';
+} from './outboundEvents.js';
 export {
   OFFBOARDING_TRIGGERED,
   OFFBOARDING_CANCELLATION_REQUESTED,
@@ -50,7 +50,7 @@ export {
   MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED,
   ANNUAL_REVIEW_INTERVIEW_COMPLETED,
   ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED,
-} from './outboundEvents';
+} from './outboundEvents.js';
 export type {
   OffboardingStateChangedPayload,
   InterviewCompletedInboundPayload,
@@ -58,7 +58,7 @@ export type {
   OffboardingCompletedPayload,
   SopCreatedPayload,
   ReviewStateChangedPayload,
-} from './inboundEvents';
+} from './inboundEvents.js';
 export {
   OFFBOARDING_STATE_CHANGED,
   INBOUND_INTERVIEW_COMPLETED,
@@ -68,4 +68,4 @@ export {
   MONTHLY_REVIEW_STATE_CHANGED,
   ANNUAL_REVIEW_STATE_CHANGED,
   INBOUND_EVENT_TYPES,
-} from './inboundEvents';
+} from './inboundEvents.js';

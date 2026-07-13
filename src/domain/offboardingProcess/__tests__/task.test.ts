@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Task } from '../task';
-import { InvalidValueObjectError } from '../../exceptions';
+import { Task } from '../task.js';
+import { InvalidValueObjectError } from '../../exceptions/index.js';
 
 describe('Task', () => {
   it('constructs with all fields and exposes them via getters', () => {

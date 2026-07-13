@@ -1,3 +1,3 @@
-export * from './expertResponseDetector';
-export * from './questionDetector';
-export * from './sopTitle';
+export * from './expertResponseDetector.js';
+export * from './questionDetector.js';
+export * from './sopTitle.js';

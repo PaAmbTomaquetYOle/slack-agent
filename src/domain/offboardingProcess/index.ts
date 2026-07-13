@@ -1,4 +1,4 @@
-export { OffboardingProcessState, NotStartedState, InProgressState, PendingRevisionState, FinishedState } from './state/index';
-export { OffboardingProcess } from './process';
-export { Task } from './task';
-export type { TaskSource } from './task';
+export { OffboardingProcessState, NotStartedState, InProgressState, PendingRevisionState, FinishedState } from './state/index.js';
+export { OffboardingProcess } from './process.js';
+export { Task } from './task.js';
+export type { TaskSource } from './task.js';

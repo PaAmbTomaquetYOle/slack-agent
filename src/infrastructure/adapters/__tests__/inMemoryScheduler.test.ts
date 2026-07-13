@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { InMemoryScheduler } from '../inMemoryScheduler';
+import { InMemoryScheduler } from '../inMemoryScheduler.js';
 
 describe('InMemoryScheduler', () => {
   beforeEach(() => {

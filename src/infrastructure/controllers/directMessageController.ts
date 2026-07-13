@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import type { IAuthService, IOffboardingOrchestrator, IReviewInterviewService } from '../../application';
-import { BaseController } from './baseController';
+import type { IAuthService, IOffboardingOrchestrator, IReviewInterviewService } from '../../application/index.js';
+import { BaseController } from './baseController.js';
 
 export class DirectMessageController extends BaseController {
   readonly #authService: IAuthService;

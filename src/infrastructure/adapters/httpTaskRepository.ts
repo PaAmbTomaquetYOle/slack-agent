@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { ITaskRepository } from '../../application/ports';
-import type { Task, ProcessId } from '../../domain';
-import { handleAxiosError, mapTaskResponse } from '../http';
-import type { BackendTaskListResponse } from '../http';
+import type { ITaskRepository } from '../../application/ports/index.js';
+import type { Task, ProcessId } from '../../domain/index.js';
+import { handleAxiosError, mapTaskResponse } from '../http/index.js';
+import type { BackendTaskListResponse } from '../http/index.js';
 
 /**
  * SA-18: tasks are read-only over HTTP — they're written via the `tasks.extracted` Kafka event.

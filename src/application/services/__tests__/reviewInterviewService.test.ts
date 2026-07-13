@@ -5,17 +5,17 @@ import type {
   IReviewInterviewAgent,
   IUserInfoProvider,
   IMessagingPort,
-} from '../../ports';
-import type { IDomainEventBus } from '../../events';
-import { ReviewInterviewService } from '../reviewInterviewService';
+} from '../../ports/index.js';
+import type { IDomainEventBus } from '../../events/index.js';
+import { ReviewInterviewService } from '../reviewInterviewService.js';
 import {
   ProcessId,
   UserId,
   InterviewId,
   ReviewInterviewCompletedEvent,
   INTERVIEW_TOPICS,
-} from '../../../domain';
-import type { ActiveReview, InterviewTurn } from '../../../domain';
+} from '../../../domain/index.js';
+import type { ActiveReview, InterviewTurn } from '../../../domain/index.js';
 
 function makeActiveReviewStoreMock(): IActiveReviewStore {
   return { find: vi.fn(), start: vi.fn(), end: vi.fn() };

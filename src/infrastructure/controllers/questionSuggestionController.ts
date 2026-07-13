@@ -1,6 +1,6 @@
 import type { App } from '@slack/bolt';
-import type { IQuestionSuggestionService } from '../../application/serviceInterfaces';
-import { BaseController } from './baseController';
+import type { IQuestionSuggestionService } from '../../application/serviceInterfaces/index.js';
+import { BaseController } from './baseController.js';
 
 export class QuestionSuggestionController extends BaseController {
   readonly #service: IQuestionSuggestionService;

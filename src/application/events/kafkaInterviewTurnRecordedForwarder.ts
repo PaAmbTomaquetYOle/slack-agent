@@ -1,7 +1,7 @@
-import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain';
-import type { InterviewTurnRecordedEvent } from '../../domain';
-import { INTERVIEW_TURN_RECORDED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent, InterviewTurn, OutboundInterviewTurnPayload } from '../../domain/index.js';
+import type { InterviewTurnRecordedEvent } from '../../domain/index.js';
+import { INTERVIEW_TURN_RECORDED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isInterviewTurnRecordedEvent(event: DomainEvent): event is InterviewTurnRecordedEvent {
   return event.eventName === 'interview.turn_recorded';

@@ -1,6 +1,6 @@
-export { UserId } from './userId';
-export { ProcessId } from './processId';
-export { ChannelId } from './channelId';
-export { InterviewId } from './interviewId';
-export { DossierId } from './dossierId';
-export { TopicQuery } from './topicQuery';
+export { UserId } from './userId.js';
+export { ProcessId } from './processId.js';
+export { ChannelId } from './channelId.js';
+export { InterviewId } from './interviewId.js';
+export { DossierId } from './dossierId.js';
+export { TopicQuery } from './topicQuery.js';

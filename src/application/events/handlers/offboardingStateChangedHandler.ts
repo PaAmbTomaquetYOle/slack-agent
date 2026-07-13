@@ -1,7 +1,7 @@
-import type { KafkaEventEnvelope, OffboardingStateChangedPayload } from '../../../domain';
-import type { IMessagingPort } from '../../ports';
-import type { IInboundEventHandler } from '../inboundEventHandler';
-import { OFFBOARDING_STATE_CHANGED } from '../../../domain';
+import type { KafkaEventEnvelope, OffboardingStateChangedPayload } from '../../../domain/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
+import { OFFBOARDING_STATE_CHANGED } from '../../../domain/index.js';
 
 function isOffboardingStateChangedPayload(payload: unknown): payload is OffboardingStateChangedPayload {
   const p = payload as Partial<OffboardingStateChangedPayload> | null;

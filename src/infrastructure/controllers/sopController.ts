@@ -1,8 +1,8 @@
 import type { App } from '@slack/bolt';
 import type { WebClient } from '@slack/web-api';
-import type { ISopService } from '../../application';
-import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../application';
-import { BaseController } from './baseController';
+import type { ISopService } from '../../application/index.js';
+import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../application/index.js';
+import { BaseController } from './baseController.js';
 
 const SOP_TITLE_MODAL_CALLBACK_ID = 'sop_title_modal';
 const SOP_TITLE_BLOCK_ID = 'sop_title_block';

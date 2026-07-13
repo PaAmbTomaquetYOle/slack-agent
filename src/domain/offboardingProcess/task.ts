@@ -1,4 +1,4 @@
-import { InvalidValueObjectError } from '../exceptions';
+import { InvalidValueObjectError } from '../exceptions/index.js';
 
 export type TaskSource = 'jira' | 'trello';
 

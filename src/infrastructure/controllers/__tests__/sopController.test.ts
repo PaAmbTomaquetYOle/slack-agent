@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ISopService } from '../../../application';
-import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../../application';
-import { SopController } from '../sopController';
-import { makeAppMock, makeWebClientMock, makeAckFn } from '../../../testing/slackMocks';
+import type { ISopService } from '../../../application/index.js';
+import { SOP_ACCEPT_ACTION_ID, SOP_DECLINE_ACTION_ID } from '../../../application/index.js';
+import { SopController } from '../sopController.js';
+import { makeAppMock, makeWebClientMock, makeAckFn } from '../../../testing/slackMocks.js';
 
 function makeSopServiceMock(): ISopService {
   return {

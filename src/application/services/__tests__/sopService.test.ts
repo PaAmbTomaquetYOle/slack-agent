@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SopService } from '../sopService';
-import type { IMessagingPort } from '../../ports';
-import type { IDomainEventBus } from '../../events';
-import { ExpertResponseDetector, SopCreationRequestedEvent, SopCandidateDecidedEvent } from '../../../domain';
+import { SopService } from '../sopService.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import type { IDomainEventBus } from '../../events/index.js';
+import { ExpertResponseDetector, SopCreationRequestedEvent, SopCandidateDecidedEvent } from '../../../domain/index.js';
 
 const DETECTOR_CONFIG = { minLength: 20, keywords: ['deploy'], minReactions: 3 };
 const HIGH_VALUE_TEXT = 'To deploy the service, run the pipeline script in staging first.';

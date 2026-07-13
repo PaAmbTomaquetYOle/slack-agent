@@ -1,10 +1,10 @@
 import { Type } from '@google/genai';
 import type { GoogleGenAI, Content, Schema, FunctionDeclaration, Part, FunctionCall } from '@google/genai';
-import type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult, ExtractedTask } from '../../application/ports';
-import type { IMcpService } from '../../application/serviceInterfaces';
-import type { IAuthService } from '../../application/serviceInterfaces';
-import { INTERVIEW_TOPICS, AuthenticationRequiredError } from '../../domain';
-import type { InterviewTopic, AuthProvider, McpToolResult, TaskSource } from '../../domain';
+import type { IInterviewAgent, InterviewAgentContext, InterviewAgentTurnResult, ExtractedTask } from '../../application/ports/index.js';
+import type { IMcpService } from '../../application/serviceInterfaces/index.js';
+import type { IAuthService } from '../../application/serviceInterfaces/index.js';
+import { INTERVIEW_TOPICS, AuthenticationRequiredError } from '../../domain/index.js';
+import type { InterviewTopic, AuthProvider, McpToolResult, TaskSource } from '../../domain/index.js';
 
 const RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,

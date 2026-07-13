@@ -6,9 +6,9 @@ import type {
   IInterviewAgent,
   IUserInfoProvider,
   IMessagingPort,
-} from '../../ports';
-import type { IDomainEventBus } from '../../events';
-import { InterviewService } from '../interviewService';
+} from '../../ports/index.js';
+import type { IDomainEventBus } from '../../events/index.js';
+import { InterviewService } from '../interviewService.js';
 import {
   OffboardingProcess,
   ProcessId,
@@ -18,8 +18,8 @@ import {
   InterviewCompletedEvent,
   InterviewTurnRecordedEvent,
   INTERVIEW_TOPICS,
-} from '../../../domain';
-import type { InterviewTurn } from '../../../domain';
+} from '../../../domain/index.js';
+import type { InterviewTurn } from '../../../domain/index.js';
 
 function makeOffboardingRepositoryMock(): IOffboardingProcessRepository {
   return {

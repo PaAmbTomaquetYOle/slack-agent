@@ -1,5 +1,5 @@
-import type { ReviewScope } from '../reviewProcess/reviewScope';
-import { INTERVIEW_TOPICS, type InterviewTopic } from './interviewTopic';
+import type { ReviewScope } from '../reviewProcess/reviewScope.js';
+import { INTERVIEW_TOPICS, type InterviewTopic } from './interviewTopic.js';
 
 /**
  * Which INTERVIEW_TOPICS a review interview covers, scoped by review type (SA-20). Reuses the

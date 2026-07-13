@@ -1,10 +1,10 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { IOffboardingProcessRepository } from '../../application/ports';
-import type { OffboardingProcess } from '../../domain';
-import type { ProcessId } from '../../domain';
-import { handleAxiosError, mapOffboardingResponse } from '../http';
-import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../http';
+import type { IOffboardingProcessRepository } from '../../application/ports/index.js';
+import type { OffboardingProcess } from '../../domain/index.js';
+import type { ProcessId } from '../../domain/index.js';
+import { handleAxiosError, mapOffboardingResponse } from '../http/index.js';
+import type { BackendOffboardingResponse, BackendOffboardingListResponse } from '../http/index.js';
 
 function isNotFound(error: unknown): boolean {
   return axios.isAxiosError(error) && error.response?.status === 404;

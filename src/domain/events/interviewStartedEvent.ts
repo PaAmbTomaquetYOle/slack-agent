@@ -1,5 +1,5 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId, UserId } from '../valueObjects';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId, UserId } from '../valueObjects/index.js';
 
 export class InterviewStartedEvent implements DomainEvent {
   static readonly EVENT_NAME = 'interview.started' as const;

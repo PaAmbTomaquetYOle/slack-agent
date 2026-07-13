@@ -1,8 +1,8 @@
-import type { IOffboardingProcessRepository, IDossierRepository, IUserInfoProvider, IMessagingPort } from '../ports';
-import type { IDomainEventBus } from '../events';
-import type { IDossierService } from '../serviceInterfaces';
-import type { Dossier, DossierSection } from '../../domain';
-import { ProcessId, DossierGenerationRequestedEvent } from '../../domain';
+import type { IOffboardingProcessRepository, IDossierRepository, IUserInfoProvider, IMessagingPort } from '../ports/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import type { IDossierService } from '../serviceInterfaces/index.js';
+import type { Dossier, DossierSection } from '../../domain/index.js';
+import { ProcessId, DossierGenerationRequestedEvent } from '../../domain/index.js';
 
 export class DossierService implements IDossierService {
   readonly #offboardingProcessRepository: IOffboardingProcessRepository;

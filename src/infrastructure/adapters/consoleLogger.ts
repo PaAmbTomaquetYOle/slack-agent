@@ -1,4 +1,4 @@
-import type { ILogger, LogMeta } from '../../application/ports';
+import type { ILogger, LogMeta } from '../../application/ports/index.js';
 
 export class ConsoleLogger implements ILogger {
   info(message: string, meta?: LogMeta): void {

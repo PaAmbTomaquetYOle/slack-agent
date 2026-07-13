@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaTasksExtractedForwarder } from '../kafkaTasksExtractedForwarder';
-import type { IEventPublisher } from '../../ports';
-import { TasksExtractedEvent, ProcessId, Task, TASKS_EXTRACTED } from '../../../domain';
+import { createKafkaTasksExtractedForwarder } from '../kafkaTasksExtractedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
+import { TasksExtractedEvent, ProcessId, Task, TASKS_EXTRACTED } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

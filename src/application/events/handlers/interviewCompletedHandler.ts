@@ -1,7 +1,7 @@
-import type { KafkaEventEnvelope, InterviewCompletedInboundPayload } from '../../../domain';
-import { ProcessId, INBOUND_INTERVIEW_COMPLETED } from '../../../domain';
-import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports';
-import type { IInboundEventHandler } from '../inboundEventHandler';
+import type { KafkaEventEnvelope, InterviewCompletedInboundPayload } from '../../../domain/index.js';
+import { ProcessId, INBOUND_INTERVIEW_COMPLETED } from '../../../domain/index.js';
+import type { IMessagingPort, IOffboardingProcessRepository } from '../../ports/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
 
 function isInterviewCompletedPayload(payload: unknown): payload is InterviewCompletedInboundPayload {
   const p = payload as Partial<InterviewCompletedInboundPayload> | null;

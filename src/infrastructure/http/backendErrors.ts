@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { DomainError } from '../../domain';
+import { DomainError } from '../../domain/index.js';
 
 export class BackendConnectionError extends DomainError {
   constructor(message: string) {

@@ -1,7 +1,7 @@
-import type { AuthProvider, McpToolResult } from '../../domain';
-import type { IMessagingPort } from '../ports';
-import type { IAuthService, IMcpService } from '../serviceInterfaces';
-import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../serviceInterfaces';
+import type { AuthProvider, McpToolResult } from '../../domain/index.js';
+import type { IMessagingPort } from '../ports/index.js';
+import type { IAuthService, IMcpService } from '../serviceInterfaces/index.js';
+import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../serviceInterfaces/index.js';
 
 const DEFAULT_PENDING_AUTH_TTL_MS = 15 * 60 * 1000;
 

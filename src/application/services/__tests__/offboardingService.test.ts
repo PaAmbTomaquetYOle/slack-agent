@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IUserInfoProvider } from '../../ports';
-import type { IDomainEventBus } from '../../events';
-import { OffboardingService } from '../offboardingService';
-import { OffboardingStartedEvent } from '../../../domain';
+import type { IUserInfoProvider } from '../../ports/index.js';
+import type { IDomainEventBus } from '../../events/index.js';
+import { OffboardingService } from '../offboardingService.js';
+import { OffboardingStartedEvent } from '../../../domain/index.js';
 
 function makeUserInfoProviderMock(): IUserInfoProvider {
   return { getDisplayName: vi.fn() };

@@ -1,2 +1,2 @@
-export type { ReviewScope } from './reviewScope';
-export type { ActiveReview } from './activeReview';
+export type { ReviewScope } from './reviewScope.js';
+export type { ActiveReview } from './activeReview.js';

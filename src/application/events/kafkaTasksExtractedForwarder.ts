@@ -1,7 +1,7 @@
-import type { DomainEvent, Task, OutboundTaskPayload } from '../../domain';
-import type { TasksExtractedEvent } from '../../domain';
-import { TASKS_EXTRACTED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent, Task, OutboundTaskPayload } from '../../domain/index.js';
+import type { TasksExtractedEvent } from '../../domain/index.js';
+import { TASKS_EXTRACTED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isTasksExtractedEvent(event: DomainEvent): event is TasksExtractedEvent {
   return event.eventName === 'tasks.extracted';

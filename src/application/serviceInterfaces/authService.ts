@@ -1,4 +1,4 @@
-import type { AuthProvider } from '../../domain';
+import type { AuthProvider } from '../../domain/index.js';
 
 export const JIRA_AUTH_ACTION_ID = 'jira_start_auth';
 export const TRELLO_AUTH_ACTION_ID = 'trello_start_auth';

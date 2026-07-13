@@ -1,6 +1,6 @@
-import { OffboardingProcessState } from './state';
-import { InProgressState } from './inProgress';
-import { CancelledState } from './cancelled';
+import { OffboardingProcessState } from './state.js';
+import { InProgressState } from './inProgress.js';
+import { CancelledState } from './cancelled.js';
 
 export class NotStartedState extends OffboardingProcessState {
   get stateName(): string { return 'not_started'; }

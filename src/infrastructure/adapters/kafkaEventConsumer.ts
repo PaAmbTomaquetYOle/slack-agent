@@ -1,7 +1,7 @@
 import type { Consumer, EachMessagePayload } from 'kafkajs';
-import type { IEventConsumer, IDeadLetterQueue } from '../../application/ports';
-import type { InboundEventDispatcher } from '../../application/events';
-import { deserializeEnvelope } from './eventDeserializer';
+import type { IEventConsumer, IDeadLetterQueue } from '../../application/ports/index.js';
+import type { InboundEventDispatcher } from '../../application/events/index.js';
+import { deserializeEnvelope } from './eventDeserializer.js';
 
 export class KafkaEventConsumer implements IEventConsumer {
   readonly #consumer: Consumer;

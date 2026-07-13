@@ -1,7 +1,7 @@
-import type { IUserInfoProvider } from '../ports';
-import type { IOffboardingService } from '../serviceInterfaces';
-import type { IDomainEventBus } from '../events';
-import { UserId, OffboardingStartedEvent } from '../../domain';
+import type { IUserInfoProvider } from '../ports/index.js';
+import type { IOffboardingService } from '../serviceInterfaces/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import { UserId, OffboardingStartedEvent } from '../../domain/index.js';
 
 export class OffboardingService implements IOffboardingService {
   readonly #eventBus: IDomainEventBus;

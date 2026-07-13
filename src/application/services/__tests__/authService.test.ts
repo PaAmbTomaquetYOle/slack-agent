@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AuthService } from '../authService';
-import type { IMcpService } from '../../serviceInterfaces';
-import type { IMessagingPort } from '../../ports';
-import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../../serviceInterfaces';
+import { AuthService } from '../authService.js';
+import type { IMcpService } from '../../serviceInterfaces/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import { JIRA_AUTH_ACTION_ID, TRELLO_AUTH_ACTION_ID } from '../../serviceInterfaces/index.js';
 
 function makeMcpServiceMock(): IMcpService {
   return {

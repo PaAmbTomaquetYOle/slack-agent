@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { ReviewInterviewCompletedEvent } from '../../domain';
-import { ReviewDossierGenerationRequestedEvent } from '../../domain';
-import type { IDomainEventBus } from './domainEventBusInterface';
+import type { DomainEvent } from '../../domain/index.js';
+import type { ReviewInterviewCompletedEvent } from '../../domain/index.js';
+import { ReviewDossierGenerationRequestedEvent } from '../../domain/index.js';
+import type { IDomainEventBus } from './domainEventBusInterface.js';
 
 function isReviewInterviewCompletedEvent(event: DomainEvent): event is ReviewInterviewCompletedEvent {
   return event.eventName === 'review_interview.completed';

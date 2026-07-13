@@ -1,5 +1,5 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId } from '../valueObjects/index';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId } from '../valueObjects/index.js';
 
 export class DossierGenerationRequestedEvent implements DomainEvent {
   static readonly EVENT_NAME = 'dossier.generation_requested' as const;

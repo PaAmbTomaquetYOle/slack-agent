@@ -1,4 +1,4 @@
-import type { InterviewId, ProcessId, InterviewTurn } from '../../domain';
+import type { InterviewId, ProcessId, InterviewTurn } from '../../domain/index.js';
 
 /**
  * A single guided-interview conversation, held entirely in memory for the lifetime of the

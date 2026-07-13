@@ -1,7 +1,7 @@
-import type { DossierId } from '../valueObjects';
-import type { ProcessId } from '../valueObjects';
-import type { InterviewId } from '../valueObjects';
-import type { DossierSection } from './dossierSection';
+import type { DossierId } from '../valueObjects/index.js';
+import type { ProcessId } from '../valueObjects/index.js';
+import type { InterviewId } from '../valueObjects/index.js';
+import type { DossierSection } from './dossierSection.js';
 
 export interface Dossier {
   readonly id: DossierId;

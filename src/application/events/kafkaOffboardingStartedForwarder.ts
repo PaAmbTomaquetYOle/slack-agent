@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { OffboardingStartedEvent } from '../../domain';
-import { OFFBOARDING_TRIGGERED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { OffboardingStartedEvent } from '../../domain/index.js';
+import { OFFBOARDING_TRIGGERED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isOffboardingStartedEvent(event: DomainEvent): event is OffboardingStartedEvent {
   return event.eventName === 'offboarding.started';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaInterviewStartedForwarder } from '../kafkaInterviewStartedForwarder';
-import type { IEventPublisher } from '../../ports';
-import { InterviewStartedEvent, ProcessId, UserId, INTERVIEW_STARTED } from '../../../domain';
+import { createKafkaInterviewStartedForwarder } from '../kafkaInterviewStartedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
+import { InterviewStartedEvent, ProcessId, UserId, INTERVIEW_STARTED } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

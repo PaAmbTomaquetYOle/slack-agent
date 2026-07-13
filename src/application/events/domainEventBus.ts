@@ -1,5 +1,5 @@
-import type { DomainEvent } from '../../domain';
-import type { IDomainEventBus } from './domainEventBusInterface';
+import type { DomainEvent } from '../../domain/index.js';
+import type { IDomainEventBus } from './domainEventBusInterface.js';
 
 type DomainEventHandler = (event: DomainEvent) => Promise<void>;
 

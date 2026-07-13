@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { IOffboardingService } from '../../../application';
-import { OffboardingController } from '../offboardingController';
-import { makeAppMock, makeAckFn, makeWebClientMock, type WebClientMock } from '../../../testing/slackMocks';
+import type { IOffboardingService } from '../../../application/index.js';
+import { OffboardingController } from '../offboardingController.js';
+import { makeAppMock, makeAckFn, makeWebClientMock, type WebClientMock } from '../../../testing/slackMocks.js';
 
 function makeOffboardingServiceMock(): IOffboardingService {
   return { startOffboarding: vi.fn() };

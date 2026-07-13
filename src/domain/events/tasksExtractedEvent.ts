@@ -1,6 +1,6 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId } from '../valueObjects';
-import type { Task } from '../offboardingProcess/task';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId } from '../valueObjects/index.js';
+import type { Task } from '../offboardingProcess/task.js';
 
 /**
  * Raised when pending Jira/Trello tasks are extracted via MCP during the guided interview

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ExpertRecommendationService } from '../expertRecommendationService';
-import type { IMcpService } from '../../serviceInterfaces';
-import type { IMessagingPort } from '../../ports';
+import { ExpertRecommendationService } from '../expertRecommendationService.js';
+import type { IMcpService } from '../../serviceInterfaces/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
 
 function makeMcpServiceMock(): IMcpService {
   return {

@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { CustomRoute } from '@slack/bolt';
-import type { IKnowledgeGraphReadPort } from '../../application/ports';
-import { KNOWLEDGE_GRAPH_PAGE_HTML } from './knowledgeGraphPage';
+import type { IKnowledgeGraphReadPort } from '../../application/ports/index.js';
+import { KNOWLEDGE_GRAPH_PAGE_HTML } from './knowledgeGraphPage.js';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 100;

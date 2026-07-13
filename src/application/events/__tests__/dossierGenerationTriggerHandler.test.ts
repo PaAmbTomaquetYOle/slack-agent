@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createDossierGenerationTriggerHandler } from '../dossierGenerationTriggerHandler';
-import type { IDossierService } from '../../serviceInterfaces';
-import { InterviewCompletedEvent, ProcessId, InterviewId } from '../../../domain';
-import type { InterviewTurn } from '../../../domain';
+import { createDossierGenerationTriggerHandler } from '../dossierGenerationTriggerHandler.js';
+import type { IDossierService } from '../../serviceInterfaces/index.js';
+import { InterviewCompletedEvent, ProcessId, InterviewId } from '../../../domain/index.js';
+import type { InterviewTurn } from '../../../domain/index.js';
 
 function makeDossierServiceMock(): IDossierService {
   return { handleInterviewCompleted: vi.fn().mockResolvedValue(undefined), publishDossier: vi.fn().mockResolvedValue(undefined) };

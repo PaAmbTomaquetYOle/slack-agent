@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { HttpTaskRepository } from '../httpTaskRepository';
-import { ProcessId } from '../../../domain';
-import type { BackendTaskListResponse } from '../../http';
+import { HttpTaskRepository } from '../httpTaskRepository.js';
+import { ProcessId } from '../../../domain/index.js';
+import type { BackendTaskListResponse } from '../../http/index.js';
 
 function makeAxiosMock() {
   return {

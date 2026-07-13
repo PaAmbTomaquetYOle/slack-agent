@@ -1,4 +1,4 @@
-import { InvalidStateTransitionError } from '../../exceptions';
+import { InvalidStateTransitionError } from '../../exceptions/index.js';
 
 export abstract class OffboardingProcessState {
   abstract get stateName(): string;

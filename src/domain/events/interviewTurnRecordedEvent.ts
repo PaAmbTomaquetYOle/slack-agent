@@ -1,6 +1,6 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId } from '../valueObjects';
-import type { InterviewTurn } from '../interview';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId } from '../valueObjects/index.js';
+import type { InterviewTurn } from '../interview/index.js';
 
 /**
  * Raised each time one or more turns are appended to an in-flight interview session, so the

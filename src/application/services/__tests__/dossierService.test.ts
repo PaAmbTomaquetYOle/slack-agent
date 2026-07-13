@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DossierService } from '../dossierService';
-import type { IOffboardingProcessRepository, IDossierRepository, IUserInfoProvider, IMessagingPort } from '../../ports';
-import type { IDomainEventBus } from '../../events';
-import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, DossierGenerationRequestedEvent } from '../../../domain';
-import type { Dossier } from '../../../domain';
+import { DossierService } from '../dossierService.js';
+import type { IOffboardingProcessRepository, IDossierRepository, IUserInfoProvider, IMessagingPort } from '../../ports/index.js';
+import type { IDomainEventBus } from '../../events/index.js';
+import { OffboardingProcess, ProcessId, UserId, InterviewId, DossierId, DossierGenerationRequestedEvent } from '../../../domain/index.js';
+import type { Dossier } from '../../../domain/index.js';
 
 function makeRepositoryMock(): IOffboardingProcessRepository {
   return {

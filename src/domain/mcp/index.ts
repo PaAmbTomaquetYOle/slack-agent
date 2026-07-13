@@ -1,5 +1,5 @@
-export type { McpTool } from './tool';
-export type { McpToolResult } from './toolResult';
+export type { McpTool } from './tool.js';
+export type { McpToolResult } from './toolResult.js';
 export type {
   McpPrompt,
   McpPromptArgument,
@@ -7,5 +7,5 @@ export type {
   McpPromptMessage,
   McpPromptResult,
   McpPromptRole,
-} from './prompt';
-export type { McpResource, McpResourceContent, McpResourceTemplate } from './resource';
+} from './prompt.js';
+export type { McpResource, McpResourceContent, McpResourceTemplate } from './resource.js';

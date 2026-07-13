@@ -1,5 +1,5 @@
-import type { IEventPublisher } from '../../application/ports';
-import type { OutboundEvent } from '../../domain';
+import type { IEventPublisher } from '../../application/ports/index.js';
+import type { OutboundEvent } from '../../domain/index.js';
 
 /**
  * Used when Kafka is not configured or unreachable so the Slack bot's

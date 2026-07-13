@@ -1,6 +1,6 @@
-import { InterviewId } from '../../domain';
-import type { ProcessId, InterviewTurn } from '../../domain';
-import type { IInterviewSessionStore, InterviewSession } from '../../application/ports';
+import { InterviewId } from '../../domain/index.js';
+import type { ProcessId, InterviewTurn } from '../../domain/index.js';
+import type { IInterviewSessionStore, InterviewSession } from '../../application/ports/index.js';
 
 class MutableInterviewSession implements InterviewSession {
   readonly id: InterviewId;

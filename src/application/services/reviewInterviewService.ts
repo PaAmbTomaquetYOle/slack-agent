@@ -5,11 +5,11 @@ import type {
   IUserInfoProvider,
   IMessagingPort,
   InterviewAgentTurnResult,
-} from '../ports';
-import type { IDomainEventBus } from '../events';
-import type { IReviewInterviewService } from '../serviceInterfaces';
-import type { InterviewTopic, InterviewTurn } from '../../domain';
-import { ReviewInterviewCompletedEvent, UserId, reviewTopicsFor } from '../../domain';
+} from '../ports/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import type { IReviewInterviewService } from '../serviceInterfaces/index.js';
+import type { InterviewTopic, InterviewTurn } from '../../domain/index.js';
+import { ReviewInterviewCompletedEvent, UserId, reviewTopicsFor } from '../../domain/index.js';
 
 const FALLBACK_REPLY = 'Tuve un problema para procesar tu respuesta, ¿podrías contármelo de nuevo?';
 

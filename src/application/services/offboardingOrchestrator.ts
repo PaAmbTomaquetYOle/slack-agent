@@ -1,6 +1,6 @@
-import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../ports';
-import type { IDomainEventBus } from '../events';
-import type { IInterviewService, IOffboardingOrchestrator, IAuthService } from '../serviceInterfaces';
+import type { IOffboardingProcessRepository, IInterviewRepository, ITaskRepository, IMessagingPort, IScheduler, ILogger } from '../ports/index.js';
+import type { IDomainEventBus } from '../events/index.js';
+import type { IInterviewService, IOffboardingOrchestrator, IAuthService } from '../serviceInterfaces/index.js';
 import {
   OffboardingProcess,
   OffboardingStartedEvent,
@@ -10,8 +10,8 @@ import {
   TasksExtractedEvent,
   AuthenticationRequiredError,
   ProcessId,
-} from '../../domain';
-import type { Interview, DomainEvent } from '../../domain';
+} from '../../domain/index.js';
+import type { Interview, DomainEvent } from '../../domain/index.js';
 
 const PRE_INTERVIEW_PREFIX = 'pre-interview';
 const INTERVIEW_STALL_PREFIX = 'interview-stall';

@@ -1,5 +1,5 @@
-import type { Dossier } from '../../domain';
-import type { ProcessId } from '../../domain';
+import type { Dossier } from '../../domain/index.js';
+import type { ProcessId } from '../../domain/index.js';
 
 /**
  * BE-7: the backend's REST surface is read-only — dossier creation now flows over Kafka

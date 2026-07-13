@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { SopCandidateOfferedEvent } from '../../domain';
-import { SOP_CANDIDATE_OFFERED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { SopCandidateOfferedEvent } from '../../domain/index.js';
+import { SOP_CANDIDATE_OFFERED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isSopCandidateOfferedEvent(event: DomainEvent): event is SopCandidateOfferedEvent {
   return event.eventName === 'sop.candidate_offered';

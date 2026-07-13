@@ -4,9 +4,9 @@ import type {
   IReviewInterviewAgent,
   ReviewInterviewAgentContext,
   InterviewAgentTurnResult,
-} from '../../application/ports';
-import { INTERVIEW_TOPICS } from '../../domain';
-import type { InterviewTopic, ReviewScope } from '../../domain';
+} from '../../application/ports/index.js';
+import { INTERVIEW_TOPICS } from '../../domain/index.js';
+import type { InterviewTopic, ReviewScope } from '../../domain/index.js';
 
 const RESPONSE_SCHEMA: Schema = {
   type: Type.OBJECT,

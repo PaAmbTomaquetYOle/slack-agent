@@ -1,6 +1,6 @@
-import type { InterviewId } from '../valueObjects';
-import type { ProcessId } from '../valueObjects';
-import type { InterviewTurn } from './interviewTurn';
+import type { InterviewId } from '../valueObjects/index.js';
+import type { ProcessId } from '../valueObjects/index.js';
+import type { InterviewTurn } from './interviewTurn.js';
 
 export interface Interview {
   readonly id: InterviewId;

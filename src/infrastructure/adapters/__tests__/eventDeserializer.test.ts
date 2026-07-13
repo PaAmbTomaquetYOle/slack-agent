@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deserializeEnvelope, EventDeserializationError } from '../eventDeserializer';
+import { deserializeEnvelope, EventDeserializationError } from '../eventDeserializer.js';
 
 describe('deserializeEnvelope', () => {
   it('parses a valid envelope', () => {

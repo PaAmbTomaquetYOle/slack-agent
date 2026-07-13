@@ -1,4 +1,4 @@
-import { InvalidValueObjectError } from '../exceptions';
+import { InvalidValueObjectError } from '../exceptions/index.js';
 
 export class TopicQuery {
   readonly #value: string;

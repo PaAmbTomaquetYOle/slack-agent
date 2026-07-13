@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaReviewDossierGenerationRequestedForwarder } from '../kafkaReviewDossierGenerationRequestedForwarder';
-import type { IEventPublisher } from '../../ports';
+import { createKafkaReviewDossierGenerationRequestedForwarder } from '../kafkaReviewDossierGenerationRequestedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
 import {
   ReviewDossierGenerationRequestedEvent,
   ProcessId,
   MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED,
   ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED,
-} from '../../../domain';
+} from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

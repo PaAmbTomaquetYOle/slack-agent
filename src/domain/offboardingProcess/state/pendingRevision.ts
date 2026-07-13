@@ -1,6 +1,6 @@
-import { OffboardingProcessState } from './state';
-import { FinishedState } from './finished';
-import { CancelledState } from './cancelled';
+import { OffboardingProcessState } from './state.js';
+import { FinishedState } from './finished.js';
+import { CancelledState } from './cancelled.js';
 
 export class PendingRevisionState extends OffboardingProcessState {
   get stateName(): string { return 'pending_revision'; }

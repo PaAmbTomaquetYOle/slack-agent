@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AxiosInstance, AxiosResponse } from 'axios';
-import { HttpDossierRepository } from '../httpDossierRepository';
-import { ProcessId } from '../../../domain';
-import type { BackendDossierResponse } from '../../http';
+import { HttpDossierRepository } from '../httpDossierRepository.js';
+import { ProcessId } from '../../../domain/index.js';
+import type { BackendDossierResponse } from '../../http/index.js';
 
 function makeAxiosMock() {
   return {

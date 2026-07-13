@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { InMemoryInterviewSessionStore } from '../inMemoryInterviewSessionStore';
-import { ProcessId, InterviewId } from '../../../domain';
-import type { InterviewTurn } from '../../../domain';
+import { InMemoryInterviewSessionStore } from '../inMemoryInterviewSessionStore.js';
+import { ProcessId, InterviewId } from '../../../domain/index.js';
+import type { InterviewTurn } from '../../../domain/index.js';
 
 function makeTurn(overrides: Partial<InterviewTurn> = {}): InterviewTurn {
   return {

@@ -1,14 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createKafkaReviewInterviewCompletedForwarder } from '../kafkaReviewInterviewCompletedForwarder';
-import type { IEventPublisher } from '../../ports';
+import { createKafkaReviewInterviewCompletedForwarder } from '../kafkaReviewInterviewCompletedForwarder.js';
+import type { IEventPublisher } from '../../ports/index.js';
 import {
   ReviewInterviewCompletedEvent,
   ProcessId,
   InterviewId,
   MONTHLY_REVIEW_INTERVIEW_COMPLETED,
   ANNUAL_REVIEW_INTERVIEW_COMPLETED,
-} from '../../../domain';
-import type { InterviewTurn } from '../../../domain';
+} from '../../../domain/index.js';
+import type { InterviewTurn } from '../../../domain/index.js';
 
 function makePublisherMock(): IEventPublisher {
   return { publish: vi.fn().mockResolvedValue(undefined), publishMany: vi.fn().mockResolvedValue(undefined) };

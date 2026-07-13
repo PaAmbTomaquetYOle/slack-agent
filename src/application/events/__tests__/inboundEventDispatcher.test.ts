@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { InboundEventDispatcher, UnknownEventTypeError } from '../inboundEventDispatcher';
-import type { IInboundEventHandler } from '../inboundEventHandler';
-import type { KafkaEventEnvelope } from '../../../domain';
+import { InboundEventDispatcher, UnknownEventTypeError } from '../inboundEventDispatcher.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
+import type { KafkaEventEnvelope } from '../../../domain/index.js';
 
 function envelope(eventType: string): KafkaEventEnvelope {
   return { event_id: 'evt-1', event_type: eventType, occurred_at: '2024-01-01T00:00:00.000Z', payload: {} };

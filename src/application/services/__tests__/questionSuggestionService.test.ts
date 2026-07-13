@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { QuestionSuggestionService } from '../questionSuggestionService';
-import type { IMcpService } from '../../serviceInterfaces';
-import type { IMessagingPort } from '../../ports';
-import { QuestionDetector } from '../../../domain';
+import { QuestionSuggestionService } from '../questionSuggestionService.js';
+import type { IMcpService } from '../../serviceInterfaces/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import { QuestionDetector } from '../../../domain/index.js';
 
 const DETECTOR_CONFIG = { minLength: 10 };
 const QUESTION_TEXT = 'How do I deploy the staging environment?';

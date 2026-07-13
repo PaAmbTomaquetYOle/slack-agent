@@ -1,6 +1,6 @@
 import type { AppOptions } from '@slack/bolt';
 
-import { SETTINGS } from '.';
+import { SETTINGS } from './constants.js';
 
 export const APP_OPTIONS: AppOptions = {
   ...(SETTINGS.SLACK_BOT_TOKEN ? { token: SETTINGS.SLACK_BOT_TOKEN } : {}),

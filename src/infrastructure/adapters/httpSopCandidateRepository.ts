@@ -1,7 +1,7 @@
 import type { AxiosInstance } from 'axios';
-import type { ISopCandidateReadRepository, PendingSopCandidate } from '../../application/ports';
-import { handleAxiosError, mapSopCandidateResponse } from '../http';
-import type { BackendSopCandidateListResponse } from '../http';
+import type { ISopCandidateReadRepository, PendingSopCandidate } from '../../application/ports/index.js';
+import { handleAxiosError, mapSopCandidateResponse } from '../http/index.js';
+import type { BackendSopCandidateListResponse } from '../http/index.js';
 
 /**
  * BE-7/SA-16: read-only — candidate writes flow over Kafka. This adapter survives solely so

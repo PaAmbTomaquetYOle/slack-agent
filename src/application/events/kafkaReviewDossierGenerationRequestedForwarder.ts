@@ -1,10 +1,10 @@
-import type { DomainEvent } from '../../domain';
-import type { ReviewDossierGenerationRequestedEvent } from '../../domain';
+import type { DomainEvent } from '../../domain/index.js';
+import type { ReviewDossierGenerationRequestedEvent } from '../../domain/index.js';
 import {
   MONTHLY_REVIEW_DOSSIER_GENERATION_REQUESTED,
   ANNUAL_REVIEW_DOSSIER_GENERATION_REQUESTED,
-} from '../../domain';
-import type { IEventPublisher } from '../ports';
+} from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isReviewDossierGenerationRequestedEvent(
   event: DomainEvent,

@@ -1,4 +1,4 @@
-# BrainTrust — Devpost submission description
+# OffBoardMe — Devpost submission description
 
 > Ready to paste into the Devpost submission form (SUB-4). Source of truth for the project
 > pitch; keep in sync with the README/architecture diagram if either changes materially.
@@ -14,20 +14,20 @@ event — it's a recurring tax on every NGO's ability to operate.
 
 ## The solution
 
-**BrainTrust** is a proactive knowledge-capture agent that lives inside Slack. It doesn't
+**OffBoardMe** is a proactive knowledge-capture agent that lives inside Slack. It doesn't
 wait for someone to write documentation — it captures institutional knowledge at the
 moments it naturally surfaces:
 
-- **Smart offboarding.** When a volunteer announces they're leaving, BrainTrust pulls
+- **Smart offboarding.** When a volunteer announces they're leaving, OffBoardMe pulls
   their open Jira/Trello tasks, runs a guided interview with them over Slack, and uses
   Slack AI to summarize the conversation into a *Handover Dossier* the next person can
   actually use.
-- **Dynamic SOPs.** BrainTrust watches team channels; when a veteran gives a detailed
+- **Dynamic SOPs.** OffBoardMe watches team channels; when a veteran gives a detailed
   answer to a procedural question, it offers to save that answer as a Standard Operating
   Procedure — using the Real-Time Search API to link it to similar past questions instead
   of creating duplicates.
 - **Knowledge graph.** A Neo4j graph maps who talks to whom and which topics each person
-  owns, so BrainTrust can recommend the right expert to ask during an incident, before
+  owns, so OffBoardMe can recommend the right expert to ask during an incident, before
   that expert also walks out the door.
 
 Under the hood, three services collaborate over Kafka and MCP: a **Slack Agent**

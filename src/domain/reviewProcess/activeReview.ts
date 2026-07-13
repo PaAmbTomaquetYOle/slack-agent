@@ -1,5 +1,5 @@
-import type { ProcessId, UserId } from '../valueObjects';
-import type { ReviewScope } from './reviewScope';
+import type { ProcessId, UserId } from '../valueObjects/index.js';
+import type { ReviewScope } from './reviewScope.js';
 
 /**
  * A review process currently being interviewed over Slack DM, tracked entirely in memory

@@ -1,4 +1,4 @@
-import type { KafkaEventEnvelope } from '../../domain';
+import type { KafkaEventEnvelope } from '../../domain/index.js';
 
 export class EventDeserializationError extends Error {
   constructor(reason: string) {

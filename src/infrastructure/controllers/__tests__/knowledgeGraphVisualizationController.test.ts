@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { ServerResponse } from 'node:http';
-import { KnowledgeGraphVisualizationController } from '../knowledgeGraphVisualizationController';
-import type { IKnowledgeGraphReadPort } from '../../../application/ports';
+import { KnowledgeGraphVisualizationController } from '../knowledgeGraphVisualizationController.js';
+import type { IKnowledgeGraphReadPort } from '../../../application/ports/index.js';
 
 function makeResMock() {
   return {

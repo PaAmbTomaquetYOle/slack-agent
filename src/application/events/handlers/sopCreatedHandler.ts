@@ -1,7 +1,7 @@
-import type { KafkaEventEnvelope, SopCreatedPayload } from '../../../domain';
-import type { IMessagingPort } from '../../ports';
-import type { IInboundEventHandler } from '../inboundEventHandler';
-import { SOP_CREATED } from '../../../domain';
+import type { KafkaEventEnvelope, SopCreatedPayload } from '../../../domain/index.js';
+import type { IMessagingPort } from '../../ports/index.js';
+import type { IInboundEventHandler } from '../inboundEventHandler.js';
+import { SOP_CREATED } from '../../../domain/index.js';
 
 function isSopCreatedPayload(payload: unknown): payload is SopCreatedPayload {
   const p = payload as Partial<SopCreatedPayload> | null;

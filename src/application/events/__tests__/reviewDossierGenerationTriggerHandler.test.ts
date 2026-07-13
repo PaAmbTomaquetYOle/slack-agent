@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createReviewDossierGenerationTriggerHandler } from '../reviewDossierGenerationTriggerHandler';
-import type { IDomainEventBus } from '../domainEventBusInterface';
-import { ReviewInterviewCompletedEvent, ProcessId, InterviewId, ReviewDossierGenerationRequestedEvent } from '../../../domain';
+import { createReviewDossierGenerationTriggerHandler } from '../reviewDossierGenerationTriggerHandler.js';
+import type { IDomainEventBus } from '../domainEventBusInterface.js';
+import { ReviewInterviewCompletedEvent, ProcessId, InterviewId, ReviewDossierGenerationRequestedEvent } from '../../../domain/index.js';
 
 function makeEventBusMock(): IDomainEventBus {
   return { subscribe: vi.fn(), publish: vi.fn().mockResolvedValue(undefined) };

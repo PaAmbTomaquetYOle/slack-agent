@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { SopCreationRequestedEvent } from '../../domain';
-import { SOP_CREATION_REQUESTED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { SopCreationRequestedEvent } from '../../domain/index.js';
+import { SOP_CREATION_REQUESTED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isSopCreationRequestedEvent(event: DomainEvent): event is SopCreationRequestedEvent {
   return event.eventName === 'sop.creation_requested';

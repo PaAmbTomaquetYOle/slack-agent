@@ -1,6 +1,6 @@
-import type { DomainEvent } from './domainEvent';
-import type { ProcessId } from '../valueObjects';
-import type { ReviewScope } from '../reviewProcess';
+import type { DomainEvent } from './domainEvent.js';
+import type { ProcessId } from '../valueObjects/index.js';
+import type { ReviewScope } from '../reviewProcess/index.js';
 
 export class ReviewDossierGenerationRequestedEvent implements DomainEvent {
   static readonly EVENT_NAME = 'review_dossier_generation_requested' as const;

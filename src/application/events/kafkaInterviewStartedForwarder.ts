@@ -1,7 +1,7 @@
-import type { DomainEvent } from '../../domain';
-import type { InterviewStartedEvent } from '../../domain';
-import { INTERVIEW_STARTED } from '../../domain';
-import type { IEventPublisher } from '../ports';
+import type { DomainEvent } from '../../domain/index.js';
+import type { InterviewStartedEvent } from '../../domain/index.js';
+import { INTERVIEW_STARTED } from '../../domain/index.js';
+import type { IEventPublisher } from '../ports/index.js';
 
 function isInterviewStartedEvent(event: DomainEvent): event is InterviewStartedEvent {
   return event.eventName === 'interview.started';

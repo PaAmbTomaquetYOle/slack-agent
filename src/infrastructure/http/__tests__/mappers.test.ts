@@ -3,12 +3,12 @@ import {
   mapOffboardingResponse,
   mapInterviewResponse,
   mapDossierResponse,
-} from '../mappers';
+} from '../mappers.js';
 import type {
   BackendOffboardingResponse,
   BackendInterviewResponse,
   BackendDossierResponse,
-} from '../mappers';
+} from '../mappers.js';
 
 describe('mapOffboardingResponse', () => {
   it('maps all fields from backend response', () => {

@@ -1,4 +1,4 @@
-import { DomainError } from './domainError';
+import { DomainError } from './domainError.js';
 
 export class InvalidValueObjectError extends DomainError {
   constructor(valueObjectName: string, message: string) {

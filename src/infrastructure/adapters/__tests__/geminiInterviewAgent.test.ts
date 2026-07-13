@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { GoogleGenAI, GenerateContentResponse, FunctionCall } from '@google/genai';
-import { GeminiInterviewAgent } from '../geminiInterviewAgent';
-import type { InterviewAgentContext } from '../../../application/ports';
-import type { IMcpService, IAuthService } from '../../../application/serviceInterfaces';
-import type { InterviewTurn, McpTool, McpToolResult } from '../../../domain';
-import { AuthenticationRequiredError, INTERVIEW_TOPICS } from '../../../domain';
+import { GeminiInterviewAgent } from '../geminiInterviewAgent.js';
+import type { InterviewAgentContext } from '../../../application/ports/index.js';
+import type { IMcpService, IAuthService } from '../../../application/serviceInterfaces/index.js';
+import type { InterviewTurn, McpTool, McpToolResult } from '../../../domain/index.js';
+import { AuthenticationRequiredError, INTERVIEW_TOPICS } from '../../../domain/index.js';
 
 function makeGenAiMock() {
   return { models: { generateContent: vi.fn() } } as unknown as GoogleGenAI;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SopTitle } from '../sopTitle';
+import { SopTitle } from '../sopTitle.js';
 
 describe('SopTitle.deriveFrom', () => {
   it('uses the whole message when short and single-line', () => {

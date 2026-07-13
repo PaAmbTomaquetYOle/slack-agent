@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import axios from 'axios';
-import { BackendTokenProvider } from '../backendTokenProvider';
+import { BackendTokenProvider } from '../backendTokenProvider.js';
 
 vi.mock('axios');
 
