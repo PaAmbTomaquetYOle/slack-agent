@@ -298,7 +298,7 @@ describe('InterviewService', () => {
     ]);
     expect(messagingPort.sendDirectMessage).toHaveBeenCalledWith(
       'U-DEPARTING',
-      expect.stringContaining('problema'),
+      expect.stringContaining('trouble'),
     );
     expect(interviewSessionStore.end).not.toHaveBeenCalled();
     expect(eventBus.publish).toHaveBeenCalledWith(expect.any(InterviewTurnRecordedEvent));
