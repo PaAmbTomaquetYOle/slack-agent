@@ -1,6 +1,6 @@
 <div align="center">
 
-![OffBoardMe · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=OffBoardMe%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
+![Offboard-Me · Slack Agent](https://capsule-render.vercel.app/api?type=waving&color=0:4A154B,50:611f69,100:ECB22E&height=200&section=header&text=Offboard-Me%20%C2%B7%20Slack%20Agent&fontSize=44&fontColor=ffffff&desc=Guided%20offboarding%20interviews%20%26%20SOP%20capture%2C%20right%20inside%20Slack&descSize=17&descAlignY=62&animation=fadeIn)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
@@ -12,11 +12,11 @@
 
 </div>
 
-Repository for the challenge's Slack Agent — part of **OffBoardMe**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
+Repository for the challenge's Slack app — part of **OffBoardMe**, a system that fights knowledge loss caused by high volunteer turnover in NGOs.
 
 The live development stack is composed from the separate `infra/` repository. That stack runs the bot together with the backend, MCP server, Kafka, Neo4j, PostgreSQL, and the Cloudflare tunnel for the public `kire.ovh` names.
 
-Deployment note: pushes to `main` now trigger the infra redeploy through GitHub Actions. Slack app configuration is still managed outside the CI flow.
+Deployment note: pushes to `main` now trigger the Slack CLI deploy flow and then the infra redeploy through GitHub Actions.
 
 ### 📚 Contents
 

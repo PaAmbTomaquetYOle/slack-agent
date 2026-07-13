@@ -1,12 +1,12 @@
 {
   "display_information": {
-    "name": "OffBoardMe",
-    "description": "Asistente de captura y propagación de conocimiento para procesos de offboarding.",
+    "name": "Offboard-Me",
+    "description": "Offboarding knowledge capture and propagation assistant.",
     "background_color": "#18205c"
   },
   "features": {
     "bot_user": {
-      "display_name": "OffBoardMe",
+      "display_name": "Offboard-Me",
       "always_online": true
     }
   },
