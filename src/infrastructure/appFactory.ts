@@ -409,7 +409,13 @@ export class AppFactory {
       expertRecommendationService,
       `${SETTINGS.KNOWLEDGE_GRAPH_BASE_URL}/knowledge-graph`,
     ).register(app);
-    new AppMentionController(expertRecommendationService).register(app);
+    new AppMentionController(
+      expertRecommendationService,
+      offboardingService,
+      mcpService,
+      authService,
+      `${SETTINGS.KNOWLEDGE_GRAPH_BASE_URL}/knowledge-graph`,
+    ).register(app);
 
     new DirectMessageController(authService, orchestrator, reviewInterviewService).register(app);
 
